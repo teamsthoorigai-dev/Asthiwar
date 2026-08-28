@@ -1,0 +1,34 @@
+{
+  "name": "asthiwar-root",
+  "version": "1.0.0",
+  "private": true,
+  "description": "ASTHIWAR Design & Build - Monorepo",
+  "workspaces": [
+    "database",
+    "backend",
+    "web"
+  ],
+  "scripts": {
+    "dev:backend": "npm --workspace=backend run dev",
+    "dev:web": "npm --workspace=web run dev",
+    "dev": "npm run dev:web",
+    "build:backend": "npm --workspace=backend run build",
+    "build:database": "npm --workspace=database run build",
+    "build:web": "npm --workspace=web run build",
+    "build": "npm run build:database && npm run build:backend && npm run build:web",
+    "check-types": "npm --workspace=database run check-types && npm --workspace=backend run check-types && npm --workspace=web run check-types",
+    "db:generate": "npm --workspace=database run db:generate",
+    "db:migrate": "npm --workspace=database run db:migrate",
+    "db:seed": "npm --workspace=database run db:seed",
+    "test": "npm --workspace=backend run test",
+    "test:unit": "npm --workspace=backend run test:unit"
+  },
+  "keywords": [
+    "asthiwar",
+    "construction",
+    "calculator",
+    "tamilnadu"
+  ],
+  "author": "Asthiwar Design & Build",
+  "license": "UNLICENSED"
+}
