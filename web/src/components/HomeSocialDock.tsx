@@ -1,7 +1,4 @@
-'use client';
-
 import { Facebook, Instagram, Youtube } from 'lucide-react';
-import { type CSSProperties, type PointerEvent, useEffect, useRef, useState } from 'react';
 
 function WhatsAppIcon() {
   return (
@@ -18,99 +15,17 @@ const socialChannels = [
   { label: 'Facebook', Icon: Facebook },
 ] as const;
 
-type DockPosition = {
-  x: number;
-  y: number;
-};
-
-const VIEWPORT_GAP = 8;
-
 export function HomeSocialDock() {
-  const dockRef = useRef<HTMLElement>(null);
-  const dragOffset = useRef({ x: 0, y: 0 });
-  const isDraggingRef = useRef(false);
-  const [position, setPosition] = useState<DockPosition | null>(null);
-  const [isDragging, setIsDragging] = useState(false);
-
-  const keepInViewport = (x: number, y: number) => {
-    const dock = dockRef.current;
-    if (!dock) return { x, y };
-
-    const rect = dock.getBoundingClientRect();
-    return {
-      x: Math.min(Math.max(VIEWPORT_GAP, x), window.innerWidth - rect.width - VIEWPORT_GAP),
-      y: Math.min(Math.max(VIEWPORT_GAP, y), window.innerHeight - rect.height - VIEWPORT_GAP),
-    };
-  };
-
-  const handlePointerDown = (event: PointerEvent<HTMLElement>) => {
-    if (event.button !== 0) return;
-
-    const dock = dockRef.current;
-    if (!dock) return;
-
-    const rect = dock.getBoundingClientRect();
-    dragOffset.current = {
-      x: event.clientX - rect.left,
-      y: event.clientY - rect.top,
-    };
-    isDraggingRef.current = true;
-    setIsDragging(true);
-    setPosition({ x: rect.left, y: rect.top });
-    event.preventDefault();
-  };
-
-  useEffect(() => {
-    const handlePointerMove = (event: globalThis.PointerEvent) => {
-      if (!isDraggingRef.current) return;
-
-      setPosition(
-        keepInViewport(
-          event.clientX - dragOffset.current.x,
-          event.clientY - dragOffset.current.y,
-        ),
-      );
-    };
-
-    const handlePointerEnd = () => {
-      if (!isDraggingRef.current) return;
-      isDraggingRef.current = false;
-      setIsDragging(false);
-    };
-
-    const handleResize = () => {
-      setPosition((current) => (current ? keepInViewport(current.x, current.y) : current));
-    };
-
-    window.addEventListener('pointermove', handlePointerMove);
-    window.addEventListener('pointerup', handlePointerEnd);
-    window.addEventListener('pointercancel', handlePointerEnd);
-    window.addEventListener('resize', handleResize);
-    return () => {
-      window.removeEventListener('pointermove', handlePointerMove);
-      window.removeEventListener('pointerup', handlePointerEnd);
-      window.removeEventListener('pointercancel', handlePointerEnd);
-      window.removeEventListener('resize', handleResize);
-    };
-  });
-
-  const dockStyle = position
-    ? ({ left: position.x, top: position.y, right: 'auto', bottom: 'auto' } satisfies CSSProperties)
-    : undefined;
-
   return (
-    <nav
-      ref={dockRef}
-      className="home-social-dock"
-      aria-label="Social media links. Drag to reposition."
-      data-dragging={isDragging || undefined}
-      style={dockStyle}
-      onPointerDown={handlePointerDown}
-    >
+    <nav className="home-social-dock" aria-label="Social media links">
       <ul>
         {socialChannels.map(({ label, Icon }) => (
           <li key={label}>
-            <span className="home-social-dock__item" aria-label={`${label} link coming soon`} title={label}>
+            <span
+              className="home-social-dock__item"
+              aria-label={`${label} link coming soon`}
+              title={label}
+            >
               <Icon size={20} strokeWidth={1.8} aria-hidden="true" />
             </span>
           </li>

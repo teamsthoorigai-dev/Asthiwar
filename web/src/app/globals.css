@@ -2283,8 +2283,6 @@ summary:focus-visible {
   -webkit-backdrop-filter: blur(18px) saturate(135%);
   backdrop-filter: blur(18px) saturate(135%);
   color: var(--paper);
-  cursor: grab;
-  touch-action: none;
   user-select: none;
   transition: opacity 180ms var(--ease-state);
 }
@@ -2292,10 +2290,6 @@ summary:focus-visible {
 body.assembly-hero-active .home-social-dock {
   pointer-events: none;
   opacity: 0;
-}
-
-.home-social-dock[data-dragging="true"] {
-  cursor: grabbing;
 }
 
 .home-social-dock ul {
@@ -2321,7 +2315,7 @@ body.assembly-hero-active .home-social-dock {
 }
 
 @media (hover: hover) {
-  .home-social-dock:not([data-dragging="true"]) .home-social-dock__item:hover {
+  .home-social-dock__item:hover {
     background: var(--oxide-deep);
     transform: translateY(-2px);
   }
