@@ -90,7 +90,7 @@ export default function SustainableConstructionPage() {
         imageAlt="Earthen masonry and a perforated screen shown in direct sunlight"
         meta={
           <>
-            <span>Natural cooling</span>
+            <span>Natural Cooling</span>
             <span>Low-cement / cement-free</span>
             <span>Long-term well-being</span>
           </>

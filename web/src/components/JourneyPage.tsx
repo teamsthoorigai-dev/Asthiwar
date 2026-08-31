@@ -75,7 +75,7 @@ export function JourneyPage() {
         <FeaturedProjects />
         <EstimateSection />
       </main>
-      <SiteFooter />
+      <SiteFooter cta="land" />
     </div>
   );
 }
@@ -185,7 +185,7 @@ export function StudioIntroduction() {
             alt="Earth, timber, stone, and mineral material samples in the ASTHIWAR studio"
             width={1600}
             height={1000}
-            sizes="(max-width: 1024px) 100vw, 80vw"
+            sizes="(max-width: 1024px) 100vw, 92vw"
           />
           <figcaption>
             <span>Material study / 04</span>

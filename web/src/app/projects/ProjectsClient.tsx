@@ -25,7 +25,7 @@ export function ProjectsClient() {
       : projects.filter((project) => project.category === activeFilter);
 
   return (
-    <SiteLayout>
+    <SiteLayout footerCta="land">
       <PageHero
         eyebrow="Projects"
         title="Projects"

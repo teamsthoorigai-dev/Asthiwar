@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { ArrowUpRight } from 'lucide-react';
 import { JsonLd } from '@/components/JsonLd';
-import { LayeredAssemblySequence } from '@/components/LayeredAssemblySequence';
+import { AssemblySequence } from '@/components/AssemblySequence';
 import { HomeProjectsSection } from '@/components/HomeProjectsSection';
 import { HomeSocialDock } from '@/components/HomeSocialDock';
 import {
@@ -44,7 +44,7 @@ export default function HomePage() {
       <JsonLd data={getFaqJsonLd(faqs)} />
       <SiteHeader />
       <main id="main-content">
-        <LayeredAssemblySequence />
+        <AssemblySequence />
         <SustainabilitySection />
         <EstimateSection />
         <HomeProjectsSection />

@@ -26,9 +26,10 @@ export const metadata: Metadata = {
 
 export default function ServicesPage() {
   return (
-    <SiteLayout footerCta="land">
+    <SiteLayout footerCta="none">
       <JsonLd data={getServicesJsonLd(services)} />
       <PageHero
+        className="services-hero"
         tone="forest"
         eyebrow="Our services"
         title="Five disciplines. One continuous process."

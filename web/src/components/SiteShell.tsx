@@ -126,34 +126,36 @@ export function SiteHeader() {
   );
 }
 
-export function SiteFooter({ cta = 'conversation' }: { cta?: 'conversation' | 'land' }) {
+export function SiteFooter({ cta = 'design' }: { cta?: 'design' | 'land' | 'none' }) {
   const isLandInvitation = cta === 'land';
 
   return (
     <footer className="site-footer">
-      <div className="site-footer__cta shell">
-        <p className="eyebrow eyebrow--light">
-          {isLandInvitation ? 'Begin with the site' : 'Let’s talk'}
-        </p>
-        <div className="site-footer__cta-grid">
-          <h2>
-            {isLandInvitation
-              ? 'Bring us the land. We’ll reveal what it can hold.'
-              : 'Start with a conversation.'}
-          </h2>
-          <div>
-            <p>
+      {cta === 'none' ? null : (
+        <div className="site-footer__cta shell">
+          <p className="eyebrow eyebrow--light">
+            {isLandInvitation ? 'Begin with the site' : 'Design + build'}
+          </p>
+          <div className="site-footer__cta-grid">
+            <h2>
               {isLandInvitation
-                ? 'Share your location, approximate area, and what you want the building to make possible.'
-                : 'Tell us about your project, your site and what you want to build.'}
-            </p>
-            <Link href="/contact" className="text-link text-link--light">
-              {isLandInvitation ? 'Start a project' : 'Book consultation'}{' '}
-              <ArrowUpRight size={18} aria-hidden="true" />
-            </Link>
+                ? 'Bring us the land. We’ll reveal what it can hold.'
+                : 'Build with design.'}
+            </h2>
+            <div>
+              <p>
+                {isLandInvitation
+                  ? 'Share your location, approximate area, and what you want the building to make possible.'
+                  : 'Bring architecture, engineering and execution into one coordinated process.'}
+              </p>
+              <Link href="/contact" className="text-link text-link--light">
+                {isLandInvitation ? 'Start a project' : 'Plan your project'}{' '}
+                <ArrowUpRight size={18} aria-hidden="true" />
+              </Link>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       <div className="site-footer__base shell">
         <div className="site-footer__brand">
@@ -194,10 +196,10 @@ export function SiteFooter({ cta = 'conversation' }: { cta?: 'conversation' | 'l
 
 export function SiteLayout({
   children,
-  footerCta = 'conversation',
+  footerCta = 'design',
 }: {
   children: ReactNode;
-  footerCta?: 'conversation' | 'land';
+  footerCta?: 'design' | 'land' | 'none';
 }) {
   return (
     <div className="site-page">

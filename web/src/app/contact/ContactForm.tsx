@@ -77,10 +77,10 @@ export function ContactForm() {
   };
 
   return (
-    <SiteLayout>
+    <SiteLayout footerCta="land">
       <PageHero
         eyebrow="LET'S TALK"
-        title="START WITH A CONVERSATION."
+        title="Start with a conversation."
         intro="Tell us about your project, your site and what you want to build."
         meta={
           <>
@@ -145,7 +145,7 @@ export function ContactForm() {
             <form className="contact-form" onSubmit={submit} noValidate>
               <div className="contact-form__intro">
                 <p className="eyebrow">Project enquiry</p>
-                <p>Fields marked required are needed to prepare the first response.</p>
+                <p>Fields marked * are needed to prepare the first response.</p>
               </div>
 
               <div className="contact-form__grid">
@@ -182,9 +182,10 @@ export function ContactForm() {
                 />
                 <label className="field">
                   <span>
-                    Project type <i>Required</i>
+                    Project type <i aria-hidden="true">*</i>
                   </span>
                   <select
+                    required
                     name="projectType"
                     value={values.projectType}
                     onChange={(event) => update('projectType', event.target.value)}
@@ -254,9 +255,10 @@ export function ContactForm() {
 
               <label className="field field--full">
                 <span>
-                  What should the project make possible? <i>Required</i>
+                  What should the project make possible? <i aria-hidden="true">*</i>
                 </span>
                 <textarea
+                  required
                   name="brief"
                   rows={7}
                   value={values.brief}
@@ -323,12 +325,13 @@ function Field({
   return (
     <label className="field">
       <span>
-        {label} {required ? <i>Required</i> : null}
+        {label} {required ? <i aria-hidden="true">*</i> : null}
       </span>
       <input
         {...inputProps}
         name={name}
         type={type}
+        required={required}
         value={value}
         onChange={(event) => onChange(name, event.target.value)}
         onBlur={() => onBlur(name)}
