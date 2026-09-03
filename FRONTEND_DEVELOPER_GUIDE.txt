@@ -1,7 +1,7 @@
 ================================================================================
-ASTHIWAR - FRONTEND DEVELOPER HANDOVER GUIDE & API INTEGRATION SPEC
+ASTHIWAR - FRONTEND DEVELOPER HANDOVER GUIDE & INTEGRATION SPECIFICATION
 ================================================================================
-Document Version : 2.0 (Updated: 2026-09-03)
+Document Version : 2.1 (Updated: 2026-09-03)
 Target Audience  : Frontend Engineering Team
 Repository       : https://github.com/teamsthoorigai-dev/Asthiwar.git
 Active Branch    : dev
@@ -9,23 +9,25 @@ Active Branch    : dev
 --------------------------------------------------------------------------------
 TABLE OF CONTENTS
 --------------------------------------------------------------------------------
-1. Project Overview & Repository Setup
-2. Key Architectural Updates (Latest Changes)
-3. Step-by-Step Calculator Flow & UI Rules
-4. Admin Portal Configuration Guide
-5. API Endpoints & Contract Reference
-6. Component & Styling Guidelines
-7. Checklist for Frontend Developers
+1. Project Architecture & Repository Setup
+2. Complete Git History & Evolution Summary
+3. Key Business & Architectural Rules (Latest Updates)
+4. Frontend Application Map & Key Components
+5. Step-by-Step Calculator Wizard & Logic Rules
+6. Admin Portal Configuration Guide
+7. Backend API Endpoints & Contract Reference
+8. Styling, Tokens & Formatting Standards
+9. Frontend Developer Action Checklist
 
 ================================================================================
-1. PROJECT OVERVIEW & REPOSITORY SETUP
+1. PROJECT ARCHITECTURE & REPOSITORY SETUP
 ================================================================================
 
-The Asthiwar web application comprises:
-- Public Cost Calculator (5-step progressive estimation wizard)
-- Marketing & Services Pages (Home, Services, Projects, Portfolio)
-- Admin Portal (Leads management, dynamic pricing matrix, brand configs)
-- Backend API (Node.js / Express / TypeScript / Drizzle ORM / PostgreSQL)
+The repository is structured as a monorepo containing:
+- /web      : Next.js (App Router), TypeScript, Vanilla / CSS Modules
+- /backend  : Node.js, Express, TypeScript REST API, PDFKit generator
+- /database : Drizzle ORM, PostgreSQL (Neon), migrations, and seeds
+- /docs     : Architecture specs, flow documentation, and changelogs
 
 Local Setup Commands:
 ---------------------
@@ -34,277 +36,239 @@ Local Setup Commands:
    git checkout dev
    git pull origin dev
 
-2. Install Dependencies:
+2. Install Dependencies (from project root):
    npm install
 
 3. Run Development Servers:
-   Frontend: npm run dev:frontend (or cd web && npm run dev)
-   Backend : npm run dev:backend  (or cd backend && npm run dev)
+   Frontend (Next.js) : npm run dev:frontend (or cd web && npm run dev) -> http://localhost:3000
+   Backend (Express)  : npm run dev:backend  (or cd backend && npm run dev) -> http://localhost:4000
 
 4. Environment Variables:
-   Frontend (.env.local / .env):
+   Frontend (`web/.env.local`):
      NEXT_PUBLIC_API_URL=http://localhost:4000
-     (or VITE_API_URL=http://localhost:4000 depending on client bundler)
 
 ================================================================================
-2. KEY ARCHITECTURAL UPDATES (LATEST CHANGES - 2026-09-03)
+2. COMPLETE GIT HISTORY & EVOLUTION SUMMARY
 ================================================================================
 
-A. Brand Customisation Pricing Architecture
--------------------------------------------
-- Every brand specification option now has distinct, package-specific pricing
-  for each of the 4 tiers: Basic (1), Standard (2), Premium (3), Luxury (4).
-- Price Deltas (priceDelta) can be:
-  * 0.00  -> Complimentary / Included with the package.
-  * > 0   -> Upgrade surcharge per sq.ft (e.g., +Rs.45/sq.ft).
-  * < 0   -> Downgrade credit per sq.ft (e.g., -Rs.20/sq.ft Credit).
-- Backend now joins `option_prices` directly by packageId. There are no generic
-  or ambiguous fallback prices.
+* [cd05a35] Update backend, database scripts, seeds, and documentation
+  - Overhauled brand customizations pricing pipeline to strict package-level rates.
+  - Implemented 11 Standard Construction Exclusions in backend PDF generator.
+  - Added dynamic add-on rules (Roof Weathering waiver for Premium/Luxury & >2k sqft).
+  - Seeded all 10 standard construction milestone stages and latest add-on rates.
 
-B. 11 Standard Construction Exclusions (Step 5 & Contract Scope)
-----------------------------------------------------------------
-To ensure full transparency before contract signing, the Step 5 estimate report
-and the generated PDF explicitly list the 11 client-scope items:
-  1. Elevation Work (Architectural facade claddings beyond standard design)
-  2. Outer Area Development (Setbacks, pavers, compound pathways, landscaping)
-  3. Interior Works & Carpentry (Wardrobes, modular kitchen, loose furniture)
-  4. Building Plan Sanction (DTCP / Local body building approval liaison fees)
-  5. Electricity Board / EB (Permanent line connection, meter deposit & tariffs)
-  6. Gas Connection (Piped gas connection & pipeline installation)
-  7. Water & Drainage / UGD (Municipal drinking water & underground sewer fees)
-  8. Borewell Drilling (Borewell drilling, casing pipe & submersible piping)
-  9. Water Motors & Pumps (Pumps/motors supply unless selected in Add-Ons)
-  10. Electrical Appliances (TV, Refrigerator, ACs, Chimney, Hob, Geysers)
-  11. Taxes & Levies (Vacant Land Tax / VLT, property taxes, municipal duties)
+* [9a1ce20] UI changes completed
+  - Removed legacy exploration templates (`home-1`, `home-2`).
+  - Refined `HomeSections.tsx`, `ProjectCard.tsx`, and `ProjectGalleryFigure.tsx`.
+  - Polished responsive layouts in `StepPackages.tsx` and `StepLeadCapture.tsx`.
 
-C. Dynamic Add-On Rules (Roof Weathering / Cool Roof Tiles)
------------------------------------------------------------
-- Premium & Luxury Packages: Roof Weathering is automatically Rs.0 (Included).
-- Basic & Standard Packages: If terrace area > 2,000 sq.ft, weathering is waived
-  (Rs.0). Otherwise, it is billed at Rs.65/sq.ft of terrace area.
+* [41a90ae] UI Changes
+  - Replaced legacy `JourneyPage` with `FieldRecordSequence` & `HomeImageHero`.
+  - Added SVG branding assets (environmental-responsibility, long-term-wellbeing,
+    low-cement, natural-cooling) and high-res logos (black & white).
+  - Consolidated `StepFloors` directly into `StepDimensions.tsx`.
 
-D. Package Naming & Taglines
-----------------------------
-- Basic   : "Essential"
-- Standard: "Comfort"
-- Premium : "Best Value" (Note: Tagline strictly updated to "Best Value")
-- Luxury  : "Ultimate Luxury"
+* [2ffbb6f] Updated next.config
+  - Enhanced asset routing and image domains in `next.config.js`.
 
-E. Dimension Microcopy
-----------------------
-- Under "Car Parking Area (Sq.Ft)", always display the microcopy note:
-  "Note: Only if parking is separate from the floor built-up area above."
+* [8da81b0] UI reworks completed
+  - Integrated 3D/Canvas architectural assembly sequence (`AssemblySequence.tsx`, `scene.ts`).
+  - Added contact form validations and interactive project galleries.
+
+* [a319a30] Initial complete application structure
+  - Core setup of Next.js frontend, Express backend, and Drizzle database models.
 
 ================================================================================
-3. STEP-BY-STEP CALCULATOR FLOW & UI RULES
+3. KEY BUSINESS & ARCHITECTURAL RULES (LATEST UPDATES)
 ================================================================================
 
-Step 1: Project Type & Built-up Dimensions
-------------------------------------------
-- Inputs:
-  * Plot Area (sq.ft)
-  * Number of Floors (Ground, G+1, G+2, G+3, etc.)
-  * Built-up Area per floor (sq.ft)
-  * Car Parking Area (sq.ft) [Optional]
-  * Balcony / Utility Area (sq.ft) [Optional]
-- Total Built-Up Area = Sum of Floor Areas + Balcony/Utility Area.
+A. Package-Specific Brand Pricing:
+   - Each brand specification (e.g. UltraTech Cement, Tata Tiscon Steel, Kohler Fixtures)
+     maintains independent rate definitions across all 4 tiers:
+     * Basic (Tier 1)
+     * Standard (Tier 2)
+     * Premium (Tier 3)
+     * Luxury (Tier 4)
+   - Rates (`priceDelta`):
+     * 0.00  -> "Included" (no surcharge).
+     * > 0   -> "+Rs.{priceDelta}/sqft" (upgrade surcharge).
+     * < 0   -> "-Rs.{abs(priceDelta)}/sqft (Credit)" (downgrade credit).
+
+B. 11 Standard Construction Exclusions (Step 5 & PDF Quote):
+   The following 11 items are strictly classified as Client Scope / Excluded from the
+   standard civil construction contract and must be visible on Step 5:
+   1. Elevation Work (Architectural facade claddings beyond standard design)
+   2. Outer Area Development (Setbacks, perimeter pavers, compound pathways, landscaping)
+   3. Interior Works & Carpentry (Wardrobes, modular kitchen, loose furniture)
+   4. Building Plan Sanction (DTCP / Local body building approval & liaison fees)
+   5. Electricity Board / EB (Permanent line connection, meter deposit & statutory tariffs)
+   6. Gas Connection (Piped gas line connection & municipal installation)
+   7. Water & Drainage / UGD (Municipal drinking water & underground drainage fees)
+   8. Borewell Drilling (Borewell drilling, PVC casing pipe & depth piping)
+   9. Water Motors & Pumps (Supply/installation of pumps unless chosen in Add-Ons)
+   10. Electrical Appliances (TV, Refrigerator, ACs, Chimney, Hob, Geysers)
+   11. Taxes & Levies (Vacant Land Tax / VLT, property taxes, municipal duties)
+
+C. Dynamic Add-On Rules (Roof Weathering / Cool Roof Tiles):
+   - Premium & Luxury Packages: Roof Weathering is automatically Rs.0 (Included).
+   - Basic & Standard Packages: If terrace area > 2,000 sq.ft, weathering is waived (Rs.0).
+     Otherwise billed at Rs.65/sq.ft of terrace area.
+
+D. Package Taglines:
+   - Basic    : "Essential"
+   - Standard : "Comfort"
+   - Premium  : "Best Value" (Strictly updated to "Best Value")
+   - Luxury   : "Ultimate Luxury"
+
+E. Dimension Microcopy:
+   - Display note under Car Parking Area:
+     "Note: Only if parking is separate from the floor built-up area above."
+
+================================================================================
+4. FRONTEND APPLICATION MAP & KEY COMPONENTS
+================================================================================
+
+- /web/src/app/page.tsx
+  * Main Landing Page rendering `HomeImageHero.tsx`, `FieldRecordSequence.tsx`,
+    `HomeSections.tsx`, and `ProjectGalleryFigure.tsx`.
+
+- /web/src/app/cost-calculator/page.tsx & /web/src/components/calculator/
+  * `CalculatorWizard.tsx`     : Main state coordinator (Step 1 to 5).
+  * `StepDimensions.tsx`       : Plot size, floors, built-up areas, parking.
+  * `StepAddons.tsx`           : Sump, septic, automation, pumps, softeners, solar.
+  * `StepPackages.tsx`         : Package selection with live subtotal previews.
+  * `StepCustomizations.tsx`   : Category-grouped brand options with price badges.
+  * `StepEstimateReport.tsx`   : Cost summary, milestone schedule & 11 exclusions.
+  * `StepLeadCapture.tsx`      : Lead modal triggering PDF quotation generation.
+
+- /web/src/app/admin/ & /web/src/components/admin/
+  * `AdminPricingConfigManager.tsx` : Live matrix for editing package base rates,
+                                     addon unit prices, and 4-tier brand deltas.
+  * `AdminEstimatesExplorer.tsx`    : Explorer for customer estimate submissions.
+  * `AdminEnquiriesManager.tsx`     : Direct contact and lead enquiries manager.
+
+================================================================================
+5. STEP-BY-STEP CALCULATOR WIZARD & LOGIC RULES
+================================================================================
+
+Step 1: Dimensions
+- Capture Plot Area (sq.ft) and Built-up Area per floor.
+- Total Built-Up Area = Sum of Floor Built-up Areas + Balcony Area.
 - Total Construction Area = Total Built-Up Area + Car Parking Area.
 
-Step 2: Add-Ons & Utilities Selection
--------------------------------------
-- Add-on Categories:
-  * Water Sump (R.C.C / Brick / Readymade) -> Capacity in Litres
-  * Septic Tank (R.C.C / Brick / Readymade) -> Capacity in Litres
-  * Compound Wall -> Running Feet & Height
-  * Motor Automation -> Bore OHT (Rs.12k), Corp OHT (Rs.12k), Both (Rs.24k)
-  * Pressure Pump -> 0.5 HP, 1.0 HP, 1.5 HP, 2.0 HP variants
-  * Water Softener -> Whole House RO / Automatic Softener (AO Smith Rs.1.05L)
-  * Solar Rooftop System -> 3kW, 5kW, 8kW, 10kW On-Grid / Hybrid
-  * EV Charging Provision -> 3.3kW / 7.2kW AC Fast Charger
-  * Rainwater Harvesting Pit -> Standard Recharge Pit
+Step 2: Add-Ons & Utilities
+- Water Sump & Septic Tank (Capacity in Litres, RCC/Brick/Readymade).
+- Compound Wall (Running Feet & Height).
+- Motor Automation (Bore OHT Rs.12k, Corp OHT Rs.12k, Both Rs.24k).
+- Pressure Pump (0.5 HP, 1.0 HP, 1.5 HP, 2.0 HP).
+- Water Softener (AO Smith Automatic Whole-house Rs.1,05,000).
+- Solar Rooftop (3kW to 10kW On-Grid/Hybrid).
 
-Step 3: Construction Package Selection
---------------------------------------
-- Cards displaying 4 tiers: Basic, Standard, Premium, Luxury.
-- Display base price per sq.ft (e.g. Rs.1,890, Rs.2,190, Rs.2,490, Rs.2,990).
-- Highlight "Best Value" badge on the Premium Package card.
-- Show live computed subtotal for each package card dynamically.
+Step 3: Package Selection
+- Basic, Standard, Premium, Luxury cards.
+- Live dynamic subtotal calculation per card.
+- "Best Value" highlight badge on Premium Package.
 
-Step 4: Brand & Material Customizations
----------------------------------------
-- Grouped by specification categories:
-  * Structure & Steel (e.g. Tata Tiscon, JSW Neosteel, Kamachi)
-  * Cement (e.g. UltraTech, Coromandel, Ramco Supergrade)
-  * Flooring & Tiles (e.g. Kajaria, Somany, Nitco)
-  * Bathroom Fixtures & Sanitaryware (e.g. Kohler, Jaquar, Parryware)
-  * Electrical Cables & Switches (e.g. Legrand, Schneider, Havells, Finolex)
-  * Painting & Finishes (e.g. Asian Paints Royale, Berger, Dulux)
-- UI Badge Rules:
-  * If priceDelta === 0 -> Render badge: "Included" (emerald/green).
-  * If priceDelta > 0   -> Render badge: "+Rs.{priceDelta}/sqft" (blue/neutral).
-  * If priceDelta < 0   -> Render badge: "-Rs.{abs(priceDelta)}/sqft (Credit)".
+Step 4: Brand Customizations
+- Specification items rendered under Category accordions.
+- Badges:
+  * priceDelta === 0 -> "Included" (emerald badge).
+  * priceDelta > 0   -> "+Rs.{priceDelta}/sqft" (accent badge).
+  * priceDelta < 0   -> "-Rs.{abs(priceDelta)}/sqft (Credit)".
 
 Step 5: Estimate Report & PDF Download
---------------------------------------
-- High-level cost breakdown summary:
-  * Civil & Construction Cost
-  * Customizations Upgrade / Delta Cost
-  * Add-Ons & Utilities Cost
-  * GST / Statutory Subtotal (if applicable)
-  * Grand Total (INR)
+- Breakdown: Base Construction + Brand Deltas + Utilities/Add-Ons = Grand Total.
 - 10 Construction Milestone Schedule with payment percentages.
 - 11 Standard Exclusions & Client Scope cards.
-- Instant Lead Capture & Instant PDF Quote Generation button.
+- Instant Lead Capture modal & Instant PDF Quote download.
 
 ================================================================================
-4. ADMIN PORTAL CONFIGURATION GUIDE
+6. ADMIN PORTAL CONFIGURATION GUIDE
 ================================================================================
 
-Component: AdminPricingConfigManager.tsx
----------------------------------------
-1. Inline Brand Table & Add-Brand Modal:
-   - When viewing or editing brand options, display 4 responsive tier cards:
-     [Basic] [Standard] [Premium] [Luxury]
-   - "Free / Upgrade" State Handling:
-     * When isComplimentary is true or delta === 0:
-       Render button: "v Free"
-     * Clicking "v Free" reveals number input to set custom rate (e.g. Rs.45).
-     * Clicking "x" icon clears rate and sets back to "v Free" (0.00).
-
-2. Batch Price Payload Format:
-   When submitting brand option pricing updates, the frontend sends:
-   {
-     "prices": [
-       { "packageId": "pkg-basic-uuid",    "priceDelta": 50.00, "isComplimentary": false },
-       { "packageId": "pkg-standard-uuid", "priceDelta": 25.00, "isComplimentary": false },
-       { "packageId": "pkg-premium-uuid",  "priceDelta": 0.00,  "isComplimentary": true },
-       { "packageId": "pkg-luxury-uuid",   "priceDelta": 0.00,  "isComplimentary": true }
-     ]
-   }
+Component: `AdminPricingConfigManager.tsx`
+- Free vs Upgrade Toggle:
+  * When `isComplimentary` is true or `priceDelta === 0`: Shows "v Free" button.
+  * Clicking "v Free" switches into custom input (e.g. Rs.45).
+  * Clicking "x" resets back to "v Free" (0.00).
+- Batch Submission Contract:
+  PUT /api/admin/config/options/:optionId/price
+  Payload:
+  {
+    "prices": [
+      { "packageId": "pkg-1", "priceDelta": 45.00, "isComplimentary": false },
+      { "packageId": "pkg-2", "priceDelta": 20.00, "isComplimentary": false },
+      { "packageId": "pkg-3", "priceDelta": 0.00,  "isComplimentary": true },
+      { "packageId": "pkg-4", "priceDelta": 0.00,  "isComplimentary": true }
+    ]
+  }
 
 ================================================================================
-5. API ENDPOINTS & CONTRACT REFERENCE
+7. BACKEND API ENDPOINTS & CONTRACT REFERENCE
 ================================================================================
 
-Base URL: http://localhost:4000/api (or process.env.NEXT_PUBLIC_API_URL + '/api')
+Base URL: `http://localhost:4000/api`
 
-A. Calculator Endpoints:
-------------------------
-1. GET /api/calculator/config
-   - Returns packages, categories, default specifications, and active add-on rates.
-   - Use to bootstrap wizard state on initial load.
+1. GET `/api/calculator/config`
+   - Fetches active packages, specification categories, default brand options, and addon rates.
 
-2. POST /api/calculator/calculate
+2. POST `/api/calculator/calculate`
    - Request Body:
      {
        "packageId": "uuid",
        "dimensions": {
          "plotArea": 1200,
-         "floors": [
-           { "floorNumber": 0, "builtUpArea": 900 },
-           { "floorNumber": 1, "builtUpArea": 850 }
-         ],
+         "floors": [{ "floorNumber": 0, "builtUpArea": 900 }, { "floorNumber": 1, "builtUpArea": 850 }],
          "parkingArea": 200,
          "balconyArea": 100
        },
-       "customizations": [
-         { "categoryId": "uuid", "optionId": "uuid" }
-       ],
-       "addons": [
-         { "addonId": "uuid", "quantity": 1, "parameters": { "capacity": 6000 } }
-       ]
+       "customizations": [{ "categoryId": "uuid", "optionId": "uuid" }],
+       "addons": [{ "addonId": "uuid", "quantity": 1, "parameters": { "capacity": 6000 } }]
      }
-   - Response:
-     {
-       "success": true,
-       "data": {
-         "baseCost": 3723000,
-         "customizationsCost": 42500,
-         "addonsCost": 285000,
-         "subtotal": 4050500,
-         "taxAmount": 0,
-         "grandTotal": 4050500,
-         "milestones": [
-           { "stage": 1, "title": "Mobilization & Foundation", "percentage": 15, "amount": 607575 },
-           ...
-         ]
-       }
-     }
+   - Returns: `baseCost`, `customizationsCost`, `addonsCost`, `subtotal`, `grandTotal`, and `milestones`.
 
-3. POST /api/calculator/submit-lead
-   - Request Body:
-     {
-       "customerName": "Ramesh Kumar",
-       "phone": "9876543210",
-       "email": "ramesh@example.com",
-       "city": "Chennai",
-       "calculationState": { ...full calculate payload + results... }
-     }
-   - Response:
-     {
-       "success": true,
-       "data": {
-         "leadId": "lead-uuid",
-         "pdfUrl": "/api/admin/leads/lead-uuid/pdf"
-       }
-     }
+3. POST `/api/calculator/submit-lead`
+   - Submits customer lead with estimation state snapshot and generates downloadable PDF link.
 
-4. GET /api/calculator/catalog
-   - Returns full catalog grouped by specification category with all 4 tier prices.
+4. GET `/api/admin/config`
+   - Returns master packages, base rates, addons, and 4-tier brand specification matrix.
 
-B. Admin Configuration Endpoints:
----------------------------------
-1. GET /api/admin/config
-   - Requires Admin Auth Bearer token.
-   - Returns all master packages, base rates, addons, and brand specification matrix.
-
-2. PUT /api/admin/config/options/:optionId/price
-   - Updates all 4 package price deltas for a specific brand option.
-   - Request Body: { "prices": [ { "packageId": "...", "priceDelta": 0, "isComplimentary": true }, ... ] }
-
-3. POST /api/admin/config/options
-   - Creates a new brand option and its 4 package rate definitions simultaneously.
-
-4. DELETE /api/admin/config/options/:optionId
-   - Deletes brand option and associated price deltas.
+5. PUT `/api/admin/config/options/:optionId/price`
+   - Updates all 4 package price deltas for a brand option.
 
 ================================================================================
-6. COMPONENT & STYLING GUIDELINES
+8. STYLING, TOKENS & FORMATTING STANDARDS
 ================================================================================
 
-1. Currency Formatting:
-   - Always format INR figures using Indian numbering format:
-     const formatINR = (val: number) =>
-       new Intl.NumberFormat('en-IN', {
-         style: 'currency',
-         currency: 'INR',
-         maximumFractionDigits: 0
-       }).format(val);
-   - Examples: Rs.1,890 / sq.ft, Rs.45,50,000
+1. Currency Formatting (INR):
+   ```typescript
+   export const formatINR = (val: number): string =>
+     new Intl.NumberFormat('en-IN', {
+       style: 'currency',
+       currency: 'INR',
+       maximumFractionDigits: 0
+     }).format(val);
+   ```
 
-2. Responsive Design:
-   - Wizard steps must be 100% mobile-friendly with thumb-friendly radio cards.
-   - Sticky Bottom Bar on mobile to display current package, estimated total, and
-     "Continue / Download Estimate" call-to-action button.
-
-3. Color Scheme & Token Standards:
+2. Design Standards:
    - Primary Accent : Deep Indigo / Emerald / Slate tones
-   - Success / Free : Emerald Green (#10B981 / #059669)
-   - Backgrounds    : Clean card elevations, dark/light theme compatible
+   - Included Badge : Emerald Green (#10B981 / #059669)
+   - Upgrade Badge  : Blue / Indigo (#3B82F6 / #6366F1)
+   - Credit Badge   : Amber / Orange (#F59E0B)
 
 ================================================================================
-7. CHECKLIST FOR FRONTEND DEVELOPERS
+9. FRONTEND DEVELOPER ACTION CHECKLIST
 ================================================================================
 
-[ ] Pull latest commits from git origin/dev.
-[ ] Ensure Step 3 package card displays "Best Value" for the Premium Package.
-[ ] Ensure Step 1 displays the Car Parking microcopy note.
-[ ] Ensure Step 4 Brand options display "+Rs.X/sqft", "Included", or "-Rs.X/sqft".
-[ ] Ensure Step 5 displays the 11 Standard Exclusions & Client Scope cards.
-[ ] Verify Admin Pricing Manager allows toggling "Free" vs "Custom Delta" per tier.
-[ ] Test calculation output against backend /api/calculator/calculate.
-[ ] Test PDF download trigger from Step 5 estimate summary.
+[ ] Pull latest changes from `dev` branch (`git pull origin dev`).
+[ ] Verify Step 1 displays Car Parking area microcopy note.
+[ ] Verify Step 3 displays "Best Value" on Premium Package.
+[ ] Verify Step 4 renders "+Rs.X/sqft", "Included", or "-Rs.X/sqft" badges accurately.
+[ ] Verify Step 5 displays the 11 Standard Exclusions & Client Scope cards.
+[ ] Verify Admin Pricing Manager supports 4-tier Free/Upgrade toggle.
+[ ] Verify calculation matching against `/api/calculator/calculate`.
+[ ] Verify PDF generation and download from `/api/admin/leads/:id/pdf`.
 
 ================================================================================
-For technical support or schema clarifications, please reach out to the backend team.
+End of Guide.
 ================================================================================
