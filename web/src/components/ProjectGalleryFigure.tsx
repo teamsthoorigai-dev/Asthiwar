@@ -1,12 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import Image from 'next/image';
-import { Pause } from 'lucide-react';
+import Link from 'next/link';
+import { ArrowUpRight, ChevronLeft, ChevronRight } from 'lucide-react';
 import type { Project } from '@/data/site';
-
-/* Hold on a card and the images advance on their own; click to freeze one. */
-const ADVANCE_MS = 1500;
 
 export function ProjectGalleryFigure({
   project,
@@ -17,82 +15,103 @@ export function ProjectGalleryFigure({
 }) {
   const images = project.gallery?.length ? project.gallery : [project.image];
   const [index, setIndex] = useState(0);
-  const [active, setActive] = useState(false);
-  const [paused, setPaused] = useState(false);
 
-  useEffect(() => {
-    if (!active || paused || images.length < 2) return;
-
-    const timer = window.setInterval(() => {
-      setIndex((current) => (current + 1) % images.length);
-    }, ADVANCE_MS);
-
-    return () => window.clearInterval(timer);
-  }, [active, paused, images.length]);
-
-  const stop = () => {
-    setActive(false);
-    setPaused(false);
-    setIndex(0);
+  const handlePrev = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIndex((current) => (current - 1 + images.length) % images.length);
   };
 
-  /* Touch has no hover, so the first tap starts the run and the next one freezes it. */
-  const toggle = () => {
-    if (!active) {
-      setActive(true);
-      setPaused(false);
-      return;
-    }
-    setPaused((current) => !current);
+  const handleNext = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIndex((current) => (current + 1) % images.length);
   };
 
   return (
-    <figure
-      className="project-card__figure"
-      data-paused={paused || undefined}
-      onMouseEnter={() => setActive(true)}
-      onMouseLeave={stop}
-    >
-      {images.map((src, position) => (
-        <Image
-          key={`${src}-${position}`}
-          src={src}
-          alt={position === 0 ? project.imageAlt : ''}
-          width={1200}
-          height={900}
-          priority={priority && position === 0}
-          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-          className="project-card__frame"
-          data-visible={position === index || undefined}
-          aria-hidden={position === index ? undefined : true}
-        />
-      ))}
-
-      <button
-        type="button"
-        className="project-card__viewer"
-        onClick={toggle}
-        onFocus={() => setActive(true)}
-        onBlur={stop}
-        aria-label={
-          paused
-            ? `${project.title} — image ${index + 1} of ${images.length}, paused. Activate to resume.`
-            : `${project.title} — image ${index + 1} of ${images.length}. Activate to pause on this image.`
-        }
-      />
-
-      <span className="project-card__paused" aria-hidden="true">
-        <Pause size={12} />
-        Paused
-      </span>
+    <figure className="project-card__figure">
+      {project.hasPage ? (
+        <Link
+          href={`/projects/${project.slug}`}
+          className="project-card__figure-link"
+          aria-label={`View ${project.title}`}
+        >
+          {images.map((src, position) => (
+            <Image
+              key={`${src}-${position}`}
+              src={src}
+              alt={position === 0 ? project.imageAlt : ''}
+              width={1200}
+              height={900}
+              priority={priority && position === 0}
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+              className="project-card__frame"
+              data-visible={position === index || undefined}
+              aria-hidden={position === index ? undefined : true}
+            />
+          ))}
+        </Link>
+      ) : (
+        <div className="project-card__figure-link project-card__figure-link--static">
+          {images.map((src, position) => (
+            <Image
+              key={`${src}-${position}`}
+              src={src}
+              alt={position === 0 ? project.imageAlt : ''}
+              width={1200}
+              height={900}
+              priority={priority && position === 0}
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+              className="project-card__frame"
+              data-visible={position === index || undefined}
+              aria-hidden={position === index ? undefined : true}
+            />
+          ))}
+        </div>
+      )}
 
       {images.length > 1 ? (
-        <span className="project-card__dots" aria-hidden="true">
-          {images.map((src, position) => (
-            <span key={`${src}-${position}`} data-active={position === index || undefined} />
-          ))}
-        </span>
+        <>
+          <button
+            type="button"
+            className="project-gallery__arrow project-gallery__arrow--prev"
+            onClick={handlePrev}
+            aria-label={`Previous image of ${project.title}`}
+          >
+            <ChevronLeft size={20} aria-hidden="true" />
+          </button>
+
+          <button
+            type="button"
+            className="project-gallery__arrow project-gallery__arrow--next"
+            onClick={handleNext}
+            aria-label={`Next image of ${project.title}`}
+          >
+            <ChevronRight size={20} aria-hidden="true" />
+          </button>
+
+          <div className="project-card__dots" aria-label="Image indicators">
+            {images.map((src, position) => (
+              <button
+                key={`${src}-${position}`}
+                type="button"
+                className="project-card__dot"
+                data-active={position === index || undefined}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setIndex(position);
+                }}
+                aria-label={`Go to image ${position + 1} of ${images.length}`}
+              />
+            ))}
+          </div>
+        </>
       ) : null}
+
+      <span className="project-card__open" aria-hidden="true">
+        <ArrowUpRight size={19} />
+      </span>
 
       <figcaption>
         {project.status} · {project.year}
@@ -100,3 +119,4 @@ export function ProjectGalleryFigure({
     </figure>
   );
 }
+

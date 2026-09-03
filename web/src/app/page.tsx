@@ -1,8 +1,5 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
-import { ArrowUpRight } from 'lucide-react';
 import { JsonLd } from '@/components/JsonLd';
-import { HomeImageHero } from '@/components/HomeImageHero';
 import { HomeProjectsSection } from '@/components/HomeProjectsSection';
 import {
   EstimateSection,
@@ -26,7 +23,7 @@ export const metadata: Metadata = {
     url: '/',
     images: [
       {
-        url: '/images/hero.jpg',
+        url: '/images/sustainable.jpg',
         width: 1600,
         height: 1000,
         alt: 'ASTHIWAR Architecture & Construction',
@@ -44,7 +41,6 @@ export default function HomePage() {
       <JsonLd data={getFaqJsonLd(faqs)} />
       <SiteHeader />
       <main id="main-content">
-        <HomeImageHero />
         <SustainabilitySection />
         <EstimateSection />
         <HomeProjectsSection />

@@ -28,10 +28,20 @@
   --space-section: 60px; /* 60 top + 60 bottom = 120px between sections */
   --header-height: 4.5rem;
   --shell: 92rem;
+  /* Phones keep the tight gutter — see the tablet-and-up override below. */
   --gutter: clamp(1rem, 4vw, 4rem);
   --ease-state: cubic-bezier(0.25, 1, 0.5, 1);
   --ease-cinematic: cubic-bezier(0.16, 1, 0.3, 1);
   --menu-shadow: 0 18px 60px rgb(25 36 29 / 0.22);
+}
+
+/* Side margins from tablet up: 7.5vw, topping out at 120px. Scoped to >=48rem
+   on purpose — at 7.5vw a 375px phone would give up 24px of content width per
+   side, which the calculator's form fields cannot spare. */
+@media (min-width: 48rem) {
+  :root {
+    --gutter: clamp(2rem, 7.5vw, 7.5rem);
+  }
 }
 
 @theme inline {
@@ -389,6 +399,35 @@ summary:focus-visible {
   text-wrap: pretty;
 }
 
+/* Optical top alignment for the eyebrow / headline / body row.
+   Their boxes already start on the same line — measured spread is 0 — but each
+   carries a different amount of leading above its cap height, so the text read
+   as three different heights (2px on the 11px eyebrow, 8px on the 19px body,
+   12px on the 92px headline: a 10px spread). Pulling each up by its own
+   leading puts the cap-tops on one line.
+
+   The values are the leading-above-cap for each line-height ratio, in em, so
+   they hold at every clamp size: half-leading is (line-height - 1.3) / 2 plus
+   the font's own ascent-to-cap gap. Change a line-height and its offset here
+   has to change with it — see the .studio-process override below, which runs
+   1.03 instead of 0.95. */
+.section-heading > .eyebrow {
+  margin-top: -0.18em;
+}
+
+.section-heading h2 {
+  margin-top: -0.13em;
+}
+
+.section-heading__grid > p {
+  margin-top: -0.42em;
+}
+
+/* Breathing space above that now-level top line. */
+.section-heading {
+  padding-top: clamp(1rem, 2.5vw, 2.5rem);
+}
+
 .section-heading--light {
   border-bottom-color: oklch(0.9271 0.0081 98.9 / 0.2);
 }
@@ -645,6 +684,9 @@ summary:focus-visible {
   display: grid;
   column-gap: clamp(2rem, 4vw, 4rem);
   row-gap: clamp(2rem, 5vw, 3rem);
+  /* Divider between the call-to-action block and the footer columns, matching
+     the rule above the copyright line at the foot. */
+  border-top: 1px solid oklch(0.9271 0.0081 98.9 / 0.18);
   padding-block: 3.5rem;
 }
 
@@ -1808,24 +1850,79 @@ summary:focus-visible {
   transform: translateY(0);
 }
 
+.project-card__figure-link {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.project-gallery__arrow {
+  position: absolute;
+  z-index: 20;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 9999px;
+  background: rgba(18, 26, 21, 0.85);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: #fff;
+  border: 1.5px solid rgba(255, 255, 255, 0.35);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+  cursor: pointer;
+  opacity: 0.9;
+  transition:
+    opacity 200ms var(--ease-state),
+    background-color 200ms var(--ease-state),
+    border-color 200ms var(--ease-state),
+    transform 200ms var(--ease-state);
+}
+
+.project-gallery__arrow--prev {
+  left: 0.75rem;
+}
+
+.project-gallery__arrow--next {
+  right: 0.75rem;
+}
+
+.project-gallery__arrow:hover {
+  opacity: 1;
+  background: var(--oxide);
+  border-color: #fff;
+  transform: translateY(-50%) scale(1.1);
+}
+
 .project-card__dots {
   position: absolute;
-  z-index: 3;
+  z-index: 10;
   bottom: 0.9rem;
   left: 0.9rem;
   display: flex;
-  gap: 0.3rem;
-  pointer-events: none;
+  gap: 0.35rem;
 }
 
-.project-card__dots > span {
-  width: 1.2rem;
-  height: 2px;
-  background: oklch(0.9271 0.0081 98.9 / 0.42);
+.project-card__dots > button,
+.project-card__dots > span,
+.project-card__dot {
+  display: block;
+  padding: 0;
+  border: 0;
+  width: 1.25rem;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.45);
+  border-radius: 2px;
+  cursor: pointer;
   transition: background-color 220ms var(--ease-state);
 }
 
-.project-card__dots > span[data-active] {
+.project-card__dots > button[data-active],
+.project-card__dots > span[data-active],
+.project-card__dot[data-active] {
   background: var(--oxide);
 }
 
@@ -1958,22 +2055,31 @@ summary:focus-visible {
 
 .sustainability-band {
   overflow: clip;
-  padding-block: var(--space-section);
+  padding: 0;
+  margin: 0;
+  width: 100%;
   background: var(--forest);
   color: var(--paper);
 }
 
 .sustainability-band__frame {
-  display: grid;
-  gap: clamp(1rem, 1.5vw, 1.5rem);
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  width: 100%;
 }
 
 .sustainability-band__hero {
   position: relative;
-  min-height: clamp(38rem, 135vw, 46rem);
+  width: 100%;
+  min-height: clamp(38rem, 84svh, 50rem);
   overflow: hidden;
   background: var(--forest-deep);
   isolation: isolate;
+  display: flex;
+  align-items: flex-end;
 }
 
 .sustainability-band__hero-image {
@@ -1989,16 +2095,58 @@ summary:focus-visible {
   z-index: -1;
   inset: 0;
   background:
-    linear-gradient(90deg, rgb(16 25 19 / 0.82) 0%, rgb(16 25 19 / 0.55) 48%, transparent 82%),
+    linear-gradient(180deg, rgb(16 25 19 / 0.68) 0%, transparent 28%),
+    linear-gradient(90deg, rgb(16 25 19 / 0.85) 0%, rgb(16 25 19 / 0.55) 48%, transparent 82%),
     linear-gradient(0deg, rgb(16 25 19 / 0.48) 0%, transparent 42%);
 }
 
-.sustainability-band__copy {
+/* No `width: 100%` here. This element also carries `.shell`, and since both
+   are single-class selectors, whichever comes later in the file wins — this
+   one did, so it overrode the shell's constrained width and pinned the copy
+   flush to the viewport edge. Letting `.shell` win lines the copy up with the
+   header logo, which uses the same min(100% - gutter*2, shell) formula. */
+.sustainability-band__inner {
+  position: relative;
+  z-index: 1;
+  padding-block: calc(var(--header-height) + 2rem) clamp(3.5rem, 6svh, 5rem);
+}
+
+.sustainability-band__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem 1.75rem;
+  margin-top: clamp(1.5rem, 3vw, 2.25rem);
+}
+
+/* Hidden below 48rem: the caption already occupies the foot of the frame at
+   that width and the two collide. Scroll affordance is self-evident on touch. */
+.sustainability-band__scroll-cue {
+  display: none;
   position: absolute;
   z-index: 1;
-  right: clamp(1.25rem, 5vw, 5rem);
-  bottom: clamp(4rem, 8vw, 6rem);
-  left: clamp(1.25rem, 5vw, 5rem);
+  bottom: 1.75rem;
+  left: 50%;
+  align-items: center;
+  gap: 0.55rem;
+  color: oklch(0.9271 0.0081 98.9 / 0.72);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+@media (min-width: 48rem) {
+  .sustainability-band__scroll-cue {
+    display: flex;
+  }
+}
+
+.sustainability-band__copy {
+  position: relative;
+  z-index: 1;
   max-width: 46rem;
 }
 
@@ -2028,8 +2176,8 @@ summary:focus-visible {
 .sustainability-band__caption {
   position: absolute;
   z-index: 1;
-  right: clamp(1.25rem, 3vw, 3rem);
-  bottom: 1rem;
+  right: var(--gutter);
+  bottom: 1.25rem;
   color: oklch(0.9271 0.0081 98.9 / 0.68);
   font-size: 0.6rem;
   font-weight: 700;
@@ -2039,9 +2187,11 @@ summary:focus-visible {
 
 .sustainability-principles {
   overflow: hidden;
-  border-block: 1px solid rgb(25 36 29 / 0.34);
+  border: none;
   background: #c7c7c5;
   color: #111712;
+  width: 100%;
+  margin: 0;
 }
 
 .sustainability-principles:focus-visible {
@@ -2059,7 +2209,8 @@ summary:focus-visible {
 
 .sustainability-principles__group {
   display: grid;
-  flex: 0 0 clamp(52rem, 92vw, 92rem);
+  flex: 0 0 max(100vw, 64rem);
+  width: max(100vw, 64rem);
   grid-template-columns: repeat(4, minmax(0, 1fr));
   margin: 0;
   padding: 0;
@@ -2073,7 +2224,8 @@ summary:focus-visible {
   place-items: center;
   align-content: center;
   gap: 0.35rem;
-  border-inline-start: 1px solid rgb(25 36 29 / 0.34);
+  border: none;
+  border-inline-start: none;
   padding: 0.8rem 1rem 0.9rem;
   text-align: center;
 }
@@ -2091,12 +2243,28 @@ summary:focus-visible {
   object-fit: contain;
 }
 
+.sustainability-principles__icon svg {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  color: #111712;
+  transition: color 300ms var(--ease-state);
+}
+
+.sustainability-principles__group > li:hover svg,
+.sustainability-principles__group > li:hover .sustainability-principles__icon svg,
+.sustainability-principles__group > li:hover .sustainability-principles__label,
+.sustainability-principles__group > li:hover span {
+  color: #2e7d32 !important;
+}
+
 .sustainability-principles__label {
   display: grid;
   color: currentColor;
   font-size: clamp(0.82rem, 1vw, 0.96rem);
   font-weight: 500;
   line-height: 1.15;
+  transition: color 300ms var(--ease-state);
 }
 
 @media (hover: hover) {
@@ -2177,10 +2345,12 @@ summary:focus-visible {
 
 .estimate-field__label,
 .estimate-field__action {
-  /* Scales with the panel. At 1536 this is 21px, which puts
-     "CONSTRUCTION QUALITY" at half the panel width as the design has it;
-     the old flat 0.66rem left it at under a quarter. */
-  font-size: clamp(0.66rem, 1.47vw, 1.45rem);
+  /* Reduced 2026-09-03 at Sundar's request, in two steps from the original
+     clamp(0.66rem, 1.47vw, 1.45rem) — 22.6px at 1536, which read as headings
+     rather than field labels — via 0.95vw to 0.85vw, ~13px at 1536. The
+     right-hand values (SELECT / ENTER AREA) share this rule on purpose, so
+     both sides of each row stay the same size. */
+  font-size: clamp(0.66rem, 0.85vw, 0.88rem);
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -2250,7 +2420,10 @@ summary:focus-visible {
 .estimate-band__label {
   margin-top: 0.85rem;
   color: inherit;
-  font-size: clamp(0.62rem, 1.5vw, 1.48rem);
+  /* Brought down with the field labels above (was clamp(0.62rem, 1.5vw,
+     1.48rem) = 23px at 1536), but kept a step larger than them since it labels
+     the headline figure rather than a form row. */
+  font-size: clamp(0.62rem, 1.05vw, 1.05rem);
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -2517,6 +2690,11 @@ body.home-image-hero-active .home-social-dock {
   color: oklch(0.9271 0.0081 98.9 / 0.68);
 }
 
+.scope-note__copy > .button {
+  width: min(100%, 15rem);
+  justify-self: start;
+}
+
 .scope-note__visual {
   overflow: hidden;
   background: var(--carbon-raised);
@@ -2528,9 +2706,22 @@ body.home-image-hero-active .home-social-dock {
   object-fit: cover;
 }
 
+/* The headline runs to 92px here on a 0.95 line-height, so its descenders fall
+   below the text box and the space under it reads tighter than the heading's
+   padding suggests. Scoped to this section — `.section-heading` is shared by
+   ten places across five pages, and only this one was reported as cramped. */
+.about-duality .section-heading {
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.about-duality .section-heading h2 {
+  margin-bottom: clamp(1rem, 2vw, 2rem);
+}
+
 .about-duality__diagram {
   display: grid;
-  margin-top: 4rem;
+  margin-top: 120px;
   border: 1px solid oklch(0.9271 0.0081 98.9 / 0.18);
 }
 
@@ -2635,6 +2826,10 @@ body.home-image-hero-active .home-social-dock {
 .studio-process .section-heading h2 {
   letter-spacing: -0.025em;
   line-height: 1.03;
+  /* 0.08em more leading than the shared 0.95, so half of that again on top of
+     the -0.13em baseline offset. Keeps this headline's cap on the same line as
+     its eyebrow and body. */
+  margin-top: -0.17em;
 }
 
 /* Services */
@@ -4254,7 +4449,7 @@ body.home-image-hero-active .home-social-dock {
   }
 
   .sustainability-band__hero {
-    min-height: clamp(36rem, 44vw, 43rem);
+    min-height: clamp(38rem, 84svh, 50rem);
   }
 
   .sustainability-band__copy {
@@ -5036,6 +5231,10 @@ body.home-image-hero-active .home-social-dock {
   margin-bottom: 0.65rem;
 }
 
+.calculator-package-tagline {
+  margin-bottom: var(--space-control);
+}
+
 /* Sits on the card's top edge, half in and half out. Notion's pill geometry
    (fully rounded, ~12px, weight 600+); the oxide fill is the Squarespace rule —
    an accent used nowhere else in the row, so the eye lands on it first. */
@@ -5059,6 +5258,14 @@ body.home-image-hero-active .home-social-dock {
   text-transform: uppercase;
   white-space: nowrap;
   pointer-events: none;
+}
+
+.calculator-package-ribbon svg {
+  width: 0.7rem;
+  height: 0.7rem;
+  flex: 0 0 0.7rem;
+  fill: currentColor;
+  stroke: currentColor;
 }
 
 /* The recommended tier stays marked even before it is chosen — the elevation
@@ -5129,6 +5336,24 @@ body.home-image-hero-active .home-social-dock {
   font-weight: 700;
   letter-spacing: 0.09em;
   white-space: nowrap;
+}
+
+.calculator-addon-price {
+  color: #e3e1da;
+}
+
+.calculator-privacy-message {
+  display: inline-block;
+  padding: 0.5rem 0.75rem;
+  border-radius: 4px;
+  background: var(--oxide);
+  color: var(--forest-deep);
+  line-height: 1.35;
+}
+
+.calculator-privacy-emphasis {
+  color: inherit;
+  font-weight: 700;
 }
 
 

@@ -129,7 +129,11 @@ function HeroOverlay({
       </div>
 
       <div className="hero-overlay__stage shell" style={{ opacity: stageOpacity }}>
-        <div key={stage.index} className="hero-overlay__stage-copy">
+        <div
+          key={stage.index}
+          className="hero-overlay__stage-copy"
+          data-stage={stage.index}
+        >
           <p className="eyebrow eyebrow--light">
             {stage.index} / {stage.label}
           </p>

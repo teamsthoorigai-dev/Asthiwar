@@ -26,12 +26,6 @@ export default function CostCalculatorPage() {
         eyebrow="Cost planning / indicative only"
         title="A number is useful only when its assumptions stay visible."
         intro="Square-foot rates help with early planning, but they are not a substitute for site conditions, coordinated drawings, specifications, and an agreed scope."
-        meta={
-          <>
-            <span>Assumptions stay visible</span>
-            <span>Figures pending confirmation</span>
-          </>
-        }
       />
 
       <section

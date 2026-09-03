@@ -173,7 +173,10 @@ export function StepLeadCapture({
 
         <div className="flex items-center justify-center gap-2 pt-2 text-[11px] text-muted">
           <Shield size={14} className="text-emerald-600 dark:text-emerald-400" />
-          <span>Your information is strictly protected and never shared with 3rd parties.</span>
+          <span className="calculator-privacy-message">
+            <strong className="calculator-privacy-emphasis">Your information</strong> is strictly
+            protected and never shared with 3rd parties.
+          </span>
         </div>
       </form>
     </div>

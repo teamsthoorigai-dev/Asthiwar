@@ -88,7 +88,7 @@
 .copy {
   position: relative;
   z-index: 1;
-  width: min(100%, 47rem);
+  width: min(100%, 51rem);
   animation: copy-enter 900ms var(--ease-cinematic) 120ms both;
 }
 
@@ -98,7 +98,9 @@
 }
 
 .copy h1 {
-  max-width: 10.5ch;
+  /* The headline carries its own <br> breaks, so the box must not re-wrap
+     them. 10.5ch was sized for "Designing spaces." and cut the longer line. */
+  max-width: none;
   font-size: clamp(3rem, 7vw, 6rem);
   font-weight: 500;
   letter-spacing: -0.04em;

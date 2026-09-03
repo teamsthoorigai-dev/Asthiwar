@@ -33,8 +33,8 @@ export function HomeImageHero() {
     <section ref={sectionRef} className={styles.hero} aria-labelledby="home-hero-title">
       <Image
         className={styles.image}
-        src="/images/hero.jpg"
-        alt="A courtyard residence framed by concrete, stone, palms and a reflecting pool"
+        src="/images/sustainable.jpg"
+        alt="Earthen masonry and a perforated screen shown in direct sunlight"
         fill
         priority
         sizes="100vw"
@@ -76,21 +76,21 @@ export function HomeImageHero() {
 
       <div className={`shell ${styles.inner}`}>
         <div className={styles.copy}>
-          <p className={`eyebrow ${styles.eyebrow}`}>Design + Build / Coimbatore</p>
+          <p className={`eyebrow ${styles.eyebrow}`}>Sustainable by design</p>
           <h1 id="home-hero-title">
-            Designing spaces.
+            Comfort
             <br />
-            Building tomorrow.
+            designed in, before
+            <br />
+            energy is spent.
           </h1>
           <p className={styles.intro}>
-            Thoughtful architecture, precise engineering and sustainable design-build solutions.
+            Natural cooling, lower-carbon material choices, and healthier spaces are considered
+            before mechanical energy is added.
           </p>
           <div className={styles.actions}>
-            <Link href="/projects" className="button button--light">
-              View projects <ArrowUpRight size={15} aria-hidden="true" />
-            </Link>
             <Link href="/cost-calculator" className="button button--outline-light">
-              Cost calculator
+              Cost calculator <ArrowUpRight size={15} aria-hidden="true" />
             </Link>
           </div>
         </div>

@@ -161,7 +161,7 @@ export function SiteFooter({ cta = 'design' }: { cta?: 'design' | 'land' | 'none
   const isLandInvitation = cta === 'land';
 
   return (
-    <footer className="site-footer">
+    <footer className={`site-footer${cta === 'none' ? ' site-footer--without-cta' : ''}`}>
       {cta === 'none' ? null : (
         <div className="site-footer__cta shell">
           <p className="eyebrow eyebrow--light">

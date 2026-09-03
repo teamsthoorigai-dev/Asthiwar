@@ -75,23 +75,39 @@ export default function ServicesPage() {
                     </ol>
                   </div>
                   {related ? (
-                    <Link
-                      href={`/projects/${related.slug}`}
-                      className="service-detail__project"
-                    >
-                      <Image
-                        src={related.image}
-                        alt=""
-                        width={640}
-                        height={420}
-                        sizes="(max-width: 768px) 100vw, 320px"
-                      />
-                      <span>
-                        Related work
-                        <strong>{related.title}</strong>
-                      </span>
-                      <ArrowUpRight size={18} aria-hidden="true" />
-                    </Link>
+                    related.hasPage ? (
+                      <Link
+                        href={`/projects/${related.slug}`}
+                        className="service-detail__project"
+                      >
+                        <Image
+                          src={related.image}
+                          alt=""
+                          width={640}
+                          height={420}
+                          sizes="(max-width: 768px) 100vw, 320px"
+                        />
+                        <span>
+                          Related work
+                          <strong>{related.title}</strong>
+                        </span>
+                        <ArrowUpRight size={18} aria-hidden="true" />
+                      </Link>
+                    ) : (
+                      <div className="service-detail__project service-detail__project--static">
+                        <Image
+                          src={related.image}
+                          alt=""
+                          width={640}
+                          height={420}
+                          sizes="(max-width: 768px) 100vw, 320px"
+                        />
+                        <span>
+                          Related work
+                          <strong>{related.title}</strong>
+                        </span>
+                      </div>
+                    )
                   ) : null}
                 </article>
               );

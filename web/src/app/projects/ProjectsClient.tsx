@@ -6,7 +6,7 @@ import { FieldRecordSequence } from '@/components/FieldRecordSequence';
 import { ProjectCard } from '@/components/ProjectCard';
 import { SiteLayout } from '@/components/SiteShell';
 import { projects } from '@/data/site';
-
+import { ArrowUpRight } from 'lucide-react';
 const projectFilters = [
   'All',
   'Residential',
@@ -28,15 +28,14 @@ export function ProjectsClient() {
   return (
     <SiteLayout footerCta="land">
       <FieldRecordSequence
-        eyebrow="ASTHIWAR / Projects"
+        eyebrow="Projects"
         title="Projects"
         intro="A collection of spaces shaped by context, material and intent."
         cue="Scroll to the archive"
         actions={
           <>
-           
             <Link href="/cost-calculator" className="button button--outline-light">
-              Cost calculator
+              Cost calculator <ArrowUpRight size={15} aria-hidden="true" />
             </Link>
           </>
         }

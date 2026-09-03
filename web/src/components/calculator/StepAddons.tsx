@@ -193,7 +193,7 @@ export function StepAddons({
                           </span>
                           <span>{v.variantName}</span>
                         </span>
-                        <span className="tabular-nums whitespace-nowrap">
+                        <span className="calculator-addon-price tabular-nums whitespace-nowrap">
                           {price > 0 ? `₹${price.toLocaleString('en-IN')}` : 'Custom Quote'}
                         </span>
                       </button>

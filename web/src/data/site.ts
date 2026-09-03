@@ -23,12 +23,14 @@ export type Project = {
   approach: string;
   materials: string[];
   timeline: Array<{ phase: string; duration: string; note: string }>;
+  hasPage?: boolean;
 };
 
 export const projects: Project[] = [
   {
     slug: 'courtyard-residence',
     title: 'Project 01',
+    hasPage: false,
     location: 'Location to be confirmed',
     type: 'To be confirmed',
     category: 'To be confirmed',
@@ -61,6 +63,7 @@ export const projects: Project[] = [
   {
     slug: 'jaali-house',
     title: 'Project 02',
+    hasPage: true,
     location: 'Location to be confirmed',
     type: 'To be confirmed',
     category: 'To be confirmed',
@@ -93,6 +96,7 @@ export const projects: Project[] = [
   {
     slug: 'lime-plaster-apartment',
     title: 'Project 03',
+    hasPage: false,
     location: 'Location to be confirmed',
     type: 'To be confirmed',
     category: 'To be confirmed',
@@ -125,6 +129,7 @@ export const projects: Project[] = [
   {
     slug: 'workshop-office',
     title: 'Project 04',
+    hasPage: false,
     location: 'Location to be confirmed',
     type: 'To be confirmed',
     category: 'To be confirmed',

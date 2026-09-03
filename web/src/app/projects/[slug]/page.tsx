@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Image from 'next/image';
 import Link from 'next/link';
+import { notFound } from 'next/navigation';
 import { ArrowLeft, ArrowUpRight } from 'lucide-react';
 import { JsonLd } from '@/components/JsonLd';
 import { PageHero } from '@/components/PageHero';
@@ -10,9 +11,11 @@ import { projects } from '@/data/site';
 import { getProjectJsonLd } from '@/lib/jsonld';
 
 export function generateStaticParams() {
-  return projects.map((project) => ({
-    slug: project.slug,
-  }));
+  return projects
+    .filter((project) => project.hasPage)
+    .map((project) => ({
+      slug: project.slug,
+    }));
 }
 
 export async function generateMetadata({
@@ -22,7 +25,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   const project = projects.find((item) => item.slug === slug);
-  if (!project) {
+  if (!project || !project.hasPage) {
     return {
       title: 'Project Not Found',
     };
@@ -64,20 +67,8 @@ export default async function ProjectDetailPage({
   const { slug } = await params;
   const project = projects.find((item) => item.slug === slug);
 
-  if (!project) {
-    return (
-      <SiteLayout>
-        <PageHero
-          eyebrow="Project record not found"
-          title="This project is not in the current archive."
-          intro="Return to the projects page to explore the available ASTHIWAR project records."
-        >
-          <Link href="/projects" className="button button--light page-hero__action">
-            <ArrowLeft size={16} aria-hidden="true" /> Back to projects
-          </Link>
-        </PageHero>
-      </SiteLayout>
-    );
+  if (!project || !project.hasPage) {
+    notFound();
   }
 
   const related = projects.filter((item) => item.slug !== project.slug).slice(0, 2);

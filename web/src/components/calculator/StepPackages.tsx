@@ -105,6 +105,16 @@ export function StepPackages({
             <div key={pkg.id} className="calculator-package-slot">
               <div
                 onClick={() => onChange({ packageSlug: pkg.slug as PackageSlug })}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    onChange({ packageSlug: pkg.slug as PackageSlug });
+                  }
+                }}
+                role="button"
+                tabIndex={0}
+                aria-label={`Select ${pkg.name}`}
+                aria-pressed={isSelected}
                 data-selected={isSelected || undefined}
                 className={`calculator-choice calculator-choice--package package-card p-5 rounded-lg border cursor-pointer transition-all flex flex-col justify-between h-full ${
                   isSelected
@@ -119,6 +129,7 @@ export function StepPackages({
                   <span className="calculator-package-ribbon">
                     <Star size={11} strokeWidth={3} aria-hidden="true" />
                     Most Popular
+                    <Star size={11} strokeWidth={3} aria-hidden="true" />
                   </span>
                 )}
 
@@ -134,11 +145,13 @@ export function StepPackages({
 
                   <h3 className="text-base font-bold mb-2">{pkg.name}</h3>
 
-                  <p className="text-xs text-muted font-medium mb-4">{pkg.tagline}</p>
+                  <p className="calculator-package-tagline text-xs text-muted font-medium">
+                    {pkg.tagline}
+                  </p>
 
                   {/* Rate Display */}
                   <div className="calculator-choice__inset p-3 rounded border border-border bg-background mb-4">
-                    <div className="flex items-baseline gap-1">
+                    <div className="flex items-baseline justify-center gap-1">
                       <span className="text-xs text-muted">₹</span>
                       <span className="text-2xl font-bold tabular-nums">
                         {rate.toLocaleString('en-IN')}
@@ -166,15 +179,6 @@ export function StepPackages({
                     ))}
                   </ul>
                 </div>
-
-                <button
-                  type="button"
-                  className={`button calculator-package-select w-full text-xs py-2 ${
-                    isSelected ? 'button--solid' : 'button--ghost'
-                  }`}
-                >
-                  {isSelected ? 'Selected Tier' : 'Select Package'}
-                </button>
               </div>
             </div>
           );

@@ -58,12 +58,14 @@ export default function sitemap(): MetadataRoute.Sitemap {
     },
   ];
 
-  const projectRoutes: MetadataRoute.Sitemap = projects.map((project) => ({
-    url: `${baseUrl}/projects/${project.slug}`,
-    lastModified: now,
-    changeFrequency: 'monthly',
-    priority: 0.8,
-  }));
+  const projectRoutes: MetadataRoute.Sitemap = projects
+    .filter((project) => project.hasPage)
+    .map((project) => ({
+      url: `${baseUrl}/projects/${project.slug}`,
+      lastModified: now,
+      changeFrequency: 'monthly',
+      priority: 0.8,
+    }));
 
   return [...staticRoutes, ...projectRoutes];
 }
