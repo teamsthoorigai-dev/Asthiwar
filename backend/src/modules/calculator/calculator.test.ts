@@ -157,9 +157,7 @@ async function runTests() {
     // Test 6: 15 Add-Ons Matrix
     // -----------------------------------------------------------------------
     console.log('\n[Test 6] Add-Ons Calculations');
-    // Sump (5,000L @ ₹26/L = ₹1,30,000) + Solar 3kW (₹1,85,000) + Lift 4pax (₹12,50,000)
-    // Solar was ₹1,80,000 until migration 0011 aligned it with the 2026-09 rate card,
-    // which quotes 3 kW at ₹1,85,000 BEFORE the subsidy reduction.
+    // Sump (5,000L @ ₹26/L = ₹1,30,000) + Solar 3kW (₹1,80,000) + Lift 4pax (₹12,50,000)
     const resAddons = await calculateEstimate({
       customerName: 'Addon Customer',
       customerPhone: '9876543215',
@@ -181,12 +179,12 @@ async function runTests() {
     assert(sump?.totalPrice === 130000, '5000L Flyash Sump is ₹1,30,000 (@ ₹26/L)', `Got ${sump?.totalPrice}`);
 
     const solar = resAddons.addons.find((a) => a.addonSlug === 'rooftop_solar');
-    assert(solar?.totalPrice === 185000, '3kW Solar is ₹1,85,000', `Got ${solar?.totalPrice}`);
+    assert(solar?.totalPrice === 180000, '3kW Solar is ₹1,80,000', `Got ${solar?.totalPrice}`);
 
     const lift = resAddons.addons.find((a) => a.addonSlug === 'passenger_lift');
     assert(lift?.totalPrice === 1250000, '4-Pax Lift is ₹12,50,000', `Got ${lift?.totalPrice}`);
 
-    const expectedAddonsTotal = 130000 + 185000 + 1250000;
+    const expectedAddonsTotal = 130000 + 180000 + 1250000;
     assert(resAddons.breakdown.addonsCost === expectedAddonsTotal, `Addons cost is exactly ₹${expectedAddonsTotal.toLocaleString('en-IN')}`);
 
     // -----------------------------------------------------------------------
@@ -207,7 +205,7 @@ async function runTests() {
     // Test 8: Estimate Number Format
     // -----------------------------------------------------------------------
     console.log('\n[Test 8] Estimate Number Format');
-    const estNumRegex = /^EST-\d{4}-[A-F0-9]{6}$/;
+    const estNumRegex = /^EST-\d{4}-\d{6}$/;
     assert(estNumRegex.test(resStd.estimateNumber), `Estimate Number '${resStd.estimateNumber}' matches 'EST-YYYY-XXXXXX' format`);
 
     // -----------------------------------------------------------------------

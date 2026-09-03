@@ -1,5 +1,4 @@
 import { Request, Response, NextFunction } from 'express';
-import { getValidatedQuery } from '../../middleware/validate.js';
 import {
   getAdminEnquiries,
   getAdminEnquiryById,
@@ -23,7 +22,7 @@ import {
 
 export async function getEnquiriesController(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const query = getValidatedQuery<EnquiriesQuery>(res) || (req.query as unknown as EnquiriesQuery);
+    const query = req.query as unknown as EnquiriesQuery;
     const result = await getAdminEnquiries(query);
     res.json({
       success: true,
@@ -83,7 +82,7 @@ export async function updateEnquiryController(req: Request, res: Response, next:
 
 export async function getEstimatesController(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const query = getValidatedQuery<EstimatesQuery>(res) || (req.query as unknown as EstimatesQuery);
+    const query = req.query as unknown as EstimatesQuery;
     const result = await getAdminEstimates(query);
     res.json({
       success: true,

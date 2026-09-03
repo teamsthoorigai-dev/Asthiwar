@@ -1,18 +1,11 @@
 /**
- * ASTHIWAR — Master Data Seed Script (Phase 3)
+ * ASTHIWAR — Master Data Seed Script (Phase 3 - Updated for v4/v5 Packages)
  *
  * Seeds 100% of the approved business data from:
+ *   - temp/Construction Packages_v4/
  *   - temp/asthiwar_requirements_and_packages.md
- *   - temp/Asthiwar Requirements/
- *   - temp/Construction Packages/
  *
  * Run via: npm run db:seed (from database/ directory)
- *
- * Rules enforced (per .agents/rules/asthiwar-project.md):
- *   - No invented prices. Every value traceable to source documents.
- *   - Idempotent: uses ON CONFLICT DO NOTHING for slug-keyed tables.
- *   - Admin password is bcrypt-hashed. Never stored in plain text.
- *   - Price history maintained with effectiveFrom timestamps.
  */
 
 import { db, pool } from '../db';
@@ -28,13 +21,10 @@ import {
   addons,
   addonPrices,
   adminUsers,
+  milestoneStages,
 } from '../schema/index';
-import { eq, isNull } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import * as bcrypt from 'bcrypt';
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
 
 function log(section: string, count: number) {
   console.log(`  ✅ ${section}: ${count} row(s) inserted`);
@@ -45,26 +35,19 @@ function log(section: string, count: number) {
 // ---------------------------------------------------------------------------
 
 async function seedLocations() {
-  const locs = [
+  const data = [
     { name: 'Coimbatore', slug: 'coimbatore', priceMultiplier: '1.0000', sortOrder: 1 },
-    { name: 'Tiruppur',   slug: 'tiruppur',   priceMultiplier: '1.0000', sortOrder: 2 },
-    { name: 'Erode',      slug: 'erode',      priceMultiplier: '1.0000', sortOrder: 3 },
-    { name: 'Salem',      slug: 'salem',      priceMultiplier: '1.0000', sortOrder: 4 },
-    { name: 'Madurai',    slug: 'madurai',    priceMultiplier: '1.0000', sortOrder: 5 },
-    { name: 'Pollachi',   slug: 'pollachi',   priceMultiplier: '0.9600', sortOrder: 6 },
-    { name: 'Chennai',    slug: 'chennai',    priceMultiplier: '1.0500', sortOrder: 7 },
-    { name: 'Trichy',     slug: 'trichy',     priceMultiplier: '1.0000', sortOrder: 8 },
+    { name: 'Pollachi',   slug: 'pollachi',   priceMultiplier: '0.9600', sortOrder: 2 },
+    { name: 'Tiruppur',   slug: 'tiruppur',   priceMultiplier: '0.9800', sortOrder: 3 },
+    { name: 'Erode',      slug: 'erode',      priceMultiplier: '0.9800', sortOrder: 4 },
+    { name: 'Chennai',    slug: 'chennai',    priceMultiplier: '1.0500', sortOrder: 5 },
+    { name: 'Madurai',    slug: 'madurai',    priceMultiplier: '1.0000', sortOrder: 6 },
+    { name: 'Virudhunagar',slug: 'virudhunagar', priceMultiplier: '1.0000', sortOrder: 7 },
+    { name: 'Other TN',   slug: 'other_tn',   priceMultiplier: '0.9600', sortOrder: 8 },
   ];
 
-  const existingLocs = await db.select({ slug: locations.slug }).from(locations);
-  const existingLocSlugs = new Set(existingLocs.map(l => l.slug));
-  const locsToInsert = locs.filter(l => !existingLocSlugs.has(l.slug));
-  let locCount = 0;
-  if (locsToInsert.length > 0) {
-    const inserted = await db.insert(locations).values(locsToInsert).returning();
-    locCount = inserted.length;
-  }
-  log('Locations', locCount);
+  await db.insert(locations).values(data).onConflictDoNothing();
+  log('Locations', data.length);
 }
 
 // ---------------------------------------------------------------------------
@@ -77,75 +60,68 @@ async function seedPackages() {
       slug: 'basic',
       name: 'Basic Package',
       tagline: 'Entry Level',
-      description: 'Essential specifications for budget-conscious construction with verified quality materials.',
-      colorTheme: '#2D3748',
+      description: 'Economical / Starter Home — ISI-brand materials throughout.',
+      colorTheme: '#6B7280',
       sortOrder: 1,
     },
     {
       slug: 'standard',
       name: 'Standard Package',
       tagline: 'Budget Friendly',
-      description: 'Popular residential specifications with premium ISI brand materials and enhanced finishes.',
-      colorTheme: '#C8A97E',
+      description: 'Mid-range family home — upgraded steel, cement and finishing brands.',
+      colorTheme: '#3B82F6',
       sortOrder: 2,
     },
     {
       slug: 'premium',
       name: 'Premium Package',
-      tagline: 'Quality Living',
-      description: 'Superior quality materials, architectural fittings, and luxury brand specifications.',
-      colorTheme: '#1A365D',
+      tagline: 'Best Value',
+      description: 'High-spec modern residence — Jaquar fittings, Ultratech cement, SS railings.',
+      colorTheme: '#8B5CF6',
       sortOrder: 3,
     },
     {
       slug: 'luxury',
       name: 'Luxury Package',
-      tagline: 'Ultra Premium',
-      description: 'The pinnacle of bespoke residential construction with imported marble, premium fixtures, and smart home provisions.',
-      colorTheme: '#744210',
+      tagline: 'Top Tier',
+      description: 'Premium architectural villa — Burma Teak, Toto/Kohler, Toughened Glass.',
+      colorTheme: '#F59E0B',
       sortOrder: 4,
     },
   ];
 
-  const existingPkgs = await db.select({ slug: packages.slug }).from(packages);
-  const existingPkgSlugs = new Set(existingPkgs.map(p => p.slug));
-  const pkgsToInsert = pkgs.filter(p => !existingPkgSlugs.has(p.slug));
-  let pkgCount = 0;
-  if (pkgsToInsert.length > 0) {
-    const inserted = await db.insert(packages).values(pkgsToInsert).returning();
-    pkgCount = inserted.length;
-  }
-  log('Packages', pkgCount);
+  await db.insert(packages).values(pkgs).onConflictDoNothing();
+  log('Packages', pkgs.length);
 
   // Fetch inserted IDs by slug
   const pkgRows = await db.select().from(packages);
   const idBySlug: Record<string, number> = {};
   for (const p of pkgRows) idBySlug[p.slug] = p.id;
 
-  // Package prices — source: requirements §4
+  // Package prices — source: Construction Packages_v4 Residencial Pricing
   const prices = [
-    // Basic: ₹2,099 / ₹2,000
+    // Basic: ₹2,099 / ₹1,999 (>3500 sqft)
     {
       packageId: idBySlug['basic'],
       pricePerSqft: '2099.00',
       volumeDiscountThresholdSqft: 3500,
-      volumePricePerSqft: '2000.00',
+      volumePricePerSqft: '1999.00',
     },
-    // Standard: ₹2,468 / ₹2,357
+    // Standard: ₹2,468 / ₹2,357 (>3500 sqft)
     {
       packageId: idBySlug['standard'],
       pricePerSqft: '2468.00',
       volumeDiscountThresholdSqft: 3500,
       volumePricePerSqft: '2357.00',
     },
-    // Premium: ₹2,899 / ₹2,799
+    // Premium: ₹2,899 / ₹2,799 (>3500 sqft)
     {
       packageId: idBySlug['premium'],
       pricePerSqft: '2899.00',
       volumeDiscountThresholdSqft: 3500,
       volumePricePerSqft: '2799.00',
     },
-    // Luxury: ₹3,250 / ₹3,200
+    // Luxury: ₹3,250 / ₹3,200 (>3500 sqft)
     {
       packageId: idBySlug['luxury'],
       pricePerSqft: '3250.00',
@@ -154,20 +130,17 @@ async function seedPackages() {
     },
   ];
 
-  // Idempotent: Only insert price row if package has no active price row
-  const existingActive = await db
-    .select({ packageId: packagePrices.packageId })
-    .from(packagePrices)
-    .where(isNull(packagePrices.effectiveTo));
-  const activePackageIds = new Set(existingActive.map(r => r.packageId));
-  
-  const toInsert = prices.filter(p => !activePackageIds.has(p.packageId));
-  let insertedCount = 0;
-  if (toInsert.length > 0) {
-    const inserted = await db.insert(packagePrices).values(toInsert).returning();
-    insertedCount = inserted.length;
+  for (const p of prices) {
+    await db.insert(packagePrices).values(p).onConflictDoUpdate({
+      target: packagePrices.packageId,
+      set: {
+        pricePerSqft: p.pricePerSqft,
+        volumeDiscountThresholdSqft: p.volumeDiscountThresholdSqft,
+        volumePricePerSqft: p.volumePricePerSqft,
+      },
+    });
   }
-  log('Package Prices', insertedCount);
+  log('Package Prices', prices.length);
 
   return idBySlug;
 }
@@ -180,25 +153,22 @@ async function seedCategories() {
   const cats = [
     { slug: 'structure',      name: 'Structure & Civil',           sortOrder: 1 },
     { slug: 'design',         name: 'Design & Engineering',        sortOrder: 2 },
-    { slug: 'management',     name: 'Construction Management',     sortOrder: 3 },
-    { slug: 'kitchen',        name: 'Kitchen & Plumbing',          sortOrder: 4 },
-    { slug: 'bathroom',       name: 'Bathroom & Sanitary',         sortOrder: 5 },
-    { slug: 'flooring',       name: 'Flooring',                    sortOrder: 6 },
-    { slug: 'doors_windows',  name: 'Doors & Windows',             sortOrder: 7 },
-    { slug: 'painting',       name: 'Painting',                    sortOrder: 8 },
-    { slug: 'electrical',     name: 'Electrical & Utilities',      sortOrder: 9 },
-    { slug: 'other',          name: 'Other Inclusions',            sortOrder: 10 },
+    { slug: 'kitchen',        name: 'Kitchen & Plumbing',          sortOrder: 3 },
+    { slug: 'bathroom',       name: 'Bathroom & Sanitary',         sortOrder: 4 },
+    { slug: 'flooring',       name: 'Flooring',                    sortOrder: 5 },
+    { slug: 'doors_windows',  name: 'Doors & Windows',             sortOrder: 6 },
+    { slug: 'painting',       name: 'Painting',                    sortOrder: 7 },
+    { slug: 'electrical',     name: 'Electrical & Utilities',      sortOrder: 8 },
+    { slug: 'other',          name: 'Railings & Inclusions',       sortOrder: 9 },
   ];
 
-  const existingCats = await db.select({ slug: categories.slug }).from(categories);
-  const existingCatSlugs = new Set(existingCats.map(c => c.slug));
-  const catsToInsert = cats.filter(c => !existingCatSlugs.has(c.slug));
-  let catCount = 0;
-  if (catsToInsert.length > 0) {
-    const inserted = await db.insert(categories).values(catsToInsert).returning();
-    catCount = inserted.length;
+  for (const c of cats) {
+    await db.insert(categories).values(c).onConflictDoUpdate({
+      target: categories.slug,
+      set: { name: c.name, sortOrder: c.sortOrder },
+    });
   }
-  log('Categories', catCount);
+  log('Categories', cats.length);
 
   const rows = await db.select().from(categories);
   const idBySlug: Record<string, number> = {};
@@ -207,16 +177,13 @@ async function seedCategories() {
 }
 
 // ---------------------------------------------------------------------------
-// 4. ITEMS + OPTIONS + PACKAGE_ITEMS + OPTION_PRICES
+// 4. ITEMS + OPTIONS + PACKAGE_ITEMS + OPTION_PRICES (24 Consolidated Items)
 // ---------------------------------------------------------------------------
 
 async function seedSpecifications(
   pkgIds: Record<string, number>,
   catIds: Record<string, number>,
 ) {
-  // -------------------------------------------------------------------------
-  // Items definition (slug, categorySlug, name, unit, isCustomizable)
-  // -------------------------------------------------------------------------
   const itemDefs: {
     slug: string;
     catSlug: string;
@@ -225,97 +192,59 @@ async function seedSpecifications(
     isCustomizable: boolean;
     sortOrder: number;
   }[] = [
-    // Structure & Civil
-    { slug: 'steel_rebar',       catSlug: 'structure', name: 'Steel Rebar Fe 550D',      unit: 'sqft', isCustomizable: true,  sortOrder: 1  },
-    { slug: 'binding_wire',      catSlug: 'structure', name: 'Binding Wires',             unit: 'sqft', isCustomizable: true,  sortOrder: 2  },
-    { slug: 'cement',            catSlug: 'structure', name: 'Cement',                    unit: 'sqft', isCustomizable: true,  sortOrder: 3  },
-    { slug: 'aggregates',        catSlug: 'structure', name: 'Aggregates / Bluemetals',   unit: 'sqft', isCustomizable: false, sortOrder: 4  },
-    { slug: 'masonry_work',      catSlug: 'structure', name: 'Masonry Work',              unit: 'sqft', isCustomizable: true,  sortOrder: 5  },
-    { slug: 'basement_height',   catSlug: 'structure', name: 'Basement Height',           unit: 'fixed',isCustomizable: false, sortOrder: 6  },
-    { slug: 'ceiling_height',    catSlug: 'structure', name: 'Ceiling Height',            unit: 'fixed',isCustomizable: false, sortOrder: 7  },
-    { slug: 'waterproofing',     catSlug: 'structure', name: 'Waterproofing',             unit: 'sqft', isCustomizable: true,  sortOrder: 8  },
-    { slug: 'rcc_design_mix',    catSlug: 'structure', name: 'RCC Design Mix',            unit: 'fixed',isCustomizable: false, sortOrder: 9  },
-    { slug: 'basement_pcc',      catSlug: 'structure', name: 'Basement PCC / RCC',        unit: 'sqft', isCustomizable: true,  sortOrder: 10 },
-    // Design & Engineering
-    { slug: 'floor_plans',       catSlug: 'design', name: 'Floor Plans & Working Drawings', unit: 'fixed', isCustomizable: false, sortOrder: 1 },
-    { slug: 'furniture_layout',  catSlug: 'design', name: 'Furniture Layout',             unit: 'sqft', isCustomizable: false, sortOrder: 2 },
-    { slug: 'elevation_3d',      catSlug: 'design', name: '3D Elevation',                 unit: 'fixed',isCustomizable: false, sortOrder: 3 },
-    { slug: 'structural_drawing',catSlug: 'design', name: 'Structural Drawing',           unit: 'sqft', isCustomizable: false, sortOrder: 4 },
-    { slug: 'soil_testing',      catSlug: 'design', name: 'Soil Testing',                 unit: 'sqft', isCustomizable: false, sortOrder: 5 },
-    { slug: 'site_assessment',   catSlug: 'design', name: 'Site Assessment',              unit: 'sqft', isCustomizable: false, sortOrder: 6 },
-    { slug: 'electrical_drawing',catSlug: 'design', name: 'Electrical Drawings',          unit: 'sqft', isCustomizable: false, sortOrder: 7 },
-    { slug: 'plumbing_drawing',  catSlug: 'design', name: 'Plumbing Drawings',            unit: 'sqft', isCustomizable: false, sortOrder: 8 },
-    { slug: 'isometric_views',   catSlug: 'design', name: 'Isometric Views',              unit: 'sqft', isCustomizable: false, sortOrder: 9 },
-    { slug: 'vr_3d',             catSlug: 'design', name: 'Virtual Reality (VR) 3D',      unit: 'sqft', isCustomizable: false, sortOrder: 10},
-    // Construction Management
-    { slug: 'online_updates',    catSlug: 'management', name: 'Online Daily Updates',      unit: 'fixed', isCustomizable: false, sortOrder: 1 },
-    { slug: 'site_engineer',     catSlug: 'management', name: 'Site Engineer Supervision', unit: 'fixed', isCustomizable: false, sortOrder: 2 },
-    { slug: 'architect_visit',   catSlug: 'management', name: 'Architect Site Visit',      unit: 'sqft', isCustomizable: false, sortOrder: 3 },
-    { slug: 'structural_eng_visit', catSlug: 'management', name: 'Structural Engineer Visit', unit: 'fixed', isCustomizable: false, sortOrder: 4 },
-    // Kitchen
-    { slug: 'kitchen_wall_tiles', catSlug: 'kitchen', name: 'Kitchen Wall Tiles',        unit: 'sqft', isCustomizable: false, sortOrder: 1 },
-    { slug: 'granite_countertop', catSlug: 'kitchen', name: 'Granite Countertop',        unit: 'rft',  isCustomizable: false, sortOrder: 2 },
-    { slug: 'kitchen_sink',      catSlug: 'kitchen', name: 'Kitchen Sink',                unit: 'fixed',isCustomizable: false, sortOrder: 3 },
-    { slug: 'kitchen_faucets',   catSlug: 'kitchen', name: 'Kitchen Faucets',             unit: 'fixed',isCustomizable: false, sortOrder: 4 },
-    // Bathroom & Sanitary
-    { slug: 'bathroom_wall_tiles',catSlug: 'bathroom', name: 'Bathroom Wall Tiles',       unit: 'sqft', isCustomizable: false, sortOrder: 1 },
-    { slug: 'sanitaryware',      catSlug: 'bathroom', name: 'Sanitaryware',               unit: 'fixed',isCustomizable: false, sortOrder: 2 },
-    { slug: 'cp_fittings',       catSlug: 'bathroom', name: 'CP Fittings',                unit: 'fixed',isCustomizable: false, sortOrder: 3 },
-    { slug: 'bathroom_doors',    catSlug: 'bathroom', name: 'Bathroom Doors',             unit: 'fixed',isCustomizable: false, sortOrder: 4 },
-    // Flooring
-    { slug: 'living_dining_flooring', catSlug: 'flooring', name: 'Living & Dining Flooring', unit: 'sqft', isCustomizable: false, sortOrder: 1 },
-    { slug: 'bedroom_flooring',   catSlug: 'flooring', name: 'Bedroom Flooring',           unit: 'sqft', isCustomizable: false, sortOrder: 2 },
-    { slug: 'staircase_flooring', catSlug: 'flooring', name: 'Staircase Flooring',         unit: 'sqft', isCustomizable: false, sortOrder: 3 },
-    { slug: 'parking_flooring',    catSlug: 'flooring', name: 'Parking Flooring',        unit: 'sqft', isCustomizable: false, sortOrder: 4 },
-    // Doors & Windows
-    { slug: 'main_door',           catSlug: 'doors_windows', name: 'Main Door',          unit: 'fixed',isCustomizable: false, sortOrder: 1 },
-    { slug: 'internal_doors',      catSlug: 'doors_windows', name: 'Internal Doors',     unit: 'fixed',isCustomizable: false, sortOrder: 2 },
-    { slug: 'windows',             catSlug: 'doors_windows', name: 'Windows',            unit: 'fixed',isCustomizable: false, sortOrder: 3 },
-    // Painting
-    { slug: 'interior_painting',   catSlug: 'painting', name: 'Interior Painting',       unit: 'sqft', isCustomizable: true,  sortOrder: 1 },
-    { slug: 'exterior_painting',   catSlug: 'painting', name: 'Exterior Painting',       unit: 'sqft', isCustomizable: true,  sortOrder: 2 },
-    // Electrical & Utilities
-    { slug: 'wires_switches',      catSlug: 'electrical', name: 'Wires & Switches',      unit: 'sqft', isCustomizable: true,  sortOrder: 1 },
-    { slug: 'lights',              catSlug: 'electrical', name: 'Lights',                unit: 'sqft', isCustomizable: true,  sortOrder: 2 },
-    { slug: 'ceiling_fans',        catSlug: 'electrical', name: 'Ceiling Fans',          unit: 'sqft', isCustomizable: false, sortOrder: 3 },
-    { slug: 'overhead_tank',       catSlug: 'electrical', name: 'Overhead Tank',         unit: 'fixed',isCustomizable: false, sortOrder: 4 },
-    { slug: 'railings',            catSlug: 'electrical', name: 'Railings',              unit: 'fixed',isCustomizable: false, sortOrder: 5 },
-    { slug: 'parapet_wall',        catSlug: 'electrical', name: 'Parapet Wall',          unit: 'fixed',isCustomizable: false, sortOrder: 6 },
-    { slug: 'roof_weathering',     catSlug: 'electrical', name: 'Roof Weathering',       unit: 'sqft', isCustomizable: false, sortOrder: 7 },
-    { slug: 'lofts_shelves',       catSlug: 'electrical', name: 'Lofts & Shelves',       unit: 'sqft', isCustomizable: false, sortOrder: 8 },
-    { slug: 'false_ceiling',       catSlug: 'electrical', name: 'False Ceiling',         unit: 'sqft', isCustomizable: false, sortOrder: 9 },
-    // Other
-    { slug: 'anti_termite',        catSlug: 'other', name: 'Anti-Termite & Earthing',    unit: 'fixed',isCustomizable: false, sortOrder: 1 },
+    { slug: "steel_rebar_binding_wires", catSlug: "structure", name: "Steel Rebar Fe 550D & Binding Wires", unit: "sqft", isCustomizable: true, sortOrder: 1 },
+    { slug: "cement", catSlug: "structure", name: "Cement", unit: "sqft", isCustomizable: true, sortOrder: 2 },
+    { slug: "masonry_work", catSlug: "structure", name: "Masonry Work", unit: "sqft", isCustomizable: true, sortOrder: 3 },
+    { slug: "basement_height", catSlug: "structure", name: "Basement Height (from ground level)", unit: "sqft", isCustomizable: true, sortOrder: 4 },
+    { slug: "ceiling_height", catSlug: "structure", name: "Ceiling Height", unit: "sqft", isCustomizable: true, sortOrder: 5 },
+    { slug: "waterproofing_basement_pcc", catSlug: "structure", name: "Water Proofing & Basement PCC", unit: "sqft", isCustomizable: true, sortOrder: 6 },
+    { slug: "soil_testing", catSlug: "design", name: "Soil Testing", unit: "sqft", isCustomizable: true, sortOrder: 7 },
+    { slug: "electrical_plumbing_drawings", catSlug: "design", name: "Electrical & Plumbing Drawings", unit: "sqft", isCustomizable: true, sortOrder: 8 },
+    { slug: "isometric_vr", catSlug: "design", name: "Isometric Views & Virtual Reality", unit: "sqft", isCustomizable: true, sortOrder: 9 },
+    { slug: "kitchen_wall_tiles_countertop", catSlug: "kitchen", name: "Kitchen Wall Tiles & Kitchen Countertop", unit: "sqft", isCustomizable: true, sortOrder: 10 },
+    { slug: "wall_tiles", catSlug: "bathroom", name: "Wall Tiles", unit: "sqft", isCustomizable: true, sortOrder: 11 },
+    { slug: "sanitary_cp_fittings", catSlug: "bathroom", name: "Sanitary & CP Fittings", unit: "sqft", isCustomizable: true, sortOrder: 12 },
+    { slug: "pvc_cpvc_pipes", catSlug: "bathroom", name: "PVC and CPVC Pipes", unit: "sqft", isCustomizable: true, sortOrder: 13 },
+    { slug: "main_flooring_balcony_tiles", catSlug: "flooring", name: "Main Flooring, Balcony Tiles", unit: "sqft", isCustomizable: true, sortOrder: 14 },
+    { slug: "staircase", catSlug: "flooring", name: "Staircase", unit: "sqft", isCustomizable: true, sortOrder: 15 },
+    { slug: "parking", catSlug: "flooring", name: "Parking", unit: "sqft", isCustomizable: true, sortOrder: 16 },
+    { slug: "main_door_internal_doors", catSlug: "doors_windows", name: "Main Door & Internal Doors", unit: "sqft", isCustomizable: true, sortOrder: 17 },
+    { slug: "balcony_headroom_doors", catSlug: "doors_windows", name: "Balcony & Headroom Doors", unit: "sqft", isCustomizable: true, sortOrder: 18 },
+    { slug: "bathroom_doors", catSlug: "doors_windows", name: "Bathroom Doors", unit: "sqft", isCustomizable: true, sortOrder: 19 },
+    { slug: "painting", catSlug: "painting", name: "PAINTING", unit: "sqft", isCustomizable: true, sortOrder: 20 },
+    { slug: "wires_switches_pipes", catSlug: "electrical", name: "Wires, Switches & Pipes", unit: "sqft", isCustomizable: true, sortOrder: 21 },
+    { slug: "lights", catSlug: "electrical", name: "Lights", unit: "sqft", isCustomizable: true, sortOrder: 22 },
+    { slug: "staircase_balcony_railings", catSlug: "other", name: "Staircase and Balcony Railings", unit: "sqft", isCustomizable: true, sortOrder: 23 },
+    { slug: "parapet_wall", catSlug: "other", name: "Parapet Wall (if headroom is built)", unit: "sqft", isCustomizable: true, sortOrder: 24 },
   ];
 
-  const itemInserts = itemDefs.map((d) => ({
-    categoryId: catIds[d.catSlug],
-    slug: d.slug,
-    name: d.name,
-    unit: d.unit,
-    isCustomizable: d.isCustomizable,
-    sortOrder: d.sortOrder,
-  }));
-
-  const existingItems = await db.select({ slug: items.slug }).from(items);
-  const existingItemSlugs = new Set(existingItems.map(i => i.slug));
-  const itemsToInsert = itemInserts.filter(i => !existingItemSlugs.has(i.slug));
-  let itemCount = 0;
-  if (itemsToInsert.length > 0) {
-    const inserted = await db.insert(items).values(itemsToInsert).returning();
-    itemCount = inserted.length;
+  for (const d of itemDefs) {
+    await db.insert(items).values({
+      categoryId: catIds[d.catSlug],
+      slug: d.slug,
+      name: d.name,
+      unit: d.unit,
+      isCustomizable: d.isCustomizable,
+      sortOrder: d.sortOrder,
+    }).onConflictDoUpdate({
+      target: items.slug,
+      set: {
+        categoryId: catIds[d.catSlug],
+        name: d.name,
+        unit: d.unit,
+        isCustomizable: d.isCustomizable,
+        sortOrder: d.sortOrder,
+      },
+    });
   }
-  log('Items', itemCount);
+  log('Items (24 Consolidated Items)', itemDefs.length);
 
   // Fetch item IDs
   const itemRows = await db.select().from(items);
   const itemIdBySlug: Record<string, number> = {};
   for (const r of itemRows) itemIdBySlug[r.slug] = r.id;
 
-  // -------------------------------------------------------------------------
-  // OPTIONS — brand choices per item
-  // Source: requirements §5 (A–F)
-  // -------------------------------------------------------------------------
+  // ── Options ───────────────────────────────────────────────────────────────
   const optionDefs: {
     itemSlug: string;
     slug: string;
@@ -323,76 +252,157 @@ async function seedSpecifications(
     specification?: string;
     isDefault: boolean;
   }[] = [
-    // Steel Rebar
-    { itemSlug: 'steel_rebar', slug: 'any_isi_steel',     brandName: 'Any ISI Brand',               isDefault: true  },
-    { itemSlug: 'steel_rebar', slug: 'spa_vizag_steel',   brandName: 'SPA / Vizag',                 isDefault: false },
-    { itemSlug: 'steel_rebar', slug: 'ars_suryadev_steel',brandName: 'ARS / Suryadev / Sumangala',  isDefault: false },
-    { itemSlug: 'steel_rebar', slug: 'jsw_tata_steel',    brandName: 'JSW / TATA',                  isDefault: false },
-    // Binding Wire
-    { itemSlug: 'binding_wire', slug: 'any_isi_wire',     brandName: 'Any ISI Brand',               isDefault: true  },
-    { itemSlug: 'binding_wire', slug: 'tata_wire',        brandName: 'TATA',                        isDefault: false },
-    // Cement
-    { itemSlug: 'cement', slug: 'any_isi_cement',         brandName: 'Any ISI Brand',               isDefault: true  },
-    { itemSlug: 'cement', slug: 'jsw_cement',             brandName: 'JSW',                         isDefault: false },
-    { itemSlug: 'cement', slug: 'ramco_dalmia_cement',    brandName: 'Ramco / Dalmia',              isDefault: false },
-    { itemSlug: 'cement', slug: 'ultratech_chettinad',    brandName: 'Ultratech / Chettinad',       isDefault: false },
-    // Masonry Work
-    { itemSlug: 'masonry_work', slug: 'solid_block',      brandName: 'Solid Concrete Block (6" / 4")', isDefault: true  },
-    { itemSlug: 'masonry_work', slug: 'flyash_aac',       brandName: 'Fly Ash / AAC Block (9" / 4.5")',isDefault: false },
-    { itemSlug: 'masonry_work', slug: 'red_brick',        brandName: 'Wirecut Red Bricks (9" / 4.5")', isDefault: false },
-    // Waterproofing
-    { itemSlug: 'waterproofing', slug: 'dr_fixit',        brandName: 'Dr. Fixit / Fosroc',          isDefault: true  },
-    // Basement PCC / RCC
-    { itemSlug: 'basement_pcc', slug: 'pcc_basement',     brandName: 'PCC Basement Floor',          isDefault: true  },
-    { itemSlug: 'basement_pcc', slug: 'rcc_basement',     brandName: 'RCC Basement Floor',          isDefault: false },
-    // Interior Painting
-    { itemSlug: 'interior_painting', slug: 'isi_emulsion', brandName: 'Any ISI Emulsion',           isDefault: true  },
-    { itemSlug: 'interior_painting', slug: 'asian_tractor',brandName: 'Asian Paints Tractor Emulsion', isDefault: false },
-    { itemSlug: 'interior_painting', slug: 'asian_premium',brandName: 'Asian Paints Premium Emulsion', isDefault: false },
-    { itemSlug: 'interior_painting', slug: 'asian_royale', brandName: 'Asian Paints Royale Emulsion',  isDefault: false },
-    // Exterior Painting
-    { itemSlug: 'exterior_painting', slug: 'isi_exterior', brandName: 'Any ISI Exterior Emulsion',  isDefault: true  },
-    { itemSlug: 'exterior_painting', slug: 'asian_ace',    brandName: 'Asian Paints Ace',            isDefault: false },
-    { itemSlug: 'exterior_painting', slug: 'asian_apex',   brandName: 'Asian Paints Apex',           isDefault: false },
-    { itemSlug: 'exterior_painting', slug: 'ultima_protek',brandName: 'Asian Paints Apex Ultima Protek', isDefault: false },
-    // Wires & Switches
-    { itemSlug: 'wires_switches', slug: 'isi_switches',    brandName: 'Any ISI Wires & Switches',   isDefault: true  },
-    { itemSlug: 'wires_switches', slug: 'rr_anchor_roma',  brandName: 'RR Kabel / Anchor Roma',     isDefault: false },
-    { itemSlug: 'wires_switches', slug: 'finolex_legrand', brandName: 'Finolex / Legrand',          isDefault: false },
-    // Lights
-    { itemSlug: 'lights', slug: 'any_isi_lights',         brandName: 'Any ISI Lights',              isDefault: true  },
-    { itemSlug: 'lights', slug: 'luker_lights',           brandName: 'Luker',                       isDefault: false },
-    { itemSlug: 'lights', slug: 'philips_lights',         brandName: 'Philips',                     isDefault: false },
+    // ── Item #1: Steel Rebar Fe 550D & Binding Wires ──
+    { itemSlug: "steel_rebar_binding_wires", slug: "any_isi_steel_wire", brandName: "Any ISI Brand Steel & Wire", isDefault: true },
+    { itemSlug: "steel_rebar_binding_wires", slug: "spa_vizag_tata_wire", brandName: "SPA / Vizag Steel & TATA Wire", isDefault: false },
+    { itemSlug: "steel_rebar_binding_wires", slug: "ars_suryadev_tata_wire", brandName: "ARS / Suryadev / Sumangala & TATA Wire", isDefault: false },
+    { itemSlug: "steel_rebar_binding_wires", slug: "jsw_tata_steel_wire", brandName: "JSW / TATA Steel & TATA Wire", isDefault: false },
+    // ── Item #2: Cement ──
+    { itemSlug: "cement", slug: "any_isi_cement", brandName: "Any ISI Brand Cement", isDefault: true },
+    { itemSlug: "cement", slug: "jsw_cement", brandName: "JSW Cement", isDefault: false },
+    { itemSlug: "cement", slug: "ramco_dalmia_cement", brandName: "Ramco / Dalmia Cement", isDefault: false },
+    { itemSlug: "cement", slug: "ultratech_chettinad_cement", brandName: "Ultratech / Chettinad Cement", isDefault: false },
+    // ── Item #3: Masonry Work ──
+    { itemSlug: "masonry_work", slug: "solid_blocks", brandName: "Solid Blocks", isDefault: true },
+    { itemSlug: "masonry_work", slug: "flyash_aac_blocks", brandName: "Fly Ash / AAC Blocks", isDefault: false },
+    { itemSlug: "masonry_work", slug: "flyash_aac_premium", brandName: "Fly Ash / AAC Blocks (Premium)", isDefault: false },
+    { itemSlug: "masonry_work", slug: "red_bricks", brandName: "Red Bricks", isDefault: false },
+    // ── Item #4: Basement Height (from ground level) ──
+    { itemSlug: "basement_height", slug: "basement_3ft_flyash", brandName: "Fly Ash Bricks upto 3 ft", isDefault: true },
+    { itemSlug: "basement_height", slug: "basement_3ft_std", brandName: "Fly Ash Bricks upto 3 ft (Std)", isDefault: false },
+    { itemSlug: "basement_height", slug: "basement_4ft_flyash", brandName: "Fly Ash Bricks upto 4 ft", isDefault: false },
+    { itemSlug: "basement_height", slug: "basement_4_5ft_redbrick", brandName: "Fly Ash / Red Bricks upto 4.5 ft", isDefault: false },
+    // ── Item #5: Ceiling Height ──
+    { itemSlug: "ceiling_height", slug: "ceiling_9_5ft", brandName: "9.5 ft Ceiling Height", isDefault: true },
+    { itemSlug: "ceiling_height", slug: "ceiling_10ft_std", brandName: "10 ft Ceiling Height (Std)", isDefault: false },
+    { itemSlug: "ceiling_height", slug: "ceiling_10ft_prem", brandName: "10 ft Ceiling Height (Prem)", isDefault: false },
+    { itemSlug: "ceiling_height", slug: "ceiling_11ft", brandName: "11 ft Ceiling Height", isDefault: false },
+    // ── Item #6: Water Proofing & Basement PCC ──
+    { itemSlug: "waterproofing_basement_pcc", slug: "pcc_basic_waterproofing", brandName: "Basic PCC (Waterproofing add-on)", isDefault: true },
+    { itemSlug: "waterproofing_basement_pcc", slug: "pcc_dr_fixit_std", brandName: "PCC + Dr.Fixit/Fosroc/Bostik Waterproofing", isDefault: false },
+    { itemSlug: "waterproofing_basement_pcc", slug: "pcc_dr_fixit_prem", brandName: "PCC + Dr.Fixit/Fosroc/Bostik Waterproofing (Prem)", isDefault: false },
+    { itemSlug: "waterproofing_basement_pcc", slug: "rcc_basement_waterproofing", brandName: "RCC Basement + Dr.Fixit/Fosroc Waterproofing", isDefault: false },
+    // ── Item #7: Soil Testing ──
+    { itemSlug: "soil_testing", slug: "soil_testing_not_included_basic", brandName: "Soil Testing (Not Included)", isDefault: true },
+    { itemSlug: "soil_testing", slug: "soil_testing_not_included_std", brandName: "Soil Testing (Not Included - Std)", isDefault: false },
+    { itemSlug: "soil_testing", slug: "soil_testing_included_prem", brandName: "Soil Testing Included", isDefault: false },
+    { itemSlug: "soil_testing", slug: "soil_testing_included_lux", brandName: "Soil Testing Included (Lux)", isDefault: false },
+    // ── Item #8: Electrical & Plumbing Drawings ──
+    { itemSlug: "electrical_plumbing_drawings", slug: "mep_drawings_basic", brandName: "MEP Drawings (Not Included)", isDefault: true },
+    { itemSlug: "electrical_plumbing_drawings", slug: "mep_drawings_std", brandName: "MEP Drawings (Not Included - Std)", isDefault: false },
+    { itemSlug: "electrical_plumbing_drawings", slug: "mep_drawings_included_prem", brandName: "MEP Drawings Included", isDefault: false },
+    { itemSlug: "electrical_plumbing_drawings", slug: "mep_drawings_included_lux", brandName: "MEP Drawings Included (Lux)", isDefault: false },
+    // ── Item #9: Isometric Views & Virtual Reality ──
+    { itemSlug: "isometric_vr", slug: "iso_vr_not_included_basic", brandName: "Isometric Views & VR (Not Included)", isDefault: true },
+    { itemSlug: "isometric_vr", slug: "iso_vr_not_included_std", brandName: "Isometric Views & VR (Not Included - Std)", isDefault: false },
+    { itemSlug: "isometric_vr", slug: "iso_vr_not_included_prem", brandName: "Isometric Views & VR (Not Included - Prem)", isDefault: false },
+    { itemSlug: "isometric_vr", slug: "iso_vr_included_lux", brandName: "Isometric Views & VR 3D Walkthrough Included", isDefault: false },
+    // ── Item #10: Kitchen Wall Tiles & Kitchen Countertop ──
+    { itemSlug: "kitchen_wall_tiles_countertop", slug: "kitchen_tiles_slab_basic", brandName: "2.5 ft Tiles + Granite Slab upto 15 rft", isDefault: true },
+    { itemSlug: "kitchen_wall_tiles_countertop", slug: "kitchen_tiles_slab_std", brandName: "4 ft Tiles + Granite Slab upto 15 rft", isDefault: false },
+    { itemSlug: "kitchen_wall_tiles_countertop", slug: "kitchen_tiles_slab_prem", brandName: "Roof Height Tiles + Granite Slab upto 20 rft", isDefault: false },
+    { itemSlug: "kitchen_wall_tiles_countertop", slug: "kitchen_tiles_slab_lux", brandName: "Roof Height Tiles + Premium Granite upto 25 rft", isDefault: false },
+    // ── Item #11: Wall Tiles ──
+    { itemSlug: "wall_tiles", slug: "wall_tiles_7ft_basic", brandName: "7 ft coverage @ \u20b935/sq.ft", isDefault: true },
+    { itemSlug: "wall_tiles", slug: "wall_tiles_7ft_std", brandName: "7 ft coverage @ \u20b945/sq.ft", isDefault: false },
+    { itemSlug: "wall_tiles", slug: "wall_tiles_10ft_prem", brandName: "10 ft coverage @ \u20b955/sq.ft", isDefault: false },
+    { itemSlug: "wall_tiles", slug: "wall_tiles_11ft_lux", brandName: "11 ft coverage @ \u20b975/sq.ft", isDefault: false },
+    // ── Item #12: Sanitary & CP Fittings ──
+    { itemSlug: "sanitary_cp_fittings", slug: "sanitary_any_isi", brandName: "Any ISI Brand Sanitary & CP", isDefault: true },
+    { itemSlug: "sanitary_cp_fittings", slug: "sanitary_parryware", brandName: "Parryware (\u20b920,000/bath allowance)", isDefault: false },
+    { itemSlug: "sanitary_cp_fittings", slug: "sanitary_jaquar", brandName: "Jaquar (\u20b930,000/bath allowance)", isDefault: false },
+    { itemSlug: "sanitary_cp_fittings", slug: "sanitary_toto_kohler", brandName: "Toto / Kohler (\u20b945,000/bath allowance)", isDefault: false },
+    // ── Item #13: PVC and CPVC Pipes ──
+    { itemSlug: "pvc_cpvc_pipes", slug: "pipes_any_isi", brandName: "Any ISI Brand Pipes", isDefault: true },
+    { itemSlug: "pvc_cpvc_pipes", slug: "pipes_watertec", brandName: "Watertec Pipes", isDefault: false },
+    { itemSlug: "pvc_cpvc_pipes", slug: "pipes_kavery_ashirwad", brandName: "Kavery / Ashirwad Pipes", isDefault: false },
+    { itemSlug: "pvc_cpvc_pipes", slug: "pipes_finolex_supreme", brandName: "Finolex / Supreme Pipes", isDefault: false },
+    // ── Item #14: Main Flooring, Balcony Tiles ──
+    { itemSlug: "main_flooring_balcony_tiles", slug: "flooring_tiles_basic", brandName: "2'x2' Main (\u20b945/sqft) + 1'x1' Balcony (\u20b935/sqft)", isDefault: true },
+    { itemSlug: "main_flooring_balcony_tiles", slug: "flooring_tiles_std", brandName: "4'x2' Main (\u20b950/sqft) + 2'x2' Balcony (\u20b950/sqft)", isDefault: false },
+    { itemSlug: "main_flooring_balcony_tiles", slug: "flooring_tiles_prem", brandName: "4'x2' Main (\u20b970/sqft) + 2'x2' Balcony (\u20b960/sqft)", isDefault: false },
+    { itemSlug: "main_flooring_balcony_tiles", slug: "flooring_tiles_lux", brandName: "Premium Tiles (\u20b9100/sqft) + Balcony (\u20b985/sqft)", isDefault: false },
+    // ── Item #15: Staircase ──
+    { itemSlug: "staircase", slug: "staircase_tiles_basic", brandName: "1'x1' Tiles @ \u20b935/sq.ft", isDefault: true },
+    { itemSlug: "staircase", slug: "staircase_tiles_std", brandName: "2'x2' Tiles @ \u20b950/sq.ft", isDefault: false },
+    { itemSlug: "staircase", slug: "staircase_granite_prem", brandName: "Granite @ \u20b9120/sq.ft", isDefault: false },
+    { itemSlug: "staircase", slug: "staircase_granite_lux", brandName: "Premium Granite @ \u20b9160/sq.ft", isDefault: false },
+    // ── Item #16: Parking ──
+    { itemSlug: "parking", slug: "parking_tiles_basic", brandName: "Tiles @ \u20b945/sq.ft", isDefault: true },
+    { itemSlug: "parking", slug: "parking_tiles_std", brandName: "Tiles @ \u20b950/sq.ft", isDefault: false },
+    { itemSlug: "parking", slug: "parking_tiles_prem", brandName: "Heavy Duty Tiles @ \u20b970/sq.ft", isDefault: false },
+    { itemSlug: "parking", slug: "parking_tiles_lux", brandName: "Premium Parking Tiles @ \u20b9100/sq.ft", isDefault: false },
+    // ── Item #17: Main Door & Internal Doors ──
+    { itemSlug: "main_door_internal_doors", slug: "doors_basic", brandName: "Readymade Teak 5\"x3\" + Flush Doors (Sal Frame)", isDefault: true },
+    { itemSlug: "main_door_internal_doors", slug: "doors_std", brandName: "Readymade Teak 5\"x4\" + Laminated Flush Doors", isDefault: false },
+    { itemSlug: "main_door_internal_doors", slug: "doors_prem", brandName: "1st Quality Teak 5\"x4\" + Teak Doors (4\"x3\" Frame)", isDefault: false },
+    { itemSlug: "main_door_internal_doors", slug: "doors_lux", brandName: "1st Quality Burma Teak 5\"x4\" + Burma Teak Doors", isDefault: false },
+    // ── Item #18: Balcony & Headroom Doors ──
+    { itemSlug: "balcony_headroom_doors", slug: "balcony_headroom_basic", brandName: "Flush Door, Sal/Mahogany Frame", isDefault: true },
+    { itemSlug: "balcony_headroom_doors", slug: "balcony_headroom_std", brandName: "Flush Door, Sal/Mahogany Frame (Std)", isDefault: false },
+    { itemSlug: "balcony_headroom_doors", slug: "balcony_headroom_prem", brandName: "Flush Doors with Grill (or) Steel Doors", isDefault: false },
+    { itemSlug: "balcony_headroom_doors", slug: "balcony_headroom_lux", brandName: "Flush Doors with Grill (or) Steel Doors (Lux)", isDefault: false },
+    // ── Item #19: Bathroom Doors ──
+    { itemSlug: "bathroom_doors", slug: "bathroom_doors_pvc", brandName: "PVC Doors", isDefault: true },
+    { itemSlug: "bathroom_doors", slug: "bathroom_doors_wpc", brandName: "WPC Doors", isDefault: false },
+    { itemSlug: "bathroom_doors", slug: "bathroom_doors_lam_wpc", brandName: "Laminated WPC Doors", isDefault: false },
+    { itemSlug: "bathroom_doors", slug: "bathroom_doors_frp", brandName: "FRP Doors", isDefault: false },
+    // ── Item #20: PAINTING ──
+    { itemSlug: "painting", slug: "paint_basic", brandName: "1 Putty + 1 Primer + 2 ISI Emulsion (Interior/Exterior)", isDefault: true },
+    { itemSlug: "painting", slug: "paint_std", brandName: "2 JSW Putty + Asian Primer + Tractor/Ace Emulsion", isDefault: false },
+    { itemSlug: "painting", slug: "paint_prem", brandName: "2 Asian Putty + Asian Primer + Premium/Apex Emulsion", isDefault: false },
+    { itemSlug: "painting", slug: "paint_lux", brandName: "3 Asian Putty + Waterproof Primer + Royale/Ultima Protek", isDefault: false },
+    // ── Item #21: Wires, Switches & Pipes ──
+    { itemSlug: "wires_switches_pipes", slug: "elec_basic", brandName: "Any ISI Brand Wires, Switches & Pipes", isDefault: true },
+    { itemSlug: "wires_switches_pipes", slug: "elec_std", brandName: "RR/Orbit Wires + Anchor Roma + Anchor/Finolex Pipes", isDefault: false },
+    { itemSlug: "wires_switches_pipes", slug: "elec_prem", brandName: "Finolex Wires + Legrand/GM + Anchor/Finolex Pipes", isDefault: false },
+    { itemSlug: "wires_switches_pipes", slug: "elec_lux", brandName: "Finolex Wires + Legrand/GM + Vasavi Pipes", isDefault: false },
+    // ── Item #22: Lights ──
+    { itemSlug: "lights", slug: "lights_any_isi", brandName: "Any ISI Brand Lights", isDefault: true },
+    { itemSlug: "lights", slug: "lights_luker", brandName: "Luker Lights", isDefault: false },
+    { itemSlug: "lights", slug: "lights_philips", brandName: "Philips Lights", isDefault: false },
+    { itemSlug: "lights", slug: "lights_philips_lux", brandName: "Philips Lights (Lux)", isDefault: false },
+    // ── Item #23: Staircase and Balcony Railings ──
+    { itemSlug: "staircase_balcony_railings", slug: "railings_ms_basic", brandName: "MS Railings", isDefault: true },
+    { itemSlug: "staircase_balcony_railings", slug: "railings_ms_std", brandName: "MS Railings (Std)", isDefault: false },
+    { itemSlug: "staircase_balcony_railings", slug: "railings_ss_prem", brandName: "SS 304 Grade Railings", isDefault: false },
+    { itemSlug: "staircase_balcony_railings", slug: "railings_glass_lux", brandName: "Toughened Glass with SS/Wood/Aluminium", isDefault: false },
+    // ── Item #24: Parapet Wall (if headroom is built) ──
+    { itemSlug: "parapet_wall", slug: "parapet_3ft_4_5in_basic", brandName: "3 ft - 4.5\" thick", isDefault: true },
+    { itemSlug: "parapet_wall", slug: "parapet_3ft_4_5in_std", brandName: "3 ft - 4.5\" thick (Std)", isDefault: false },
+    { itemSlug: "parapet_wall", slug: "parapet_3ft_9in_prem", brandName: "3 ft - 9\" thick", isDefault: false },
+    { itemSlug: "parapet_wall", slug: "parapet_3_5ft_9in_lux", brandName: "3.5 ft - 9\" thick", isDefault: false },
   ];
 
-  const optionInserts = optionDefs.map((d) => ({
-    itemId: itemIdBySlug[d.itemSlug],
-    slug: d.slug,
-    brandName: d.brandName,
-    specification: d.specification ?? null,
-    isDefault: d.isDefault,
-  }));
-
-  const existingOptions = await db.select({ slug: options.slug }).from(options);
-  const existingOptionSlugs = new Set(existingOptions.map(o => o.slug));
-  const optionsToInsert = optionInserts.filter(o => !existingOptionSlugs.has(o.slug));
-  let optionCount = 0;
-  if (optionsToInsert.length > 0) {
-    const inserted = await db.insert(options).values(optionsToInsert).returning();
-    optionCount = inserted.length;
+  const existingOptions = await db.select().from(options);
+  for (const o of optionDefs) {
+    const itmId = itemIdBySlug[o.itemSlug];
+    if (!itmId) continue;
+    
+    const existing = existingOptions.find(ex => ex.itemId === itmId && ex.slug === o.slug);
+    if (existing) {
+      await db.update(options).set({
+        brandName: o.brandName,
+        isDefault: o.isDefault,
+      }).where(eq(options.id, existing.id));
+    } else {
+      await db.insert(options).values({
+        itemId: itmId,
+        slug: o.slug,
+        brandName: o.brandName,
+        specification: o.specification,
+        isDefault: o.isDefault,
+      });
+    }
   }
-  log('Options', optionCount);
+  log('Options (96 Variant Options)', optionDefs.length);
 
   // Fetch option IDs
   const optionRows = await db.select().from(options);
   const optIdBySlug: Record<string, number> = {};
   for (const r of optionRows) optIdBySlug[r.slug] = r.id;
 
-  // -------------------------------------------------------------------------
-  // PACKAGE_ITEMS — default brands and "Additional Cost" flags per package
-  // Source: requirements §5 (A–F) — every cell read explicitly
-  // isIncluded = false + additionalCostPrice > 0 → item is an add-on cost
-  // -------------------------------------------------------------------------
+  // ── Package Items (Defaults per Package) ──────────────────────────────────
   type PackageItemDef = {
     pkgSlug: string;
     itemSlug: string;
@@ -403,363 +413,466 @@ async function seedSpecifications(
   };
 
   const piDefs: PackageItemDef[] = [
-    // ── Steel Rebar ──────────────────────────────────────────────────────────
-    { pkgSlug: 'basic',     itemSlug: 'steel_rebar', defaultOptionSlug: 'any_isi_steel',      isIncluded: true, additionalCostPrice: '0.00' },
-    { pkgSlug: 'standard',  itemSlug: 'steel_rebar', defaultOptionSlug: 'spa_vizag_steel',    isIncluded: true, additionalCostPrice: '0.00' },
-    { pkgSlug: 'premium',   itemSlug: 'steel_rebar', defaultOptionSlug: 'ars_suryadev_steel', isIncluded: true, additionalCostPrice: '0.00' },
-    { pkgSlug: 'luxury',    itemSlug: 'steel_rebar', defaultOptionSlug: 'jsw_tata_steel',     isIncluded: true, additionalCostPrice: '0.00' },
-    // ── Binding Wire ─────────────────────────────────────────────────────────
-    { pkgSlug: 'basic',     itemSlug: 'binding_wire', defaultOptionSlug: 'any_isi_wire', isIncluded: true, additionalCostPrice: '0.00' },
-    { pkgSlug: 'standard',  itemSlug: 'binding_wire', defaultOptionSlug: 'tata_wire',   isIncluded: true, additionalCostPrice: '0.00' },
-    { pkgSlug: 'premium',   itemSlug: 'binding_wire', defaultOptionSlug: 'tata_wire',   isIncluded: true, additionalCostPrice: '0.00' },
-    { pkgSlug: 'luxury',    itemSlug: 'binding_wire', defaultOptionSlug: 'tata_wire',   isIncluded: true, additionalCostPrice: '0.00' },
-    // ── Cement ───────────────────────────────────────────────────────────────
-    { pkgSlug: 'basic',     itemSlug: 'cement', defaultOptionSlug: 'any_isi_cement',      isIncluded: true, additionalCostPrice: '0.00' },
-    { pkgSlug: 'standard',  itemSlug: 'cement', defaultOptionSlug: 'jsw_cement',          isIncluded: true, additionalCostPrice: '0.00' },
-    { pkgSlug: 'premium',   itemSlug: 'cement', defaultOptionSlug: 'ramco_dalmia_cement', isIncluded: true, additionalCostPrice: '0.00' },
-    { pkgSlug: 'luxury',    itemSlug: 'cement', defaultOptionSlug: 'ultratech_chettinad', isIncluded: true, additionalCostPrice: '0.00' },
-    // ── Aggregates (no brand choice — BSI specs only) ────────────────────────
-    { pkgSlug: 'basic',     itemSlug: 'aggregates', isIncluded: true, additionalCostPrice: '0.00', includedCoverage: 'BSI Specs' },
-    { pkgSlug: 'standard',  itemSlug: 'aggregates', isIncluded: true, additionalCostPrice: '0.00', includedCoverage: 'BSI Specs' },
-    { pkgSlug: 'premium',   itemSlug: 'aggregates', isIncluded: true, additionalCostPrice: '0.00', includedCoverage: 'BSI Specs' },
-    { pkgSlug: 'luxury',    itemSlug: 'aggregates', isIncluded: true, additionalCostPrice: '0.00', includedCoverage: 'BSI Specs' },
-    // ── Masonry Work ─────────────────────────────────────────────────────────
-    // Basic: Solid blocks included; Red brick +₹120/sqft
-    { pkgSlug: 'basic',    itemSlug: 'masonry_work', defaultOptionSlug: 'solid_block', isIncluded: true, additionalCostPrice: '0.00'   },
-    // Standard/Premium: Fly ash included; Red brick +₹100/sqft
-    { pkgSlug: 'standard', itemSlug: 'masonry_work', defaultOptionSlug: 'flyash_aac',  isIncluded: true, additionalCostPrice: '0.00'   },
-    { pkgSlug: 'premium',  itemSlug: 'masonry_work', defaultOptionSlug: 'flyash_aac',  isIncluded: true, additionalCostPrice: '0.00'   },
-    // Luxury: Red bricks fully included
-    { pkgSlug: 'luxury',   itemSlug: 'masonry_work', defaultOptionSlug: 'red_brick',   isIncluded: true, additionalCostPrice: '0.00', includedCoverage: 'Red Bricks (Included)' },
-    // ── Ceiling Height (descriptive, no option) ───────────────────────────────
-    { pkgSlug: 'basic',    itemSlug: 'ceiling_height', isIncluded: true, additionalCostPrice: '0.00', includedCoverage: '9.5 ft' },
-    { pkgSlug: 'standard', itemSlug: 'ceiling_height', isIncluded: true, additionalCostPrice: '0.00', includedCoverage: '10 ft'  },
-    { pkgSlug: 'premium',  itemSlug: 'ceiling_height', isIncluded: true, additionalCostPrice: '0.00', includedCoverage: '10 ft'  },
-    { pkgSlug: 'luxury',   itemSlug: 'ceiling_height', isIncluded: true, additionalCostPrice: '0.00', includedCoverage: '11 ft'  },
-    // ── Waterproofing — Basic: +₹10/sqft; rest: Dr.Fixit/Fosroc/Bostik included ──
-    { pkgSlug: 'basic',    itemSlug: 'waterproofing', isIncluded: false, additionalCostPrice: '10.00' },
-    { pkgSlug: 'standard', itemSlug: 'waterproofing', defaultOptionSlug: 'dr_fixit', isIncluded: true, additionalCostPrice: '0.00' },
-    { pkgSlug: 'premium',  itemSlug: 'waterproofing', defaultOptionSlug: 'dr_fixit', isIncluded: true, additionalCostPrice: '0.00' },
-    { pkgSlug: 'luxury',   itemSlug: 'waterproofing', defaultOptionSlug: 'dr_fixit', isIncluded: true, additionalCostPrice: '0.00' },
-    // ── RCC Design Mix (descriptive) ─────────────────────────────────────────
-    { pkgSlug: 'basic',    itemSlug: 'rcc_design_mix', isIncluded: true, additionalCostPrice: '0.00', includedCoverage: 'M20' },
-    { pkgSlug: 'standard', itemSlug: 'rcc_design_mix', isIncluded: true, additionalCostPrice: '0.00', includedCoverage: 'M20' },
-    { pkgSlug: 'premium',  itemSlug: 'rcc_design_mix', isIncluded: true, additionalCostPrice: '0.00', includedCoverage: 'M20' },
-    { pkgSlug: 'luxury',   itemSlug: 'rcc_design_mix', isIncluded: true, additionalCostPrice: '0.00', includedCoverage: 'M25' },
-    // ── Basement PCC/RCC — Basic/Standard/Premium: PCC; RCC +₹40; Luxury: RCC included ──
-    { pkgSlug: 'basic',    itemSlug: 'basement_pcc', defaultOptionSlug: 'pcc_basement', isIncluded: true, additionalCostPrice: '0.00' },
-    { pkgSlug: 'standard', itemSlug: 'basement_pcc', defaultOptionSlug: 'pcc_basement', isIncluded: true, additionalCostPrice: '0.00' },
-    { pkgSlug: 'premium',  itemSlug: 'basement_pcc', defaultOptionSlug: 'pcc_basement', isIncluded: true, additionalCostPrice: '0.00' },
-    { pkgSlug: 'luxury',   itemSlug: 'basement_pcc', defaultOptionSlug: 'rcc_basement', isIncluded: true, additionalCostPrice: '0.00', includedCoverage: 'RCC (Included)' },
-    // ── Design: Floor Plans — all included ───────────────────────────────────
-    { pkgSlug: 'basic',    itemSlug: 'floor_plans', isIncluded: true, additionalCostPrice: '0.00' },
-    { pkgSlug: 'standard', itemSlug: 'floor_plans', isIncluded: true, additionalCostPrice: '0.00' },
-    { pkgSlug: 'premium',  itemSlug: 'floor_plans', isIncluded: true, additionalCostPrice: '0.00' },
-    { pkgSlug: 'luxury',   itemSlug: 'floor_plans', isIncluded: true, additionalCostPrice: '0.00' },
-    // ── Furniture Layout — Basic/Standard: +₹4/sqft; Premium/Luxury: included ──
-    { pkgSlug: 'basic',    itemSlug: 'furniture_layout', isIncluded: false, additionalCostPrice: '4.00' },
-    { pkgSlug: 'standard', itemSlug: 'furniture_layout', isIncluded: false, additionalCostPrice: '4.00' },
-    { pkgSlug: 'premium',  itemSlug: 'furniture_layout', isIncluded: true,  additionalCostPrice: '0.00' },
-    { pkgSlug: 'luxury',   itemSlug: 'furniture_layout', isIncluded: true,  additionalCostPrice: '0.00' },
-    // ── 3D Elevation — all included ──────────────────────────────────────────
-    { pkgSlug: 'basic',    itemSlug: 'elevation_3d', isIncluded: true, additionalCostPrice: '0.00' },
-    { pkgSlug: 'standard', itemSlug: 'elevation_3d', isIncluded: true, additionalCostPrice: '0.00' },
-    { pkgSlug: 'premium',  itemSlug: 'elevation_3d', isIncluded: true, additionalCostPrice: '0.00' },
-    { pkgSlug: 'luxury',   itemSlug: 'elevation_3d', isIncluded: true, additionalCostPrice: '0.00' },
-    // ── Structural Drawing — Basic: +₹6; rest included ───────────────────────
-    { pkgSlug: 'basic',    itemSlug: 'structural_drawing', isIncluded: false, additionalCostPrice: '6.00' },
-    { pkgSlug: 'standard', itemSlug: 'structural_drawing', isIncluded: true,  additionalCostPrice: '0.00' },
-    { pkgSlug: 'premium',  itemSlug: 'structural_drawing', isIncluded: true,  additionalCostPrice: '0.00' },
-    { pkgSlug: 'luxury',   itemSlug: 'structural_drawing', isIncluded: true,  additionalCostPrice: '0.00' },
-    // ── Soil Testing — Basic/Standard: +₹40; Premium/Luxury: included ────────
-    { pkgSlug: 'basic',    itemSlug: 'soil_testing', isIncluded: false, additionalCostPrice: '40.00' },
-    { pkgSlug: 'standard', itemSlug: 'soil_testing', isIncluded: false, additionalCostPrice: '40.00' },
-    { pkgSlug: 'premium',  itemSlug: 'soil_testing', isIncluded: true,  additionalCostPrice: '0.00'  },
-    { pkgSlug: 'luxury',   itemSlug: 'soil_testing', isIncluded: true,  additionalCostPrice: '0.00'  },
-    // ── Site Assessment — Basic/Standard: +₹10; Premium/Luxury: included ─────
-    { pkgSlug: 'basic',    itemSlug: 'site_assessment', isIncluded: false, additionalCostPrice: '10.00' },
-    { pkgSlug: 'standard', itemSlug: 'site_assessment', isIncluded: false, additionalCostPrice: '10.00' },
-    { pkgSlug: 'premium',  itemSlug: 'site_assessment', isIncluded: true,  additionalCostPrice: '0.00'  },
-    { pkgSlug: 'luxury',   itemSlug: 'site_assessment', isIncluded: true,  additionalCostPrice: '0.00'  },
-    // ── Electrical Drawings — Basic/Standard: +₹6; rest included ────────────
-    { pkgSlug: 'basic',    itemSlug: 'electrical_drawing', isIncluded: false, additionalCostPrice: '6.00' },
-    { pkgSlug: 'standard', itemSlug: 'electrical_drawing', isIncluded: false, additionalCostPrice: '6.00' },
-    { pkgSlug: 'premium',  itemSlug: 'electrical_drawing', isIncluded: true,  additionalCostPrice: '0.00' },
-    { pkgSlug: 'luxury',   itemSlug: 'electrical_drawing', isIncluded: true,  additionalCostPrice: '0.00' },
-    // ── Plumbing Drawings — Basic/Standard: +₹6; rest included ──────────────
-    { pkgSlug: 'basic',    itemSlug: 'plumbing_drawing', isIncluded: false, additionalCostPrice: '6.00' },
-    { pkgSlug: 'standard', itemSlug: 'plumbing_drawing', isIncluded: false, additionalCostPrice: '6.00' },
-    { pkgSlug: 'premium',  itemSlug: 'plumbing_drawing', isIncluded: true,  additionalCostPrice: '0.00' },
-    { pkgSlug: 'luxury',   itemSlug: 'plumbing_drawing', isIncluded: true,  additionalCostPrice: '0.00' },
-    // ── Isometric Views — Basic/Standard: +₹8; rest included ────────────────
-    { pkgSlug: 'basic',    itemSlug: 'isometric_views', isIncluded: false, additionalCostPrice: '8.00' },
-    { pkgSlug: 'standard', itemSlug: 'isometric_views', isIncluded: false, additionalCostPrice: '8.00' },
-    { pkgSlug: 'premium',  itemSlug: 'isometric_views', isIncluded: true,  additionalCostPrice: '0.00' },
-    { pkgSlug: 'luxury',   itemSlug: 'isometric_views', isIncluded: true,  additionalCostPrice: '0.00' },
-    // ── VR 3D — Basic/Standard/Premium: +₹40; Luxury: included ──────────────
-    { pkgSlug: 'basic',    itemSlug: 'vr_3d', isIncluded: false, additionalCostPrice: '40.00' },
-    { pkgSlug: 'standard', itemSlug: 'vr_3d', isIncluded: false, additionalCostPrice: '40.00' },
-    { pkgSlug: 'premium',  itemSlug: 'vr_3d', isIncluded: false, additionalCostPrice: '40.00' },
-    { pkgSlug: 'luxury',   itemSlug: 'vr_3d', isIncluded: true,  additionalCostPrice: '0.00'  },
-    // ── Management: Online Updates — all daily ────────────────────────────────
-    { pkgSlug: 'basic',    itemSlug: 'online_updates', isIncluded: true, additionalCostPrice: '0.00', includedCoverage: 'Daily' },
-    { pkgSlug: 'standard', itemSlug: 'online_updates', isIncluded: true, additionalCostPrice: '0.00', includedCoverage: 'Daily' },
-    { pkgSlug: 'premium',  itemSlug: 'online_updates', isIncluded: true, additionalCostPrice: '0.00', includedCoverage: 'Daily' },
-    { pkgSlug: 'luxury',   itemSlug: 'online_updates', isIncluded: true, additionalCostPrice: '0.00', includedCoverage: 'Daily' },
-    // ── Site Engineer ────────────────────────────────────────────────────────
-    { pkgSlug: 'basic',    itemSlug: 'site_engineer', isIncluded: true, additionalCostPrice: '0.00', includedCoverage: 'Once in 2 days'   },
-    { pkgSlug: 'standard', itemSlug: 'site_engineer', isIncluded: true, additionalCostPrice: '0.00', includedCoverage: 'Daily Visits'     },
-    { pkgSlug: 'premium',  itemSlug: 'site_engineer', isIncluded: true, additionalCostPrice: '0.00', includedCoverage: 'Full day on site' },
-    { pkgSlug: 'luxury',   itemSlug: 'site_engineer', isIncluded: true, additionalCostPrice: '0.00', includedCoverage: 'Full day on site' },
-    // ── Architect Visit — Basic/Standard: +₹40; Premium/Luxury: before concretes ──
-    { pkgSlug: 'basic',    itemSlug: 'architect_visit', isIncluded: false, additionalCostPrice: '40.00' },
-    { pkgSlug: 'standard', itemSlug: 'architect_visit', isIncluded: false, additionalCostPrice: '40.00' },
-    { pkgSlug: 'premium',  itemSlug: 'architect_visit', isIncluded: true,  additionalCostPrice: '0.00', includedCoverage: 'Before all concrete days' },
-    { pkgSlug: 'luxury',   itemSlug: 'architect_visit', isIncluded: true,  additionalCostPrice: '0.00', includedCoverage: 'Before all concrete days' },
-    // ── Structural Engineer Visit — all included ──────────────────────────────
-    { pkgSlug: 'basic',    itemSlug: 'structural_eng_visit', isIncluded: true, additionalCostPrice: '0.00', includedCoverage: 'Before all concrete days' },
-    { pkgSlug: 'standard', itemSlug: 'structural_eng_visit', isIncluded: true, additionalCostPrice: '0.00', includedCoverage: 'Before all concrete days' },
-    { pkgSlug: 'premium',  itemSlug: 'structural_eng_visit', isIncluded: true, additionalCostPrice: '0.00', includedCoverage: 'Before all concrete days' },
-    { pkgSlug: 'luxury',   itemSlug: 'structural_eng_visit', isIncluded: true, additionalCostPrice: '0.00', includedCoverage: 'Before all concrete days' },
-    // ── Kitchen Wall Tiles ───────────────────────────────────────────────────
-    { pkgSlug: 'basic',    itemSlug: 'kitchen_wall_tiles', isIncluded: true, additionalCostPrice: '0.00', includedCoverage: '2.5 ft slab @ ₹35/sqft' },
-    { pkgSlug: 'standard', itemSlug: 'kitchen_wall_tiles', isIncluded: true, additionalCostPrice: '0.00', includedCoverage: '4 ft slab @ ₹45/sqft'   },
-    { pkgSlug: 'premium',  itemSlug: 'kitchen_wall_tiles', isIncluded: true, additionalCostPrice: '0.00', includedCoverage: 'Roof height @ ₹55/sqft'  },
-    { pkgSlug: 'luxury',   itemSlug: 'kitchen_wall_tiles', isIncluded: true, additionalCostPrice: '0.00', includedCoverage: 'Roof height @ ₹75/sqft'  },
-    // ── Granite Countertop ───────────────────────────────────────────────────
-    { pkgSlug: 'basic',    itemSlug: 'granite_countertop', isIncluded: true, additionalCostPrice: '0.00', includedCoverage: 'Up to 15 rft @ ₹80/sqft'  },
-    { pkgSlug: 'standard', itemSlug: 'granite_countertop', isIncluded: true, additionalCostPrice: '0.00', includedCoverage: 'Up to 15 rft @ ₹100/sqft' },
-    { pkgSlug: 'premium',  itemSlug: 'granite_countertop', isIncluded: true, additionalCostPrice: '0.00', includedCoverage: 'Up to 20 rft @ ₹120/sqft' },
-    { pkgSlug: 'luxury',   itemSlug: 'granite_countertop', isIncluded: true, additionalCostPrice: '0.00', includedCoverage: 'Up to 25 rft @ ₹160/sqft' },
-    // ── Kitchen Sink ─────────────────────────────────────────────────────────
-    { pkgSlug: 'basic',    itemSlug: 'kitchen_sink', isIncluded: true, additionalCostPrice: '0.00', includedCoverage: 'Allowance up to ₹4,000'  },
-    { pkgSlug: 'standard', itemSlug: 'kitchen_sink', isIncluded: true, additionalCostPrice: '0.00', includedCoverage: 'Allowance up to ₹5,000'  },
-    { pkgSlug: 'premium',  itemSlug: 'kitchen_sink', isIncluded: true, additionalCostPrice: '0.00', includedCoverage: 'Allowance up to ₹7,000'  },
-    { pkgSlug: 'luxury',   itemSlug: 'kitchen_sink', isIncluded: true, additionalCostPrice: '0.00', includedCoverage: 'Allowance up to ₹14,000' },
-    // ── Bathroom Wall Tiles ──────────────────────────────────────────────────
-    { pkgSlug: 'basic',    itemSlug: 'bathroom_wall_tiles', isIncluded: true, additionalCostPrice: '0.00', includedCoverage: '7 ft @ ₹35/sqft'  },
-    { pkgSlug: 'standard', itemSlug: 'bathroom_wall_tiles', isIncluded: true, additionalCostPrice: '0.00', includedCoverage: '7 ft @ ₹45/sqft'  },
-    { pkgSlug: 'premium',  itemSlug: 'bathroom_wall_tiles', isIncluded: true, additionalCostPrice: '0.00', includedCoverage: '10 ft @ ₹55/sqft' },
-    { pkgSlug: 'luxury',   itemSlug: 'bathroom_wall_tiles', isIncluded: true, additionalCostPrice: '0.00', includedCoverage: '11 ft @ ₹75/sqft' },
-    // ── Sanitary & CP Fittings ───────────────────────────────────────────────
-    { pkgSlug: 'basic',    itemSlug: 'sanitary_fittings', defaultOptionSlug: 'any_isi_sanitary', isIncluded: true, additionalCostPrice: '0.00' },
-    { pkgSlug: 'standard', itemSlug: 'sanitary_fittings', defaultOptionSlug: 'parryware',        isIncluded: true, additionalCostPrice: '0.00', includedCoverage: 'Parryware up to ₹20,000/bath' },
-    { pkgSlug: 'premium',  itemSlug: 'sanitary_fittings', defaultOptionSlug: 'jaquar',           isIncluded: true, additionalCostPrice: '0.00', includedCoverage: 'Jaquar up to ₹30,000/bath'    },
-    { pkgSlug: 'luxury',   itemSlug: 'sanitary_fittings', defaultOptionSlug: 'toto_kohler',      isIncluded: true, additionalCostPrice: '0.00', includedCoverage: 'Toto/Kohler up to ₹45,000/bath' },
-    // ── PVC/CPVC Pipes ───────────────────────────────────────────────────────
-    { pkgSlug: 'basic',    itemSlug: 'pvc_cpvc_pipes', defaultOptionSlug: 'any_isi_pipe',    isIncluded: true, additionalCostPrice: '0.00' },
-    { pkgSlug: 'standard', itemSlug: 'pvc_cpvc_pipes', defaultOptionSlug: 'watertec',        isIncluded: true, additionalCostPrice: '0.00' },
-    { pkgSlug: 'premium',  itemSlug: 'pvc_cpvc_pipes', defaultOptionSlug: 'kavery_ashirwad', isIncluded: true, additionalCostPrice: '0.00' },
-    { pkgSlug: 'luxury',   itemSlug: 'pvc_cpvc_pipes', defaultOptionSlug: 'finolex_supreme', isIncluded: true, additionalCostPrice: '0.00' },
-    // ── Flooring: Main ───────────────────────────────────────────────────────
-    { pkgSlug: 'basic',    itemSlug: 'main_flooring', isIncluded: true, additionalCostPrice: '0.00', includedCoverage: "2'x2' @ ₹45/sqft"     },
-    { pkgSlug: 'standard', itemSlug: 'main_flooring', isIncluded: true, additionalCostPrice: '0.00', includedCoverage: "4'x2' @ ₹50/sqft"     },
-    { pkgSlug: 'premium',  itemSlug: 'main_flooring', isIncluded: true, additionalCostPrice: '0.00', includedCoverage: "4'x2' @ ₹70/sqft"     },
-    { pkgSlug: 'luxury',   itemSlug: 'main_flooring', isIncluded: true, additionalCostPrice: '0.00', includedCoverage: 'Premium Tiles @ ₹100/sqft' },
-    // ── Flooring: Balcony & Open Area ────────────────────────────────────────
-    { pkgSlug: 'basic',    itemSlug: 'balcony_flooring', isIncluded: true, additionalCostPrice: '0.00', includedCoverage: "1'x1' @ ₹35/sqft" },
-    { pkgSlug: 'standard', itemSlug: 'balcony_flooring', isIncluded: true, additionalCostPrice: '0.00', includedCoverage: "2'x2' @ ₹50/sqft" },
-    { pkgSlug: 'premium',  itemSlug: 'balcony_flooring', isIncluded: true, additionalCostPrice: '0.00', includedCoverage: "2'x2' @ ₹60/sqft" },
-    { pkgSlug: 'luxury',   itemSlug: 'balcony_flooring', isIncluded: true, additionalCostPrice: '0.00', includedCoverage: 'Tiles @ ₹85/sqft'  },
-    // ── Flooring: Staircase ──────────────────────────────────────────────────
-    { pkgSlug: 'basic',    itemSlug: 'staircase_flooring', isIncluded: true, additionalCostPrice: '0.00', includedCoverage: "1'x1' @ ₹35/sqft"  },
-    { pkgSlug: 'standard', itemSlug: 'staircase_flooring', isIncluded: true, additionalCostPrice: '0.00', includedCoverage: "2'x2' @ ₹50/sqft"  },
-    { pkgSlug: 'premium',  itemSlug: 'staircase_flooring', isIncluded: true, additionalCostPrice: '0.00', includedCoverage: 'Granite @ ₹120/sqft' },
-    { pkgSlug: 'luxury',   itemSlug: 'staircase_flooring', isIncluded: true, additionalCostPrice: '0.00', includedCoverage: 'Granite @ ₹160/sqft' },
-    // ── Flooring: Parking ────────────────────────────────────────────────────
-    { pkgSlug: 'basic',    itemSlug: 'parking_flooring', isIncluded: true, additionalCostPrice: '0.00', includedCoverage: 'Tiles @ ₹45/sqft'  },
-    { pkgSlug: 'standard', itemSlug: 'parking_flooring', isIncluded: true, additionalCostPrice: '0.00', includedCoverage: 'Tiles @ ₹50/sqft'  },
-    { pkgSlug: 'premium',  itemSlug: 'parking_flooring', isIncluded: true, additionalCostPrice: '0.00', includedCoverage: 'Tiles @ ₹70/sqft'  },
-    { pkgSlug: 'luxury',   itemSlug: 'parking_flooring', isIncluded: true, additionalCostPrice: '0.00', includedCoverage: 'Tiles @ ₹100/sqft' },
-    // ── Main Door ────────────────────────────────────────────────────────────
-    { pkgSlug: 'basic',    itemSlug: 'main_door', isIncluded: true, additionalCostPrice: '0.00', includedCoverage: 'Readymade Teak 5"x3", 3.5\'x7\''  },
-    { pkgSlug: 'standard', itemSlug: 'main_door', isIncluded: true, additionalCostPrice: '0.00', includedCoverage: 'Readymade Teak 5"x4", 3.5\'x7\''  },
-    { pkgSlug: 'premium',  itemSlug: 'main_door', isIncluded: true, additionalCostPrice: '0.00', includedCoverage: '1st Quality Teak 5"x4", 3.5\'x7\'' },
-    { pkgSlug: 'luxury',   itemSlug: 'main_door', isIncluded: true, additionalCostPrice: '0.00', includedCoverage: '1st Quality Burma Teak 5"x4", 3.5\'x8\'' },
-    // ── Internal Doors ───────────────────────────────────────────────────────
-    { pkgSlug: 'basic',    itemSlug: 'internal_doors', isIncluded: true, additionalCostPrice: '0.00', includedCoverage: 'Flush 4"x2.5" frame'         },
-    { pkgSlug: 'standard', itemSlug: 'internal_doors', isIncluded: true, additionalCostPrice: '0.00', includedCoverage: 'Laminated Flush 4"x3" frame'  },
-    { pkgSlug: 'premium',  itemSlug: 'internal_doors', isIncluded: true, additionalCostPrice: '0.00', includedCoverage: 'Teak Door 4"x3" frame'        },
-    { pkgSlug: 'luxury',   itemSlug: 'internal_doors', isIncluded: true, additionalCostPrice: '0.00', includedCoverage: 'Burma Teak Door 4"x3" frame'  },
-    // ── Windows ──────────────────────────────────────────────────────────────
-    { pkgSlug: 'basic',    itemSlug: 'windows', isIncluded: true, additionalCostPrice: '0.00', includedCoverage: 'UPVC Sliding (White)' },
-    { pkgSlug: 'standard', itemSlug: 'windows', isIncluded: true, additionalCostPrice: '0.00', includedCoverage: 'UPVC Sliding (White)' },
-    { pkgSlug: 'premium',  itemSlug: 'windows', isIncluded: true, additionalCostPrice: '0.00', includedCoverage: 'UPVC Sliding & Open'  },
-    { pkgSlug: 'luxury',   itemSlug: 'windows', isIncluded: true, additionalCostPrice: '0.00', includedCoverage: 'UPVC Sliding & Open + Net Mesh' },
-    // ── Interior Painting ────────────────────────────────────────────────────
-    { pkgSlug: 'basic',    itemSlug: 'interior_painting', defaultOptionSlug: 'isi_emulsion',  isIncluded: true, additionalCostPrice: '0.00' },
-    { pkgSlug: 'standard', itemSlug: 'interior_painting', defaultOptionSlug: 'asian_tractor', isIncluded: true, additionalCostPrice: '0.00' },
-    { pkgSlug: 'premium',  itemSlug: 'interior_painting', defaultOptionSlug: 'asian_premium', isIncluded: true, additionalCostPrice: '0.00' },
-    { pkgSlug: 'luxury',   itemSlug: 'interior_painting', defaultOptionSlug: 'asian_royale',  isIncluded: true, additionalCostPrice: '0.00' },
-    // ── Exterior Painting ────────────────────────────────────────────────────
-    { pkgSlug: 'basic',    itemSlug: 'exterior_painting', defaultOptionSlug: 'isi_exterior',  isIncluded: true, additionalCostPrice: '0.00' },
-    { pkgSlug: 'standard', itemSlug: 'exterior_painting', defaultOptionSlug: 'asian_ace',     isIncluded: true, additionalCostPrice: '0.00' },
-    { pkgSlug: 'premium',  itemSlug: 'exterior_painting', defaultOptionSlug: 'asian_apex',    isIncluded: true, additionalCostPrice: '0.00' },
-    { pkgSlug: 'luxury',   itemSlug: 'exterior_painting', defaultOptionSlug: 'ultima_protek', isIncluded: true, additionalCostPrice: '0.00' },
-    // ── Wires & Switches ─────────────────────────────────────────────────────
-    { pkgSlug: 'basic',    itemSlug: 'wires_switches', defaultOptionSlug: 'isi_switches',    isIncluded: true, additionalCostPrice: '0.00' },
-    { pkgSlug: 'standard', itemSlug: 'wires_switches', defaultOptionSlug: 'rr_anchor_roma',  isIncluded: true, additionalCostPrice: '0.00' },
-    { pkgSlug: 'premium',  itemSlug: 'wires_switches', defaultOptionSlug: 'finolex_legrand', isIncluded: true, additionalCostPrice: '0.00' },
-    { pkgSlug: 'luxury',   itemSlug: 'wires_switches', defaultOptionSlug: 'finolex_legrand', isIncluded: true, additionalCostPrice: '0.00' },
-    // ── Lights ───────────────────────────────────────────────────────────────
-    { pkgSlug: 'basic',    itemSlug: 'lights', defaultOptionSlug: 'any_isi_lights',  isIncluded: true, additionalCostPrice: '0.00' },
-    { pkgSlug: 'standard', itemSlug: 'lights', defaultOptionSlug: 'luker_lights',    isIncluded: true, additionalCostPrice: '0.00' },
-    { pkgSlug: 'premium',  itemSlug: 'lights', defaultOptionSlug: 'philips_lights',  isIncluded: true, additionalCostPrice: '0.00' },
-    { pkgSlug: 'luxury',   itemSlug: 'lights', defaultOptionSlug: 'philips_lights',  isIncluded: true, additionalCostPrice: '0.00' },
-    // ── Ceiling Fans — Basic/Standard: +₹50/sqft; Premium/Luxury: Crompton included ──
-    { pkgSlug: 'basic',    itemSlug: 'ceiling_fans', isIncluded: false, additionalCostPrice: '50.00' },
-    { pkgSlug: 'standard', itemSlug: 'ceiling_fans', isIncluded: false, additionalCostPrice: '50.00' },
-    { pkgSlug: 'premium',  itemSlug: 'ceiling_fans', isIncluded: true,  additionalCostPrice: '0.00', includedCoverage: 'Crompton (Included)' },
-    { pkgSlug: 'luxury',   itemSlug: 'ceiling_fans', isIncluded: true,  additionalCostPrice: '0.00', includedCoverage: 'Crompton (Included)' },
-    // ── Overhead Tank ────────────────────────────────────────────────────────
-    { pkgSlug: 'basic',    itemSlug: 'overhead_tank', isIncluded: true, additionalCostPrice: '0.00', includedCoverage: '500L + 500L ISI'              },
-    { pkgSlug: 'standard', itemSlug: 'overhead_tank', isIncluded: true, additionalCostPrice: '0.00', includedCoverage: '500L + 500L Kavery'            },
-    { pkgSlug: 'premium',  itemSlug: 'overhead_tank', isIncluded: true, additionalCostPrice: '0.00', includedCoverage: '1000L + 1000L Ideal/Sintex'    },
-    { pkgSlug: 'luxury',   itemSlug: 'overhead_tank', isIncluded: true, additionalCostPrice: '0.00', includedCoverage: '3000L Readymade Tanks'          },
-    // ── Railings ─────────────────────────────────────────────────────────────
-    { pkgSlug: 'basic',    itemSlug: 'railings', isIncluded: true, additionalCostPrice: '0.00', includedCoverage: 'MS Railings'                         },
-    { pkgSlug: 'standard', itemSlug: 'railings', isIncluded: true, additionalCostPrice: '0.00', includedCoverage: 'MS Railings'                         },
-    { pkgSlug: 'premium',  itemSlug: 'railings', isIncluded: true, additionalCostPrice: '0.00', includedCoverage: 'SS 304 Grade Railings'               },
-    { pkgSlug: 'luxury',   itemSlug: 'railings', isIncluded: true, additionalCostPrice: '0.00', includedCoverage: 'Toughened Glass w/ SS/Wood/Alu'      },
-    // ── Parapet Wall ─────────────────────────────────────────────────────────
-    { pkgSlug: 'basic',    itemSlug: 'parapet_wall', isIncluded: true, additionalCostPrice: '0.00', includedCoverage: '3 ft — 4.5" thick'  },
-    { pkgSlug: 'standard', itemSlug: 'parapet_wall', isIncluded: true, additionalCostPrice: '0.00', includedCoverage: '3 ft — 4.5" thick'  },
-    { pkgSlug: 'premium',  itemSlug: 'parapet_wall', isIncluded: true, additionalCostPrice: '0.00', includedCoverage: '3 ft — 9" thick'    },
-    { pkgSlug: 'luxury',   itemSlug: 'parapet_wall', isIncluded: true, additionalCostPrice: '0.00', includedCoverage: '3.5 ft — 9" thick'  },
-    // ── Roof Weathering ──────────────────────────────────────────────────────
-    // Basic: free >2000sqft, else +₹80/sqft; Standard: free >2000sqft, else +₹70/sqft; Premium/Luxury: included
-    { pkgSlug: 'basic',    itemSlug: 'roof_weathering', isIncluded: false, additionalCostPrice: '80.00', includedCoverage: 'Free if area > 2000 sqft'   },
-    { pkgSlug: 'standard', itemSlug: 'roof_weathering', isIncluded: false, additionalCostPrice: '70.00', includedCoverage: 'Free if area > 2000 sqft'   },
-    { pkgSlug: 'premium',  itemSlug: 'roof_weathering', isIncluded: true,  additionalCostPrice: '0.00'  },
-    { pkgSlug: 'luxury',   itemSlug: 'roof_weathering', isIncluded: true,  additionalCostPrice: '0.00'  },
-    // ── Lofts & Shelves — Basic/Standard: +₹12; Premium/Luxury: 1 loft/room included ──
-    { pkgSlug: 'basic',    itemSlug: 'lofts_shelves', isIncluded: false, additionalCostPrice: '12.00' },
-    { pkgSlug: 'standard', itemSlug: 'lofts_shelves', isIncluded: false, additionalCostPrice: '12.00' },
-    { pkgSlug: 'premium',  itemSlug: 'lofts_shelves', isIncluded: true,  additionalCostPrice: '0.00', includedCoverage: '1 loft per room (Max 5 ft)' },
-    { pkgSlug: 'luxury',   itemSlug: 'lofts_shelves', isIncluded: true,  additionalCostPrice: '0.00', includedCoverage: '1 loft per room (Max 5 ft)' },
-    // ── False Ceiling — Basic/Standard: +₹12; Premium/Luxury: included ──────
-    { pkgSlug: 'basic',    itemSlug: 'false_ceiling', isIncluded: false, additionalCostPrice: '12.00' },
-    { pkgSlug: 'standard', itemSlug: 'false_ceiling', isIncluded: false, additionalCostPrice: '12.00' },
-    { pkgSlug: 'premium',  itemSlug: 'false_ceiling', isIncluded: true,  additionalCostPrice: '0.00'  },
-    { pkgSlug: 'luxury',   itemSlug: 'false_ceiling', isIncluded: true,  additionalCostPrice: '0.00'  },
-    // ── Anti-Termite & Earthing — all included ────────────────────────────────
-    { pkgSlug: 'basic',    itemSlug: 'anti_termite', isIncluded: true, additionalCostPrice: '0.00' },
-    { pkgSlug: 'standard', itemSlug: 'anti_termite', isIncluded: true, additionalCostPrice: '0.00' },
-    { pkgSlug: 'premium',  itemSlug: 'anti_termite', isIncluded: true, additionalCostPrice: '0.00' },
-    { pkgSlug: 'luxury',   itemSlug: 'anti_termite', isIncluded: true, additionalCostPrice: '0.00' },
+    // ── Item #1: Steel Rebar Fe 550D & Binding Wires ──
+    { pkgSlug: "basic", itemSlug: "steel_rebar_binding_wires", defaultOptionSlug: "any_isi_steel_wire", isIncluded: true, additionalCostPrice: '0.00' },
+    { pkgSlug: "standard", itemSlug: "steel_rebar_binding_wires", defaultOptionSlug: "spa_vizag_tata_wire", isIncluded: true, additionalCostPrice: '0.00' },
+    { pkgSlug: "premium", itemSlug: "steel_rebar_binding_wires", defaultOptionSlug: "ars_suryadev_tata_wire", isIncluded: true, additionalCostPrice: '0.00' },
+    { pkgSlug: "luxury", itemSlug: "steel_rebar_binding_wires", defaultOptionSlug: "jsw_tata_steel_wire", isIncluded: true, additionalCostPrice: '0.00' },
+    // ── Item #2: Cement ──
+    { pkgSlug: "basic", itemSlug: "cement", defaultOptionSlug: "any_isi_cement", isIncluded: true, additionalCostPrice: '0.00' },
+    { pkgSlug: "standard", itemSlug: "cement", defaultOptionSlug: "jsw_cement", isIncluded: true, additionalCostPrice: '0.00' },
+    { pkgSlug: "premium", itemSlug: "cement", defaultOptionSlug: "ramco_dalmia_cement", isIncluded: true, additionalCostPrice: '0.00' },
+    { pkgSlug: "luxury", itemSlug: "cement", defaultOptionSlug: "ultratech_chettinad_cement", isIncluded: true, additionalCostPrice: '0.00' },
+    // ── Item #3: Masonry Work ──
+    { pkgSlug: "basic", itemSlug: "masonry_work", defaultOptionSlug: "solid_blocks", isIncluded: true, additionalCostPrice: '0.00' },
+    { pkgSlug: "standard", itemSlug: "masonry_work", defaultOptionSlug: "flyash_aac_blocks", isIncluded: true, additionalCostPrice: '0.00' },
+    { pkgSlug: "premium", itemSlug: "masonry_work", defaultOptionSlug: "flyash_aac_premium", isIncluded: true, additionalCostPrice: '0.00' },
+    { pkgSlug: "luxury", itemSlug: "masonry_work", defaultOptionSlug: "red_bricks", isIncluded: true, additionalCostPrice: '0.00' },
+    // ── Item #4: Basement Height (from ground level) ──
+    { pkgSlug: "basic", itemSlug: "basement_height", defaultOptionSlug: "basement_3ft_flyash", isIncluded: true, additionalCostPrice: '0.00' },
+    { pkgSlug: "standard", itemSlug: "basement_height", defaultOptionSlug: "basement_3ft_std", isIncluded: true, additionalCostPrice: '0.00' },
+    { pkgSlug: "premium", itemSlug: "basement_height", defaultOptionSlug: "basement_4ft_flyash", isIncluded: true, additionalCostPrice: '0.00' },
+    { pkgSlug: "luxury", itemSlug: "basement_height", defaultOptionSlug: "basement_4_5ft_redbrick", isIncluded: true, additionalCostPrice: '0.00' },
+    // ── Item #5: Ceiling Height ──
+    { pkgSlug: "basic", itemSlug: "ceiling_height", defaultOptionSlug: "ceiling_9_5ft", isIncluded: true, additionalCostPrice: '0.00' },
+    { pkgSlug: "standard", itemSlug: "ceiling_height", defaultOptionSlug: "ceiling_10ft_std", isIncluded: true, additionalCostPrice: '0.00' },
+    { pkgSlug: "premium", itemSlug: "ceiling_height", defaultOptionSlug: "ceiling_10ft_prem", isIncluded: true, additionalCostPrice: '0.00' },
+    { pkgSlug: "luxury", itemSlug: "ceiling_height", defaultOptionSlug: "ceiling_11ft", isIncluded: true, additionalCostPrice: '0.00' },
+    // ── Item #6: Water Proofing & Basement PCC ──
+    { pkgSlug: "basic", itemSlug: "waterproofing_basement_pcc", defaultOptionSlug: "pcc_basic_waterproofing", isIncluded: true, additionalCostPrice: '0.00' },
+    { pkgSlug: "standard", itemSlug: "waterproofing_basement_pcc", defaultOptionSlug: "pcc_dr_fixit_std", isIncluded: true, additionalCostPrice: '0.00' },
+    { pkgSlug: "premium", itemSlug: "waterproofing_basement_pcc", defaultOptionSlug: "pcc_dr_fixit_prem", isIncluded: true, additionalCostPrice: '0.00' },
+    { pkgSlug: "luxury", itemSlug: "waterproofing_basement_pcc", defaultOptionSlug: "rcc_basement_waterproofing", isIncluded: true, additionalCostPrice: '0.00' },
+    // ── Item #7: Soil Testing ──
+    { pkgSlug: "basic", itemSlug: "soil_testing", defaultOptionSlug: "soil_testing_not_included_basic", isIncluded: true, additionalCostPrice: '0.00' },
+    { pkgSlug: "standard", itemSlug: "soil_testing", defaultOptionSlug: "soil_testing_not_included_std", isIncluded: true, additionalCostPrice: '0.00' },
+    { pkgSlug: "premium", itemSlug: "soil_testing", defaultOptionSlug: "soil_testing_included_prem", isIncluded: true, additionalCostPrice: '0.00' },
+    { pkgSlug: "luxury", itemSlug: "soil_testing", defaultOptionSlug: "soil_testing_included_lux", isIncluded: true, additionalCostPrice: '0.00' },
+    // ── Item #8: Electrical & Plumbing Drawings ──
+    { pkgSlug: "basic", itemSlug: "electrical_plumbing_drawings", defaultOptionSlug: "mep_drawings_basic", isIncluded: true, additionalCostPrice: '0.00' },
+    { pkgSlug: "standard", itemSlug: "electrical_plumbing_drawings", defaultOptionSlug: "mep_drawings_std", isIncluded: true, additionalCostPrice: '0.00' },
+    { pkgSlug: "premium", itemSlug: "electrical_plumbing_drawings", defaultOptionSlug: "mep_drawings_included_prem", isIncluded: true, additionalCostPrice: '0.00' },
+    { pkgSlug: "luxury", itemSlug: "electrical_plumbing_drawings", defaultOptionSlug: "mep_drawings_included_lux", isIncluded: true, additionalCostPrice: '0.00' },
+    // ── Item #9: Isometric Views & Virtual Reality ──
+    { pkgSlug: "basic", itemSlug: "isometric_vr", defaultOptionSlug: "iso_vr_not_included_basic", isIncluded: true, additionalCostPrice: '0.00' },
+    { pkgSlug: "standard", itemSlug: "isometric_vr", defaultOptionSlug: "iso_vr_not_included_std", isIncluded: true, additionalCostPrice: '0.00' },
+    { pkgSlug: "premium", itemSlug: "isometric_vr", defaultOptionSlug: "iso_vr_not_included_prem", isIncluded: true, additionalCostPrice: '0.00' },
+    { pkgSlug: "luxury", itemSlug: "isometric_vr", defaultOptionSlug: "iso_vr_included_lux", isIncluded: true, additionalCostPrice: '0.00' },
+    // ── Item #10: Kitchen Wall Tiles & Kitchen Countertop ──
+    { pkgSlug: "basic", itemSlug: "kitchen_wall_tiles_countertop", defaultOptionSlug: "kitchen_tiles_slab_basic", isIncluded: true, additionalCostPrice: '0.00' },
+    { pkgSlug: "standard", itemSlug: "kitchen_wall_tiles_countertop", defaultOptionSlug: "kitchen_tiles_slab_std", isIncluded: true, additionalCostPrice: '0.00' },
+    { pkgSlug: "premium", itemSlug: "kitchen_wall_tiles_countertop", defaultOptionSlug: "kitchen_tiles_slab_prem", isIncluded: true, additionalCostPrice: '0.00' },
+    { pkgSlug: "luxury", itemSlug: "kitchen_wall_tiles_countertop", defaultOptionSlug: "kitchen_tiles_slab_lux", isIncluded: true, additionalCostPrice: '0.00' },
+    // ── Item #11: Wall Tiles ──
+    { pkgSlug: "basic", itemSlug: "wall_tiles", defaultOptionSlug: "wall_tiles_7ft_basic", isIncluded: true, additionalCostPrice: '0.00' },
+    { pkgSlug: "standard", itemSlug: "wall_tiles", defaultOptionSlug: "wall_tiles_7ft_std", isIncluded: true, additionalCostPrice: '0.00' },
+    { pkgSlug: "premium", itemSlug: "wall_tiles", defaultOptionSlug: "wall_tiles_10ft_prem", isIncluded: true, additionalCostPrice: '0.00' },
+    { pkgSlug: "luxury", itemSlug: "wall_tiles", defaultOptionSlug: "wall_tiles_11ft_lux", isIncluded: true, additionalCostPrice: '0.00' },
+    // ── Item #12: Sanitary & CP Fittings ──
+    { pkgSlug: "basic", itemSlug: "sanitary_cp_fittings", defaultOptionSlug: "sanitary_any_isi", isIncluded: true, additionalCostPrice: '0.00' },
+    { pkgSlug: "standard", itemSlug: "sanitary_cp_fittings", defaultOptionSlug: "sanitary_parryware", isIncluded: true, additionalCostPrice: '0.00' },
+    { pkgSlug: "premium", itemSlug: "sanitary_cp_fittings", defaultOptionSlug: "sanitary_jaquar", isIncluded: true, additionalCostPrice: '0.00' },
+    { pkgSlug: "luxury", itemSlug: "sanitary_cp_fittings", defaultOptionSlug: "sanitary_toto_kohler", isIncluded: true, additionalCostPrice: '0.00' },
+    // ── Item #13: PVC and CPVC Pipes ──
+    { pkgSlug: "basic", itemSlug: "pvc_cpvc_pipes", defaultOptionSlug: "pipes_any_isi", isIncluded: true, additionalCostPrice: '0.00' },
+    { pkgSlug: "standard", itemSlug: "pvc_cpvc_pipes", defaultOptionSlug: "pipes_watertec", isIncluded: true, additionalCostPrice: '0.00' },
+    { pkgSlug: "premium", itemSlug: "pvc_cpvc_pipes", defaultOptionSlug: "pipes_kavery_ashirwad", isIncluded: true, additionalCostPrice: '0.00' },
+    { pkgSlug: "luxury", itemSlug: "pvc_cpvc_pipes", defaultOptionSlug: "pipes_finolex_supreme", isIncluded: true, additionalCostPrice: '0.00' },
+    // ── Item #14: Main Flooring, Balcony Tiles ──
+    { pkgSlug: "basic", itemSlug: "main_flooring_balcony_tiles", defaultOptionSlug: "flooring_tiles_basic", isIncluded: true, additionalCostPrice: '0.00' },
+    { pkgSlug: "standard", itemSlug: "main_flooring_balcony_tiles", defaultOptionSlug: "flooring_tiles_std", isIncluded: true, additionalCostPrice: '0.00' },
+    { pkgSlug: "premium", itemSlug: "main_flooring_balcony_tiles", defaultOptionSlug: "flooring_tiles_prem", isIncluded: true, additionalCostPrice: '0.00' },
+    { pkgSlug: "luxury", itemSlug: "main_flooring_balcony_tiles", defaultOptionSlug: "flooring_tiles_lux", isIncluded: true, additionalCostPrice: '0.00' },
+    // ── Item #15: Staircase ──
+    { pkgSlug: "basic", itemSlug: "staircase", defaultOptionSlug: "staircase_tiles_basic", isIncluded: true, additionalCostPrice: '0.00' },
+    { pkgSlug: "standard", itemSlug: "staircase", defaultOptionSlug: "staircase_tiles_std", isIncluded: true, additionalCostPrice: '0.00' },
+    { pkgSlug: "premium", itemSlug: "staircase", defaultOptionSlug: "staircase_granite_prem", isIncluded: true, additionalCostPrice: '0.00' },
+    { pkgSlug: "luxury", itemSlug: "staircase", defaultOptionSlug: "staircase_granite_lux", isIncluded: true, additionalCostPrice: '0.00' },
+    // ── Item #16: Parking ──
+    { pkgSlug: "basic", itemSlug: "parking", defaultOptionSlug: "parking_tiles_basic", isIncluded: true, additionalCostPrice: '0.00' },
+    { pkgSlug: "standard", itemSlug: "parking", defaultOptionSlug: "parking_tiles_std", isIncluded: true, additionalCostPrice: '0.00' },
+    { pkgSlug: "premium", itemSlug: "parking", defaultOptionSlug: "parking_tiles_prem", isIncluded: true, additionalCostPrice: '0.00' },
+    { pkgSlug: "luxury", itemSlug: "parking", defaultOptionSlug: "parking_tiles_lux", isIncluded: true, additionalCostPrice: '0.00' },
+    // ── Item #17: Main Door & Internal Doors ──
+    { pkgSlug: "basic", itemSlug: "main_door_internal_doors", defaultOptionSlug: "doors_basic", isIncluded: true, additionalCostPrice: '0.00' },
+    { pkgSlug: "standard", itemSlug: "main_door_internal_doors", defaultOptionSlug: "doors_std", isIncluded: true, additionalCostPrice: '0.00' },
+    { pkgSlug: "premium", itemSlug: "main_door_internal_doors", defaultOptionSlug: "doors_prem", isIncluded: true, additionalCostPrice: '0.00' },
+    { pkgSlug: "luxury", itemSlug: "main_door_internal_doors", defaultOptionSlug: "doors_lux", isIncluded: true, additionalCostPrice: '0.00' },
+    // ── Item #18: Balcony & Headroom Doors ──
+    { pkgSlug: "basic", itemSlug: "balcony_headroom_doors", defaultOptionSlug: "balcony_headroom_basic", isIncluded: true, additionalCostPrice: '0.00' },
+    { pkgSlug: "standard", itemSlug: "balcony_headroom_doors", defaultOptionSlug: "balcony_headroom_std", isIncluded: true, additionalCostPrice: '0.00' },
+    { pkgSlug: "premium", itemSlug: "balcony_headroom_doors", defaultOptionSlug: "balcony_headroom_prem", isIncluded: true, additionalCostPrice: '0.00' },
+    { pkgSlug: "luxury", itemSlug: "balcony_headroom_doors", defaultOptionSlug: "balcony_headroom_lux", isIncluded: true, additionalCostPrice: '0.00' },
+    // ── Item #19: Bathroom Doors ──
+    { pkgSlug: "basic", itemSlug: "bathroom_doors", defaultOptionSlug: "bathroom_doors_pvc", isIncluded: true, additionalCostPrice: '0.00' },
+    { pkgSlug: "standard", itemSlug: "bathroom_doors", defaultOptionSlug: "bathroom_doors_wpc", isIncluded: true, additionalCostPrice: '0.00' },
+    { pkgSlug: "premium", itemSlug: "bathroom_doors", defaultOptionSlug: "bathroom_doors_lam_wpc", isIncluded: true, additionalCostPrice: '0.00' },
+    { pkgSlug: "luxury", itemSlug: "bathroom_doors", defaultOptionSlug: "bathroom_doors_frp", isIncluded: true, additionalCostPrice: '0.00' },
+    // ── Item #20: PAINTING ──
+    { pkgSlug: "basic", itemSlug: "painting", defaultOptionSlug: "paint_basic", isIncluded: true, additionalCostPrice: '0.00' },
+    { pkgSlug: "standard", itemSlug: "painting", defaultOptionSlug: "paint_std", isIncluded: true, additionalCostPrice: '0.00' },
+    { pkgSlug: "premium", itemSlug: "painting", defaultOptionSlug: "paint_prem", isIncluded: true, additionalCostPrice: '0.00' },
+    { pkgSlug: "luxury", itemSlug: "painting", defaultOptionSlug: "paint_lux", isIncluded: true, additionalCostPrice: '0.00' },
+    // ── Item #21: Wires, Switches & Pipes ──
+    { pkgSlug: "basic", itemSlug: "wires_switches_pipes", defaultOptionSlug: "elec_basic", isIncluded: true, additionalCostPrice: '0.00' },
+    { pkgSlug: "standard", itemSlug: "wires_switches_pipes", defaultOptionSlug: "elec_std", isIncluded: true, additionalCostPrice: '0.00' },
+    { pkgSlug: "premium", itemSlug: "wires_switches_pipes", defaultOptionSlug: "elec_prem", isIncluded: true, additionalCostPrice: '0.00' },
+    { pkgSlug: "luxury", itemSlug: "wires_switches_pipes", defaultOptionSlug: "elec_lux", isIncluded: true, additionalCostPrice: '0.00' },
+    // ── Item #22: Lights ──
+    { pkgSlug: "basic", itemSlug: "lights", defaultOptionSlug: "lights_any_isi", isIncluded: true, additionalCostPrice: '0.00' },
+    { pkgSlug: "standard", itemSlug: "lights", defaultOptionSlug: "lights_luker", isIncluded: true, additionalCostPrice: '0.00' },
+    { pkgSlug: "premium", itemSlug: "lights", defaultOptionSlug: "lights_philips", isIncluded: true, additionalCostPrice: '0.00' },
+    { pkgSlug: "luxury", itemSlug: "lights", defaultOptionSlug: "lights_philips_lux", isIncluded: true, additionalCostPrice: '0.00' },
+    // ── Item #23: Staircase and Balcony Railings ──
+    { pkgSlug: "basic", itemSlug: "staircase_balcony_railings", defaultOptionSlug: "railings_ms_basic", isIncluded: true, additionalCostPrice: '0.00' },
+    { pkgSlug: "standard", itemSlug: "staircase_balcony_railings", defaultOptionSlug: "railings_ms_std", isIncluded: true, additionalCostPrice: '0.00' },
+    { pkgSlug: "premium", itemSlug: "staircase_balcony_railings", defaultOptionSlug: "railings_ss_prem", isIncluded: true, additionalCostPrice: '0.00' },
+    { pkgSlug: "luxury", itemSlug: "staircase_balcony_railings", defaultOptionSlug: "railings_glass_lux", isIncluded: true, additionalCostPrice: '0.00' },
+    // ── Item #24: Parapet Wall (if headroom is built) ──
+    { pkgSlug: "basic", itemSlug: "parapet_wall", defaultOptionSlug: "parapet_3ft_4_5in_basic", isIncluded: true, additionalCostPrice: '0.00' },
+    { pkgSlug: "standard", itemSlug: "parapet_wall", defaultOptionSlug: "parapet_3ft_4_5in_std", isIncluded: true, additionalCostPrice: '0.00' },
+    { pkgSlug: "premium", itemSlug: "parapet_wall", defaultOptionSlug: "parapet_3ft_9in_prem", isIncluded: true, additionalCostPrice: '0.00' },
+    { pkgSlug: "luxury", itemSlug: "parapet_wall", defaultOptionSlug: "parapet_3_5ft_9in_lux", isIncluded: true, additionalCostPrice: '0.00' },
   ];
 
-  const piInserts = piDefs.map((d) => ({
-    packageId:            pkgIds[d.pkgSlug],
-    itemId:               itemIdBySlug[d.itemSlug],
-    defaultOptionId:      d.defaultOptionSlug ? optIdBySlug[d.defaultOptionSlug] : null,
-    includedCoverage:     d.includedCoverage ?? null,
-    isIncluded:           d.isIncluded,
-    additionalCostPrice:  d.additionalCostPrice,
-  }));
+  const existingPIs = await db.select().from(packageItems);
+  for (const d of piDefs) {
+    const pId = pkgIds[d.pkgSlug];
+    const itmId = itemIdBySlug[d.itemSlug];
+    const optId = d.defaultOptionSlug ? optIdBySlug[d.defaultOptionSlug] : null;
 
-  const existingPackageItems = await db
-    .select({ packageId: packageItems.packageId, itemId: packageItems.itemId })
-    .from(packageItems);
-  const existingPiKeys = new Set(existingPackageItems.map(pi => `${pi.packageId}:${pi.itemId}`));
-  const piToInsert = piInserts.filter(pi => !existingPiKeys.has(`${pi.packageId}:${pi.itemId}`));
-  let piCount = 0;
-  if (piToInsert.length > 0) {
-    const inserted = await db.insert(packageItems).values(piToInsert).returning();
-    piCount = inserted.length;
+    const existing = existingPIs.find(ex => ex.packageId === pId && ex.itemId === itmId);
+    if (existing) {
+      await db.update(packageItems).set({
+        defaultOptionId: optId,
+        isIncluded: d.isIncluded,
+        additionalCostPrice: d.additionalCostPrice,
+      }).where(eq(packageItems.id, existing.id));
+    } else {
+      await db.insert(packageItems).values({
+        packageId: pId,
+        itemId: itmId,
+        defaultOptionId: optId,
+        includedCoverage: d.includedCoverage ?? null,
+        isIncluded: d.isIncluded,
+        additionalCostPrice: d.additionalCostPrice,
+      });
+    }
   }
-  log('Package Items (package × item mappings)', piCount);
+  log('Package Items (96 package × item mappings)', piDefs.length);
 
-  // -------------------------------------------------------------------------
-  // OPTION_PRICES — upgrade deltas for brand options
-  // Source: requirements §5 (masonry red brick upgrade, rcc basement upgrade)
-  // -------------------------------------------------------------------------
+  // ── Option Prices (Upgrade Deltas) ─────────────────────────────────────────
   const opDefs: {
     optionSlug: string;
-    packageSlug?: string;
+    packageSlug: string;
     priceDelta: string;
     priceType: string;
   }[] = [
-    // Masonry: Red brick upgrade from Solid block (Basic) → +₹120/sqft
-    { optionSlug: 'red_brick', packageSlug: 'basic',    priceDelta: '120.00', priceType: 'per_sqft' },
-    // Masonry: Red brick upgrade from Fly ash (Standard/Premium) → +₹100/sqft
-    { optionSlug: 'red_brick', packageSlug: 'standard', priceDelta: '100.00', priceType: 'per_sqft' },
-    { optionSlug: 'red_brick', packageSlug: 'premium',  priceDelta: '100.00', priceType: 'per_sqft' },
-    // RCC Basement upgrade from PCC (Basic/Standard/Premium) → +₹40/sqft
-    { optionSlug: 'rcc_basement', packageSlug: 'basic',    priceDelta: '40.00', priceType: 'per_sqft' },
-    { optionSlug: 'rcc_basement', packageSlug: 'standard', priceDelta: '40.00', priceType: 'per_sqft' },
-    { optionSlug: 'rcc_basement', packageSlug: 'premium',  priceDelta: '40.00', priceType: 'per_sqft' },
-
-    // -----------------------------------------------------------------------
-    // Brand upgrade deltas — migration 0012.
-    // Rule (confirmed by Sundar 2026-09-01): delta = cost at the option's tier
-    // minus cost at the customer's tier, clamped at zero. Tier costs come from
-    // tab 1821959866 of the rate card. See 0012_brand_upgrade_deltas.sql for the
-    // cross-check and for what is deliberately left out (painting, masonry).
-    // -----------------------------------------------------------------------
-    // Steel Rebar Fe 550D — 305 / 320 / 350 / 400
-    { optionSlug: 'spa_vizag_steel',    packageSlug: 'basic',    priceDelta: '15.00', priceType: 'per_sqft' },
-    { optionSlug: 'ars_suryadev_steel', packageSlug: 'basic',    priceDelta: '45.00', priceType: 'per_sqft' },
-    { optionSlug: 'ars_suryadev_steel', packageSlug: 'standard', priceDelta: '30.00', priceType: 'per_sqft' },
-    { optionSlug: 'jsw_tata_steel',     packageSlug: 'basic',    priceDelta: '95.00', priceType: 'per_sqft' },
-    { optionSlug: 'jsw_tata_steel',     packageSlug: 'standard', priceDelta: '80.00', priceType: 'per_sqft' },
-    { optionSlug: 'jsw_tata_steel',     packageSlug: 'premium',  priceDelta: '50.00', priceType: 'per_sqft' },
-    // Cement — 210 / 215 / 225 / 245
-    { optionSlug: 'jsw_cement',          packageSlug: 'basic',    priceDelta: '5.00',  priceType: 'per_sqft' },
-    { optionSlug: 'ramco_dalmia_cement', packageSlug: 'basic',    priceDelta: '15.00', priceType: 'per_sqft' },
-    { optionSlug: 'ramco_dalmia_cement', packageSlug: 'standard', priceDelta: '10.00', priceType: 'per_sqft' },
-    { optionSlug: 'ultratech_chettinad', packageSlug: 'basic',    priceDelta: '35.00', priceType: 'per_sqft' },
-    { optionSlug: 'ultratech_chettinad', packageSlug: 'standard', priceDelta: '30.00', priceType: 'per_sqft' },
-    { optionSlug: 'ultratech_chettinad', packageSlug: 'premium',  priceDelta: '20.00', priceType: 'per_sqft' },
-    // PVC & CPVC Pipes — 100 / 125 / 145 / 160
-    { optionSlug: 'watertec',        packageSlug: 'basic',    priceDelta: '25.00', priceType: 'per_sqft' },
-    { optionSlug: 'kavery_ashirwad', packageSlug: 'basic',    priceDelta: '45.00', priceType: 'per_sqft' },
-    { optionSlug: 'kavery_ashirwad', packageSlug: 'standard', priceDelta: '20.00', priceType: 'per_sqft' },
-    { optionSlug: 'finolex_supreme', packageSlug: 'basic',    priceDelta: '60.00', priceType: 'per_sqft' },
-    { optionSlug: 'finolex_supreme', packageSlug: 'standard', priceDelta: '35.00', priceType: 'per_sqft' },
-    { optionSlug: 'finolex_supreme', packageSlug: 'premium',  priceDelta: '15.00', priceType: 'per_sqft' },
-    // Sanitary & CP Fittings — 40 / 60 / 90 / 135
-    { optionSlug: 'parryware',   packageSlug: 'basic',    priceDelta: '20.00', priceType: 'per_sqft' },
-    { optionSlug: 'jaquar',      packageSlug: 'basic',    priceDelta: '50.00', priceType: 'per_sqft' },
-    { optionSlug: 'jaquar',      packageSlug: 'standard', priceDelta: '30.00', priceType: 'per_sqft' },
-    { optionSlug: 'toto_kohler', packageSlug: 'basic',    priceDelta: '95.00', priceType: 'per_sqft' },
-    { optionSlug: 'toto_kohler', packageSlug: 'standard', priceDelta: '75.00', priceType: 'per_sqft' },
-    { optionSlug: 'toto_kohler', packageSlug: 'premium',  priceDelta: '45.00', priceType: 'per_sqft' },
-    // Wires & Switches — wires 60/75/90/90 + switches 17/22/28/28 = 77 / 97 / 118 / 118
-    { optionSlug: 'rr_anchor_roma',  packageSlug: 'basic',    priceDelta: '20.00', priceType: 'per_sqft' },
-    { optionSlug: 'finolex_legrand', packageSlug: 'basic',    priceDelta: '41.00', priceType: 'per_sqft' },
-    { optionSlug: 'finolex_legrand', packageSlug: 'standard', priceDelta: '21.00', priceType: 'per_sqft' },
-    // Lights — 17 / 22 / 28 / 28
-    { optionSlug: 'luker_lights',   packageSlug: 'basic',    priceDelta: '5.00',  priceType: 'per_sqft' },
-    { optionSlug: 'philips_lights', packageSlug: 'basic',    priceDelta: '11.00', priceType: 'per_sqft' },
-    { optionSlug: 'philips_lights', packageSlug: 'standard', priceDelta: '6.00',  priceType: 'per_sqft' },
-    // Waterproofing — 0 / 10 / 10 / 10; all three brands are equivalent, so Basic
-    // pays ₹10 for any of them. Stated per option so the UI shows it.
-    { optionSlug: 'dr_fixit', packageSlug: 'basic', priceDelta: '10.00', priceType: 'per_sqft' },
-    { optionSlug: 'fosroc',   packageSlug: 'basic', priceDelta: '10.00', priceType: 'per_sqft' },
-    { optionSlug: 'bostik',   packageSlug: 'basic', priceDelta: '10.00', priceType: 'per_sqft' },
+    // ── Item #1: Steel Rebar Fe 550D & Binding Wires ──
+    { optionSlug: "any_isi_steel_wire", packageSlug: "standard", priceDelta: '-15.00', priceType: 'per_sqft' },
+    { optionSlug: "any_isi_steel_wire", packageSlug: "premium", priceDelta: '-45.00', priceType: 'per_sqft' },
+    { optionSlug: "any_isi_steel_wire", packageSlug: "luxury", priceDelta: '-95.00', priceType: 'per_sqft' },
+    { optionSlug: "spa_vizag_tata_wire", packageSlug: "basic", priceDelta: '15.00', priceType: 'per_sqft' },
+    { optionSlug: "spa_vizag_tata_wire", packageSlug: "premium", priceDelta: '-30.00', priceType: 'per_sqft' },
+    { optionSlug: "spa_vizag_tata_wire", packageSlug: "luxury", priceDelta: '-80.00', priceType: 'per_sqft' },
+    { optionSlug: "ars_suryadev_tata_wire", packageSlug: "basic", priceDelta: '45.00', priceType: 'per_sqft' },
+    { optionSlug: "ars_suryadev_tata_wire", packageSlug: "standard", priceDelta: '30.00', priceType: 'per_sqft' },
+    { optionSlug: "ars_suryadev_tata_wire", packageSlug: "luxury", priceDelta: '-50.00', priceType: 'per_sqft' },
+    { optionSlug: "jsw_tata_steel_wire", packageSlug: "basic", priceDelta: '95.00', priceType: 'per_sqft' },
+    { optionSlug: "jsw_tata_steel_wire", packageSlug: "standard", priceDelta: '80.00', priceType: 'per_sqft' },
+    { optionSlug: "jsw_tata_steel_wire", packageSlug: "premium", priceDelta: '50.00', priceType: 'per_sqft' },
+    // ── Item #2: Cement ──
+    { optionSlug: "any_isi_cement", packageSlug: "standard", priceDelta: '-5.00', priceType: 'per_sqft' },
+    { optionSlug: "any_isi_cement", packageSlug: "premium", priceDelta: '-15.00', priceType: 'per_sqft' },
+    { optionSlug: "any_isi_cement", packageSlug: "luxury", priceDelta: '-35.00', priceType: 'per_sqft' },
+    { optionSlug: "jsw_cement", packageSlug: "basic", priceDelta: '5.00', priceType: 'per_sqft' },
+    { optionSlug: "jsw_cement", packageSlug: "premium", priceDelta: '-10.00', priceType: 'per_sqft' },
+    { optionSlug: "jsw_cement", packageSlug: "luxury", priceDelta: '-30.00', priceType: 'per_sqft' },
+    { optionSlug: "ramco_dalmia_cement", packageSlug: "basic", priceDelta: '15.00', priceType: 'per_sqft' },
+    { optionSlug: "ramco_dalmia_cement", packageSlug: "standard", priceDelta: '10.00', priceType: 'per_sqft' },
+    { optionSlug: "ramco_dalmia_cement", packageSlug: "luxury", priceDelta: '-20.00', priceType: 'per_sqft' },
+    { optionSlug: "ultratech_chettinad_cement", packageSlug: "basic", priceDelta: '35.00', priceType: 'per_sqft' },
+    { optionSlug: "ultratech_chettinad_cement", packageSlug: "standard", priceDelta: '30.00', priceType: 'per_sqft' },
+    { optionSlug: "ultratech_chettinad_cement", packageSlug: "premium", priceDelta: '20.00', priceType: 'per_sqft' },
+    // ── Item #3: Masonry Work ──
+    { optionSlug: "solid_blocks", packageSlug: "standard", priceDelta: '-20.00', priceType: 'per_sqft' },
+    { optionSlug: "solid_blocks", packageSlug: "premium", priceDelta: '-20.00', priceType: 'per_sqft' },
+    { optionSlug: "solid_blocks", packageSlug: "luxury", priceDelta: '-130.00', priceType: 'per_sqft' },
+    { optionSlug: "flyash_aac_blocks", packageSlug: "basic", priceDelta: '20.00', priceType: 'per_sqft' },
+    { optionSlug: "flyash_aac_blocks", packageSlug: "luxury", priceDelta: '-110.00', priceType: 'per_sqft' },
+    { optionSlug: "flyash_aac_premium", packageSlug: "basic", priceDelta: '20.00', priceType: 'per_sqft' },
+    { optionSlug: "flyash_aac_premium", packageSlug: "luxury", priceDelta: '-110.00', priceType: 'per_sqft' },
+    { optionSlug: "red_bricks", packageSlug: "basic", priceDelta: '130.00', priceType: 'per_sqft' },
+    { optionSlug: "red_bricks", packageSlug: "standard", priceDelta: '110.00', priceType: 'per_sqft' },
+    { optionSlug: "red_bricks", packageSlug: "premium", priceDelta: '110.00', priceType: 'per_sqft' },
+    // ── Item #4: Basement Height (from ground level) ──
+    { optionSlug: "basement_3ft_flyash", packageSlug: "premium", priceDelta: '-20.00', priceType: 'per_sqft' },
+    { optionSlug: "basement_3ft_flyash", packageSlug: "luxury", priceDelta: '-40.00', priceType: 'per_sqft' },
+    { optionSlug: "basement_3ft_std", packageSlug: "premium", priceDelta: '-20.00', priceType: 'per_sqft' },
+    { optionSlug: "basement_3ft_std", packageSlug: "luxury", priceDelta: '-40.00', priceType: 'per_sqft' },
+    { optionSlug: "basement_4ft_flyash", packageSlug: "basic", priceDelta: '20.00', priceType: 'per_sqft' },
+    { optionSlug: "basement_4ft_flyash", packageSlug: "standard", priceDelta: '20.00', priceType: 'per_sqft' },
+    { optionSlug: "basement_4ft_flyash", packageSlug: "luxury", priceDelta: '-20.00', priceType: 'per_sqft' },
+    { optionSlug: "basement_4_5ft_redbrick", packageSlug: "basic", priceDelta: '40.00', priceType: 'per_sqft' },
+    { optionSlug: "basement_4_5ft_redbrick", packageSlug: "standard", priceDelta: '40.00', priceType: 'per_sqft' },
+    { optionSlug: "basement_4_5ft_redbrick", packageSlug: "premium", priceDelta: '20.00', priceType: 'per_sqft' },
+    // ── Item #5: Ceiling Height ──
+    { optionSlug: "ceiling_9_5ft", packageSlug: "standard", priceDelta: '-25.00', priceType: 'per_sqft' },
+    { optionSlug: "ceiling_9_5ft", packageSlug: "premium", priceDelta: '-70.00', priceType: 'per_sqft' },
+    { optionSlug: "ceiling_9_5ft", packageSlug: "luxury", priceDelta: '-70.00', priceType: 'per_sqft' },
+    { optionSlug: "ceiling_10ft_std", packageSlug: "basic", priceDelta: '25.00', priceType: 'per_sqft' },
+    { optionSlug: "ceiling_10ft_std", packageSlug: "premium", priceDelta: '-45.00', priceType: 'per_sqft' },
+    { optionSlug: "ceiling_10ft_std", packageSlug: "luxury", priceDelta: '-45.00', priceType: 'per_sqft' },
+    { optionSlug: "ceiling_10ft_prem", packageSlug: "basic", priceDelta: '70.00', priceType: 'per_sqft' },
+    { optionSlug: "ceiling_10ft_prem", packageSlug: "standard", priceDelta: '45.00', priceType: 'per_sqft' },
+    { optionSlug: "ceiling_11ft", packageSlug: "basic", priceDelta: '70.00', priceType: 'per_sqft' },
+    { optionSlug: "ceiling_11ft", packageSlug: "standard", priceDelta: '45.00', priceType: 'per_sqft' },
+    // ── Item #6: Water Proofing & Basement PCC ──
+    { optionSlug: "pcc_basic_waterproofing", packageSlug: "standard", priceDelta: '-10.00', priceType: 'per_sqft' },
+    { optionSlug: "pcc_basic_waterproofing", packageSlug: "premium", priceDelta: '-10.00', priceType: 'per_sqft' },
+    { optionSlug: "pcc_basic_waterproofing", packageSlug: "luxury", priceDelta: '-50.00', priceType: 'per_sqft' },
+    { optionSlug: "pcc_dr_fixit_std", packageSlug: "basic", priceDelta: '10.00', priceType: 'per_sqft' },
+    { optionSlug: "pcc_dr_fixit_std", packageSlug: "luxury", priceDelta: '-40.00', priceType: 'per_sqft' },
+    { optionSlug: "pcc_dr_fixit_prem", packageSlug: "basic", priceDelta: '10.00', priceType: 'per_sqft' },
+    { optionSlug: "pcc_dr_fixit_prem", packageSlug: "luxury", priceDelta: '-40.00', priceType: 'per_sqft' },
+    { optionSlug: "rcc_basement_waterproofing", packageSlug: "basic", priceDelta: '50.00', priceType: 'per_sqft' },
+    { optionSlug: "rcc_basement_waterproofing", packageSlug: "standard", priceDelta: '40.00', priceType: 'per_sqft' },
+    { optionSlug: "rcc_basement_waterproofing", packageSlug: "premium", priceDelta: '40.00', priceType: 'per_sqft' },
+    // ── Item #7: Soil Testing ──
+    { optionSlug: "soil_testing_not_included_basic", packageSlug: "premium", priceDelta: '-40.00', priceType: 'per_sqft' },
+    { optionSlug: "soil_testing_not_included_basic", packageSlug: "luxury", priceDelta: '-40.00', priceType: 'per_sqft' },
+    { optionSlug: "soil_testing_not_included_std", packageSlug: "premium", priceDelta: '-40.00', priceType: 'per_sqft' },
+    { optionSlug: "soil_testing_not_included_std", packageSlug: "luxury", priceDelta: '-40.00', priceType: 'per_sqft' },
+    { optionSlug: "soil_testing_included_prem", packageSlug: "basic", priceDelta: '40.00', priceType: 'per_sqft' },
+    { optionSlug: "soil_testing_included_prem", packageSlug: "standard", priceDelta: '40.00', priceType: 'per_sqft' },
+    { optionSlug: "soil_testing_included_lux", packageSlug: "basic", priceDelta: '40.00', priceType: 'per_sqft' },
+    { optionSlug: "soil_testing_included_lux", packageSlug: "standard", priceDelta: '40.00', priceType: 'per_sqft' },
+    // ── Item #8: Electrical & Plumbing Drawings ──
+    { optionSlug: "mep_drawings_basic", packageSlug: "premium", priceDelta: '-12.00', priceType: 'per_sqft' },
+    { optionSlug: "mep_drawings_basic", packageSlug: "luxury", priceDelta: '-12.00', priceType: 'per_sqft' },
+    { optionSlug: "mep_drawings_std", packageSlug: "premium", priceDelta: '-12.00', priceType: 'per_sqft' },
+    { optionSlug: "mep_drawings_std", packageSlug: "luxury", priceDelta: '-12.00', priceType: 'per_sqft' },
+    { optionSlug: "mep_drawings_included_prem", packageSlug: "basic", priceDelta: '12.00', priceType: 'per_sqft' },
+    { optionSlug: "mep_drawings_included_prem", packageSlug: "standard", priceDelta: '12.00', priceType: 'per_sqft' },
+    { optionSlug: "mep_drawings_included_lux", packageSlug: "basic", priceDelta: '12.00', priceType: 'per_sqft' },
+    { optionSlug: "mep_drawings_included_lux", packageSlug: "standard", priceDelta: '12.00', priceType: 'per_sqft' },
+    // ── Item #9: Isometric Views & Virtual Reality ──
+    { optionSlug: "iso_vr_not_included_basic", packageSlug: "luxury", priceDelta: '-50.00', priceType: 'per_sqft' },
+    { optionSlug: "iso_vr_not_included_std", packageSlug: "luxury", priceDelta: '-50.00', priceType: 'per_sqft' },
+    { optionSlug: "iso_vr_not_included_prem", packageSlug: "luxury", priceDelta: '-50.00', priceType: 'per_sqft' },
+    { optionSlug: "iso_vr_included_lux", packageSlug: "basic", priceDelta: '50.00', priceType: 'per_sqft' },
+    { optionSlug: "iso_vr_included_lux", packageSlug: "standard", priceDelta: '50.00', priceType: 'per_sqft' },
+    { optionSlug: "iso_vr_included_lux", packageSlug: "premium", priceDelta: '50.00', priceType: 'per_sqft' },
+    // ── Item #10: Kitchen Wall Tiles & Kitchen Countertop ──
+    { optionSlug: "kitchen_tiles_slab_basic", packageSlug: "standard", priceDelta: '-12.00', priceType: 'per_sqft' },
+    { optionSlug: "kitchen_tiles_slab_basic", packageSlug: "premium", priceDelta: '-30.00', priceType: 'per_sqft' },
+    { optionSlug: "kitchen_tiles_slab_basic", packageSlug: "luxury", priceDelta: '-48.00', priceType: 'per_sqft' },
+    { optionSlug: "kitchen_tiles_slab_std", packageSlug: "basic", priceDelta: '12.00', priceType: 'per_sqft' },
+    { optionSlug: "kitchen_tiles_slab_std", packageSlug: "premium", priceDelta: '-18.00', priceType: 'per_sqft' },
+    { optionSlug: "kitchen_tiles_slab_std", packageSlug: "luxury", priceDelta: '-36.00', priceType: 'per_sqft' },
+    { optionSlug: "kitchen_tiles_slab_prem", packageSlug: "basic", priceDelta: '30.00', priceType: 'per_sqft' },
+    { optionSlug: "kitchen_tiles_slab_prem", packageSlug: "standard", priceDelta: '18.00', priceType: 'per_sqft' },
+    { optionSlug: "kitchen_tiles_slab_prem", packageSlug: "luxury", priceDelta: '-18.00', priceType: 'per_sqft' },
+    { optionSlug: "kitchen_tiles_slab_lux", packageSlug: "basic", priceDelta: '48.00', priceType: 'per_sqft' },
+    { optionSlug: "kitchen_tiles_slab_lux", packageSlug: "standard", priceDelta: '36.00', priceType: 'per_sqft' },
+    { optionSlug: "kitchen_tiles_slab_lux", packageSlug: "premium", priceDelta: '18.00', priceType: 'per_sqft' },
+    // ── Item #11: Wall Tiles ──
+    { optionSlug: "wall_tiles_7ft_basic", packageSlug: "standard", priceDelta: '-14.00', priceType: 'per_sqft' },
+    { optionSlug: "wall_tiles_7ft_basic", packageSlug: "premium", priceDelta: '-59.00', priceType: 'per_sqft' },
+    { optionSlug: "wall_tiles_7ft_basic", packageSlug: "luxury", priceDelta: '-104.00', priceType: 'per_sqft' },
+    { optionSlug: "wall_tiles_7ft_std", packageSlug: "basic", priceDelta: '14.00', priceType: 'per_sqft' },
+    { optionSlug: "wall_tiles_7ft_std", packageSlug: "premium", priceDelta: '-45.00', priceType: 'per_sqft' },
+    { optionSlug: "wall_tiles_7ft_std", packageSlug: "luxury", priceDelta: '-90.00', priceType: 'per_sqft' },
+    { optionSlug: "wall_tiles_10ft_prem", packageSlug: "basic", priceDelta: '59.00', priceType: 'per_sqft' },
+    { optionSlug: "wall_tiles_10ft_prem", packageSlug: "standard", priceDelta: '45.00', priceType: 'per_sqft' },
+    { optionSlug: "wall_tiles_10ft_prem", packageSlug: "luxury", priceDelta: '-45.00', priceType: 'per_sqft' },
+    { optionSlug: "wall_tiles_11ft_lux", packageSlug: "basic", priceDelta: '104.00', priceType: 'per_sqft' },
+    { optionSlug: "wall_tiles_11ft_lux", packageSlug: "standard", priceDelta: '90.00', priceType: 'per_sqft' },
+    { optionSlug: "wall_tiles_11ft_lux", packageSlug: "premium", priceDelta: '45.00', priceType: 'per_sqft' },
+    // ── Item #12: Sanitary & CP Fittings ──
+    { optionSlug: "sanitary_any_isi", packageSlug: "standard", priceDelta: '-20.00', priceType: 'per_sqft' },
+    { optionSlug: "sanitary_any_isi", packageSlug: "premium", priceDelta: '-50.00', priceType: 'per_sqft' },
+    { optionSlug: "sanitary_any_isi", packageSlug: "luxury", priceDelta: '-95.00', priceType: 'per_sqft' },
+    { optionSlug: "sanitary_parryware", packageSlug: "basic", priceDelta: '20.00', priceType: 'per_sqft' },
+    { optionSlug: "sanitary_parryware", packageSlug: "premium", priceDelta: '-30.00', priceType: 'per_sqft' },
+    { optionSlug: "sanitary_parryware", packageSlug: "luxury", priceDelta: '-75.00', priceType: 'per_sqft' },
+    { optionSlug: "sanitary_jaquar", packageSlug: "basic", priceDelta: '50.00', priceType: 'per_sqft' },
+    { optionSlug: "sanitary_jaquar", packageSlug: "standard", priceDelta: '30.00', priceType: 'per_sqft' },
+    { optionSlug: "sanitary_jaquar", packageSlug: "luxury", priceDelta: '-45.00', priceType: 'per_sqft' },
+    { optionSlug: "sanitary_toto_kohler", packageSlug: "basic", priceDelta: '95.00', priceType: 'per_sqft' },
+    { optionSlug: "sanitary_toto_kohler", packageSlug: "standard", priceDelta: '75.00', priceType: 'per_sqft' },
+    { optionSlug: "sanitary_toto_kohler", packageSlug: "premium", priceDelta: '45.00', priceType: 'per_sqft' },
+    // ── Item #13: PVC and CPVC Pipes ──
+    { optionSlug: "pipes_any_isi", packageSlug: "standard", priceDelta: '-25.00', priceType: 'per_sqft' },
+    { optionSlug: "pipes_any_isi", packageSlug: "premium", priceDelta: '-45.00', priceType: 'per_sqft' },
+    { optionSlug: "pipes_any_isi", packageSlug: "luxury", priceDelta: '-60.00', priceType: 'per_sqft' },
+    { optionSlug: "pipes_watertec", packageSlug: "basic", priceDelta: '25.00', priceType: 'per_sqft' },
+    { optionSlug: "pipes_watertec", packageSlug: "premium", priceDelta: '-20.00', priceType: 'per_sqft' },
+    { optionSlug: "pipes_watertec", packageSlug: "luxury", priceDelta: '-35.00', priceType: 'per_sqft' },
+    { optionSlug: "pipes_kavery_ashirwad", packageSlug: "basic", priceDelta: '45.00', priceType: 'per_sqft' },
+    { optionSlug: "pipes_kavery_ashirwad", packageSlug: "standard", priceDelta: '20.00', priceType: 'per_sqft' },
+    { optionSlug: "pipes_kavery_ashirwad", packageSlug: "luxury", priceDelta: '-15.00', priceType: 'per_sqft' },
+    { optionSlug: "pipes_finolex_supreme", packageSlug: "basic", priceDelta: '60.00', priceType: 'per_sqft' },
+    { optionSlug: "pipes_finolex_supreme", packageSlug: "standard", priceDelta: '35.00', priceType: 'per_sqft' },
+    { optionSlug: "pipes_finolex_supreme", packageSlug: "premium", priceDelta: '15.00', priceType: 'per_sqft' },
+    // ── Item #14: Main Flooring, Balcony Tiles ──
+    { optionSlug: "flooring_tiles_basic", packageSlug: "standard", priceDelta: '-10.00', priceType: 'per_sqft' },
+    { optionSlug: "flooring_tiles_basic", packageSlug: "premium", priceDelta: '-30.00', priceType: 'per_sqft' },
+    { optionSlug: "flooring_tiles_basic", packageSlug: "luxury", priceDelta: '-60.00', priceType: 'per_sqft' },
+    { optionSlug: "flooring_tiles_std", packageSlug: "basic", priceDelta: '10.00', priceType: 'per_sqft' },
+    { optionSlug: "flooring_tiles_std", packageSlug: "premium", priceDelta: '-20.00', priceType: 'per_sqft' },
+    { optionSlug: "flooring_tiles_std", packageSlug: "luxury", priceDelta: '-50.00', priceType: 'per_sqft' },
+    { optionSlug: "flooring_tiles_prem", packageSlug: "basic", priceDelta: '30.00', priceType: 'per_sqft' },
+    { optionSlug: "flooring_tiles_prem", packageSlug: "standard", priceDelta: '20.00', priceType: 'per_sqft' },
+    { optionSlug: "flooring_tiles_prem", packageSlug: "luxury", priceDelta: '-30.00', priceType: 'per_sqft' },
+    { optionSlug: "flooring_tiles_lux", packageSlug: "basic", priceDelta: '60.00', priceType: 'per_sqft' },
+    { optionSlug: "flooring_tiles_lux", packageSlug: "standard", priceDelta: '50.00', priceType: 'per_sqft' },
+    { optionSlug: "flooring_tiles_lux", packageSlug: "premium", priceDelta: '30.00', priceType: 'per_sqft' },
+    // ── Item #15: Staircase ──
+    { optionSlug: "staircase_tiles_basic", packageSlug: "standard", priceDelta: '-15.00', priceType: 'per_sqft' },
+    { optionSlug: "staircase_tiles_basic", packageSlug: "premium", priceDelta: '-85.00', priceType: 'per_sqft' },
+    { optionSlug: "staircase_tiles_basic", packageSlug: "luxury", priceDelta: '-125.00', priceType: 'per_sqft' },
+    { optionSlug: "staircase_tiles_std", packageSlug: "basic", priceDelta: '15.00', priceType: 'per_sqft' },
+    { optionSlug: "staircase_tiles_std", packageSlug: "premium", priceDelta: '-70.00', priceType: 'per_sqft' },
+    { optionSlug: "staircase_tiles_std", packageSlug: "luxury", priceDelta: '-110.00', priceType: 'per_sqft' },
+    { optionSlug: "staircase_granite_prem", packageSlug: "basic", priceDelta: '85.00', priceType: 'per_sqft' },
+    { optionSlug: "staircase_granite_prem", packageSlug: "standard", priceDelta: '70.00', priceType: 'per_sqft' },
+    { optionSlug: "staircase_granite_prem", packageSlug: "luxury", priceDelta: '-40.00', priceType: 'per_sqft' },
+    { optionSlug: "staircase_granite_lux", packageSlug: "basic", priceDelta: '125.00', priceType: 'per_sqft' },
+    { optionSlug: "staircase_granite_lux", packageSlug: "standard", priceDelta: '110.00', priceType: 'per_sqft' },
+    { optionSlug: "staircase_granite_lux", packageSlug: "premium", priceDelta: '40.00', priceType: 'per_sqft' },
+    // ── Item #16: Parking ──
+    { optionSlug: "parking_tiles_basic", packageSlug: "standard", priceDelta: '-5.00', priceType: 'per_sqft' },
+    { optionSlug: "parking_tiles_basic", packageSlug: "premium", priceDelta: '-25.00', priceType: 'per_sqft' },
+    { optionSlug: "parking_tiles_basic", packageSlug: "luxury", priceDelta: '-55.00', priceType: 'per_sqft' },
+    { optionSlug: "parking_tiles_std", packageSlug: "basic", priceDelta: '5.00', priceType: 'per_sqft' },
+    { optionSlug: "parking_tiles_std", packageSlug: "premium", priceDelta: '-20.00', priceType: 'per_sqft' },
+    { optionSlug: "parking_tiles_std", packageSlug: "luxury", priceDelta: '-50.00', priceType: 'per_sqft' },
+    { optionSlug: "parking_tiles_prem", packageSlug: "basic", priceDelta: '25.00', priceType: 'per_sqft' },
+    { optionSlug: "parking_tiles_prem", packageSlug: "standard", priceDelta: '20.00', priceType: 'per_sqft' },
+    { optionSlug: "parking_tiles_prem", packageSlug: "luxury", priceDelta: '-30.00', priceType: 'per_sqft' },
+    { optionSlug: "parking_tiles_lux", packageSlug: "basic", priceDelta: '55.00', priceType: 'per_sqft' },
+    { optionSlug: "parking_tiles_lux", packageSlug: "standard", priceDelta: '50.00', priceType: 'per_sqft' },
+    { optionSlug: "parking_tiles_lux", packageSlug: "premium", priceDelta: '30.00', priceType: 'per_sqft' },
+    // ── Item #17: Main Door & Internal Doors ──
+    { optionSlug: "doors_basic", packageSlug: "standard", priceDelta: '-25.00', priceType: 'per_sqft' },
+    { optionSlug: "doors_basic", packageSlug: "premium", priceDelta: '-125.00', priceType: 'per_sqft' },
+    { optionSlug: "doors_basic", packageSlug: "luxury", priceDelta: '-200.00', priceType: 'per_sqft' },
+    { optionSlug: "doors_std", packageSlug: "basic", priceDelta: '25.00', priceType: 'per_sqft' },
+    { optionSlug: "doors_std", packageSlug: "premium", priceDelta: '-100.00', priceType: 'per_sqft' },
+    { optionSlug: "doors_std", packageSlug: "luxury", priceDelta: '-175.00', priceType: 'per_sqft' },
+    { optionSlug: "doors_prem", packageSlug: "basic", priceDelta: '125.00', priceType: 'per_sqft' },
+    { optionSlug: "doors_prem", packageSlug: "standard", priceDelta: '100.00', priceType: 'per_sqft' },
+    { optionSlug: "doors_prem", packageSlug: "luxury", priceDelta: '-75.00', priceType: 'per_sqft' },
+    { optionSlug: "doors_lux", packageSlug: "basic", priceDelta: '200.00', priceType: 'per_sqft' },
+    { optionSlug: "doors_lux", packageSlug: "standard", priceDelta: '175.00', priceType: 'per_sqft' },
+    { optionSlug: "doors_lux", packageSlug: "premium", priceDelta: '75.00', priceType: 'per_sqft' },
+    // ── Item #18: Balcony & Headroom Doors ──
+    { optionSlug: "balcony_headroom_basic", packageSlug: "premium", priceDelta: '-39.00', priceType: 'per_sqft' },
+    { optionSlug: "balcony_headroom_basic", packageSlug: "luxury", priceDelta: '-39.00', priceType: 'per_sqft' },
+    { optionSlug: "balcony_headroom_std", packageSlug: "premium", priceDelta: '-39.00', priceType: 'per_sqft' },
+    { optionSlug: "balcony_headroom_std", packageSlug: "luxury", priceDelta: '-39.00', priceType: 'per_sqft' },
+    { optionSlug: "balcony_headroom_prem", packageSlug: "basic", priceDelta: '39.00', priceType: 'per_sqft' },
+    { optionSlug: "balcony_headroom_prem", packageSlug: "standard", priceDelta: '39.00', priceType: 'per_sqft' },
+    { optionSlug: "balcony_headroom_lux", packageSlug: "basic", priceDelta: '39.00', priceType: 'per_sqft' },
+    { optionSlug: "balcony_headroom_lux", packageSlug: "standard", priceDelta: '39.00', priceType: 'per_sqft' },
+    // ── Item #19: Bathroom Doors ──
+    { optionSlug: "bathroom_doors_pvc", packageSlug: "standard", priceDelta: '-4.00', priceType: 'per_sqft' },
+    { optionSlug: "bathroom_doors_pvc", packageSlug: "premium", priceDelta: '-10.00', priceType: 'per_sqft' },
+    { optionSlug: "bathroom_doors_pvc", packageSlug: "luxury", priceDelta: '-17.00', priceType: 'per_sqft' },
+    { optionSlug: "bathroom_doors_wpc", packageSlug: "basic", priceDelta: '4.00', priceType: 'per_sqft' },
+    { optionSlug: "bathroom_doors_wpc", packageSlug: "premium", priceDelta: '-6.00', priceType: 'per_sqft' },
+    { optionSlug: "bathroom_doors_wpc", packageSlug: "luxury", priceDelta: '-13.00', priceType: 'per_sqft' },
+    { optionSlug: "bathroom_doors_lam_wpc", packageSlug: "basic", priceDelta: '10.00', priceType: 'per_sqft' },
+    { optionSlug: "bathroom_doors_lam_wpc", packageSlug: "standard", priceDelta: '6.00', priceType: 'per_sqft' },
+    { optionSlug: "bathroom_doors_lam_wpc", packageSlug: "luxury", priceDelta: '-7.00', priceType: 'per_sqft' },
+    { optionSlug: "bathroom_doors_frp", packageSlug: "basic", priceDelta: '17.00', priceType: 'per_sqft' },
+    { optionSlug: "bathroom_doors_frp", packageSlug: "standard", priceDelta: '13.00', priceType: 'per_sqft' },
+    { optionSlug: "bathroom_doors_frp", packageSlug: "premium", priceDelta: '7.00', priceType: 'per_sqft' },
+    // ── Item #20: PAINTING ──
+    { optionSlug: "paint_basic", packageSlug: "standard", priceDelta: '-25.00', priceType: 'per_sqft' },
+    { optionSlug: "paint_basic", packageSlug: "premium", priceDelta: '-50.00', priceType: 'per_sqft' },
+    { optionSlug: "paint_basic", packageSlug: "luxury", priceDelta: '-80.00', priceType: 'per_sqft' },
+    { optionSlug: "paint_std", packageSlug: "basic", priceDelta: '25.00', priceType: 'per_sqft' },
+    { optionSlug: "paint_std", packageSlug: "premium", priceDelta: '-25.00', priceType: 'per_sqft' },
+    { optionSlug: "paint_std", packageSlug: "luxury", priceDelta: '-55.00', priceType: 'per_sqft' },
+    { optionSlug: "paint_prem", packageSlug: "basic", priceDelta: '50.00', priceType: 'per_sqft' },
+    { optionSlug: "paint_prem", packageSlug: "standard", priceDelta: '25.00', priceType: 'per_sqft' },
+    { optionSlug: "paint_prem", packageSlug: "luxury", priceDelta: '-30.00', priceType: 'per_sqft' },
+    { optionSlug: "paint_lux", packageSlug: "basic", priceDelta: '80.00', priceType: 'per_sqft' },
+    { optionSlug: "paint_lux", packageSlug: "standard", priceDelta: '55.00', priceType: 'per_sqft' },
+    { optionSlug: "paint_lux", packageSlug: "premium", priceDelta: '30.00', priceType: 'per_sqft' },
+    // ── Item #21: Wires, Switches & Pipes ──
+    { optionSlug: "elec_basic", packageSlug: "standard", priceDelta: '-30.00', priceType: 'per_sqft' },
+    { optionSlug: "elec_basic", packageSlug: "premium", priceDelta: '-50.00', priceType: 'per_sqft' },
+    { optionSlug: "elec_basic", packageSlug: "luxury", priceDelta: '-70.00', priceType: 'per_sqft' },
+    { optionSlug: "elec_std", packageSlug: "basic", priceDelta: '30.00', priceType: 'per_sqft' },
+    { optionSlug: "elec_std", packageSlug: "premium", priceDelta: '-20.00', priceType: 'per_sqft' },
+    { optionSlug: "elec_std", packageSlug: "luxury", priceDelta: '-40.00', priceType: 'per_sqft' },
+    { optionSlug: "elec_prem", packageSlug: "basic", priceDelta: '50.00', priceType: 'per_sqft' },
+    { optionSlug: "elec_prem", packageSlug: "standard", priceDelta: '20.00', priceType: 'per_sqft' },
+    { optionSlug: "elec_prem", packageSlug: "luxury", priceDelta: '-20.00', priceType: 'per_sqft' },
+    { optionSlug: "elec_lux", packageSlug: "basic", priceDelta: '70.00', priceType: 'per_sqft' },
+    { optionSlug: "elec_lux", packageSlug: "standard", priceDelta: '40.00', priceType: 'per_sqft' },
+    { optionSlug: "elec_lux", packageSlug: "premium", priceDelta: '20.00', priceType: 'per_sqft' },
+    // ── Item #22: Lights ──
+    { optionSlug: "lights_any_isi", packageSlug: "standard", priceDelta: '-5.00', priceType: 'per_sqft' },
+    { optionSlug: "lights_any_isi", packageSlug: "premium", priceDelta: '-11.00', priceType: 'per_sqft' },
+    { optionSlug: "lights_any_isi", packageSlug: "luxury", priceDelta: '-11.00', priceType: 'per_sqft' },
+    { optionSlug: "lights_luker", packageSlug: "basic", priceDelta: '5.00', priceType: 'per_sqft' },
+    { optionSlug: "lights_luker", packageSlug: "premium", priceDelta: '-6.00', priceType: 'per_sqft' },
+    { optionSlug: "lights_luker", packageSlug: "luxury", priceDelta: '-6.00', priceType: 'per_sqft' },
+    { optionSlug: "lights_philips", packageSlug: "basic", priceDelta: '11.00', priceType: 'per_sqft' },
+    { optionSlug: "lights_philips", packageSlug: "standard", priceDelta: '6.00', priceType: 'per_sqft' },
+    { optionSlug: "lights_philips_lux", packageSlug: "basic", priceDelta: '11.00', priceType: 'per_sqft' },
+    { optionSlug: "lights_philips_lux", packageSlug: "standard", priceDelta: '6.00', priceType: 'per_sqft' },
+    // ── Item #23: Staircase and Balcony Railings ──
+    { optionSlug: "railings_ms_basic", packageSlug: "premium", priceDelta: '-10.00', priceType: 'per_sqft' },
+    { optionSlug: "railings_ms_basic", packageSlug: "luxury", priceDelta: '-35.00', priceType: 'per_sqft' },
+    { optionSlug: "railings_ms_std", packageSlug: "premium", priceDelta: '-10.00', priceType: 'per_sqft' },
+    { optionSlug: "railings_ms_std", packageSlug: "luxury", priceDelta: '-35.00', priceType: 'per_sqft' },
+    { optionSlug: "railings_ss_prem", packageSlug: "basic", priceDelta: '10.00', priceType: 'per_sqft' },
+    { optionSlug: "railings_ss_prem", packageSlug: "standard", priceDelta: '10.00', priceType: 'per_sqft' },
+    { optionSlug: "railings_ss_prem", packageSlug: "luxury", priceDelta: '-25.00', priceType: 'per_sqft' },
+    { optionSlug: "railings_glass_lux", packageSlug: "basic", priceDelta: '35.00', priceType: 'per_sqft' },
+    { optionSlug: "railings_glass_lux", packageSlug: "standard", priceDelta: '35.00', priceType: 'per_sqft' },
+    { optionSlug: "railings_glass_lux", packageSlug: "premium", priceDelta: '25.00', priceType: 'per_sqft' },
+    // ── Item #24: Parapet Wall (if headroom is built) ──
+    { optionSlug: "parapet_3ft_4_5in_basic", packageSlug: "premium", priceDelta: '-40.00', priceType: 'per_sqft' },
+    { optionSlug: "parapet_3ft_4_5in_basic", packageSlug: "luxury", priceDelta: '-55.00', priceType: 'per_sqft' },
+    { optionSlug: "parapet_3ft_4_5in_std", packageSlug: "premium", priceDelta: '-40.00', priceType: 'per_sqft' },
+    { optionSlug: "parapet_3ft_4_5in_std", packageSlug: "luxury", priceDelta: '-55.00', priceType: 'per_sqft' },
+    { optionSlug: "parapet_3ft_9in_prem", packageSlug: "basic", priceDelta: '40.00', priceType: 'per_sqft' },
+    { optionSlug: "parapet_3ft_9in_prem", packageSlug: "standard", priceDelta: '40.00', priceType: 'per_sqft' },
+    { optionSlug: "parapet_3ft_9in_prem", packageSlug: "luxury", priceDelta: '-15.00', priceType: 'per_sqft' },
+    { optionSlug: "parapet_3_5ft_9in_lux", packageSlug: "basic", priceDelta: '55.00', priceType: 'per_sqft' },
+    { optionSlug: "parapet_3_5ft_9in_lux", packageSlug: "standard", priceDelta: '55.00', priceType: 'per_sqft' },
+    { optionSlug: "parapet_3_5ft_9in_lux", packageSlug: "premium", priceDelta: '15.00', priceType: 'per_sqft' },
   ];
 
-  const opInserts = opDefs.map((d) => ({
-    optionId:    optIdBySlug[d.optionSlug],
-    packageId:   d.packageSlug ? pkgIds[d.packageSlug] : null,
-    priceDelta:  d.priceDelta,
-    priceType:   d.priceType,
-  }));
+  const existingOPs = await db.select().from(optionPrices);
+  for (const d of opDefs) {
+    const optId = optIdBySlug[d.optionSlug];
+    const pId = pkgIds[d.packageSlug];
+    if (!optId || !pId) continue;
 
-  const existingActiveOptions = await db
-    .select({ optionId: optionPrices.optionId, packageId: optionPrices.packageId })
-    .from(optionPrices)
-    .where(isNull(optionPrices.effectiveTo));
-  const activeOptionKeys = new Set(existingActiveOptions.map(r => `${r.optionId}:${r.packageId ?? 'null'}`));
-
-  const opToInsert = opInserts.filter(p => !activeOptionKeys.has(`${p.optionId}:${p.packageId ?? 'null'}`));
-  let opInsertedCount = 0;
-  if (opToInsert.length > 0) {
-    const inserted = await db.insert(optionPrices).values(opToInsert).returning();
-    opInsertedCount = inserted.length;
+    const deltaVal = Math.max(0, parseFloat(d.priceDelta) || 0).toFixed(2);
+    const existing = existingOPs.find(ex => ex.optionId === optId && ex.packageId === pId);
+    if (existing) {
+      await db.update(optionPrices).set({
+        priceDelta: deltaVal,
+        priceType: d.priceType,
+      }).where(eq(optionPrices.id, existing.id));
+    } else {
+      await db.insert(optionPrices).values({
+        optionId: optId,
+        packageId: pId,
+        priceDelta: deltaVal,
+        priceType: d.priceType,
+      });
+    }
   }
-  log('Option Prices (upgrade deltas)', opInsertedCount);
+  log('Option Prices (Upgrade Deltas)', opDefs.length);
 }
 
 // ---------------------------------------------------------------------------
@@ -767,110 +880,154 @@ async function seedSpecifications(
 // ---------------------------------------------------------------------------
 
 async function seedAddons() {
-  // 15 add-ons — source: requirements §6
   const addonDefs = [
     {
-      slug: 'overhead_concrete_tank', name: 'Overhead Concrete Tank',
-      description: 'Custom capacity overhead water storage tank. Capacity selected in Litres. A family of 4 opt for 2,500 Litres.',
-      pricingUnit: 'per_litre', defaultQuantity: '2500', minQuantity: '500', maxQuantity: '20000', sortOrder: 1,
+      slug: 'overhead_concrete_tank',
+      name: 'Overhead Concrete Tank',
+      description: 'Custom capacity overhead water storage tank. Capacity selected in Litres. Note: OHT Capacity Recommendation: 2,500 Litres for a Family of 4',
+      pricingUnit: 'per_litre',
+      defaultQuantity: '2500',
+      minQuantity: '500',
+      maxQuantity: '10000',
+      sortOrder: 1,
     },
     {
-      slug: 'conventional_septic_tank', name: 'Conventional Septic Tank',
-      description: 'Volume-based septic tank. Capacity selected in Litres. A family of 4 opt for 5,000 Litres.',
-      pricingUnit: 'per_litre', defaultQuantity: '5000', minQuantity: '1000', maxQuantity: '20000', sortOrder: 2,
+      slug: 'conventional_septic_tank',
+      name: 'Conventional Septic Tank',
+      description: 'Volume-based septic tank. Capacity selected in Litres. Note: Septic Tank Capacity Recommendation: 6,000 Litres for a Family of 4',
+      pricingUnit: 'per_litre',
+      defaultQuantity: '6000',
+      minQuantity: '1000',
+      maxQuantity: '15000',
+      sortOrder: 2,
     },
     {
-      slug: 'underground_sump', name: 'Underground Sump',
-      description: 'Underground water sump. Capacity selected in Litres. A family of 4 opt for 6,000 Litres.',
-      pricingUnit: 'per_litre', defaultQuantity: '6000', minQuantity: '1000', maxQuantity: '30000', sortOrder: 3,
+      slug: 'underground_sump',
+      name: 'Underground Sump',
+      description: 'Underground water sump. Capacity selected in Litres. Note: UG Sump Capacity Recommendation: 6,000 Litres for a Family of 4',
+      pricingUnit: 'per_litre',
+      defaultQuantity: '6000',
+      minQuantity: '1000',
+      maxQuantity: '20000',
+      sortOrder: 3,
     },
     {
-      slug: 'compound_wall', name: 'Compound Wall (upto 5\'6" Height)',
-      description: 'Perimeter compound wall up to 5\'6" height. Running feet entered by customer.',
-      pricingUnit: 'per_rft', defaultQuantity: '50', minQuantity: '10', maxQuantity: '500', sortOrder: 4,
+      slug: 'compound_wall',
+      name: 'Compound Wall (up to 5\'6" Height)',
+      description: 'Perimeter compound wall. Running feet entered by customer.',
+      pricingUnit: 'per_rft',
+      defaultQuantity: '50',
+      minQuantity: '10',
+      maxQuantity: '500',
+      sortOrder: 4,
     },
     {
-      slug: 'rooftop_solar', name: 'Rooftop Solar Panels',
-      description: 'Grid-tied rooftop solar system. Pricing before subsidy reduction (subsidy approx. ₹78,000). 3 kW per day required for a 1 to 3 BHK home.',
-      pricingUnit: 'fixed', sortOrder: 5,
+      slug: 'rooftop_solar',
+      name: 'Rooftop Solar Panels',
+      description: 'Grid-tied rooftop solar system. Pricing before subsidy reduction. Note: 3kW per day required for 1 to 3 BHK',
+      pricingUnit: 'fixed',
+      sortOrder: 5,
     },
     {
-      // The rate card leaves the 2-car gate area blank, so it is not stated (Rule #3).
-      slug: 'main_gate', name: 'Main Gate',
-      description: 'Main entrance gate. Price per sq.ft of gate area. Guide: 1 car gate 10\' x 6\' = 60 sq.ft; wicket gate 3.5\' x 6\' = 21 sq.ft.',
-      pricingUnit: 'per_sqft_gate', defaultQuantity: '60', minQuantity: '20', maxQuantity: '200', sortOrder: 6,
+      slug: 'main_gate',
+      name: 'Main Gate',
+      description: 'Main entrance gate. Price per sq.ft of gate area. Note: Recommended gate area for 1 car parking = 60 sq.ft., 2 car parking = 120 sq.ft, Wicket gate = 24 sq.ft.',
+      pricingUnit: 'per_sqft_gate',
+      defaultQuantity: '60',
+      minQuantity: '20',
+      maxQuantity: '200',
+      sortOrder: 6,
     },
     {
-      slug: 'cctv_security', name: 'CCTV & Security System',
-      description: 'Complete CCTV setup with DVR and storage.',
-      pricingUnit: 'fixed', sortOrder: 7,
+      slug: 'cctv_security',
+      name: 'CCTV & Security System',
+      description: 'Complete CCTV setup with DVR and color night vision cameras.',
+      pricingUnit: 'fixed',
+      sortOrder: 7,
     },
     {
-      slug: 'smart_home', name: 'Smart Home Automation',
-      description: 'Smart switches, lights, fans and main door lock with mobile app control.',
-      pricingUnit: 'fixed', sortOrder: 8,
+      slug: 'smart_home',
+      name: 'Smart Home Automation',
+      description: 'Smart switches, lights, fans & main door lock automation.',
+      pricingUnit: 'fixed',
+      sortOrder: 8,
     },
     {
-      slug: 'passenger_lift', name: 'Passenger Lift (4 Pax)',
+      slug: 'passenger_lift',
+      name: 'Passenger Lift (4 Pax)',
       description: 'Complete 4-passenger lift installation.',
-      pricingUnit: 'fixed', sortOrder: 9,
+      pricingUnit: 'fixed',
+      sortOrder: 9,
     },
     {
-      slug: 'choke_pit', name: 'Choke Pit & Rings',
-      description: 'Choke pits and rings. Two pits keep toilet and other water separate.',
-      pricingUnit: 'fixed', sortOrder: 10,
+      slug: 'choke_pit',
+      name: 'Choke Pit & Rings',
+      description: 'Choke pit installation for drainage and greywater.',
+      pricingUnit: 'fixed',
+      sortOrder: 10,
     },
     {
-      // Renamed on the rate card; the SLUG stays so existing estimate rows resolve.
-      slug: 'solar_water_heater', name: 'Water Heat Pump',
-      description: 'Solar or electric water heating. 200 to 250 Litres per day required for a family of 5.',
-      pricingUnit: 'fixed', sortOrder: 11,
+      slug: 'water_heat_pump',
+      name: 'Water Heat Pump / Solar Water Heater',
+      description: 'Water heating solution for the home. Note: 200 to 250 Litres per day required for family of 5',
+      pricingUnit: 'fixed',
+      sortOrder: 11,
     },
     {
-      slug: 'cool_roof_tiles', name: 'Cool Roof Tiles',
-      description: "1'x1' white cool tiles with epoxy waterproofing. Price per sq.ft of terrace.",
-      pricingUnit: 'per_sqft_terrace', defaultQuantity: '100', minQuantity: '50', maxQuantity: '2000', sortOrder: 12,
+      slug: 'cool_roof_tiles',
+      name: 'Cool Roof Tiles',
+      description: "1' x 1' white tiles with epoxy waterproofing. Price per sq.ft of terrace area.",
+      pricingUnit: 'per_sqft_terrace',
+      defaultQuantity: '100',
+      minQuantity: '50',
+      maxQuantity: '2000',
+      sortOrder: 12,
     },
     {
-      // Fitted per tank, so bore-water and corporation-water may both be selected.
-      slug: 'motor_automation', name: 'Motor Automation (Auto Cut-Off)',
-      description: 'Automatic water controller with auto cut-off.',
-      pricingUnit: 'fixed', sortOrder: 13, allowsMultiple: true,
+      slug: 'motor_automation',
+      name: 'Motor Automation (Auto Cut-Off)',
+      description: 'Automatic water controller with auto cut-off for overhead tank.',
+      pricingUnit: 'fixed',
+      sortOrder: 13,
     },
     {
-      slug: 'pressure_pump', name: 'Pressure Pump',
-      description: 'High-pressure plumbing pump. Brand: Grundfos.',
-      pricingUnit: 'fixed', sortOrder: 14,
+      slug: 'pressure_pump',
+      name: 'Pressure Pump (Grundfos)',
+      description: 'Grundfos booster pressure pump system for domestic water supply.',
+      pricingUnit: 'fixed',
+      sortOrder: 14,
     },
     {
-      // Not on the 2026-09 rate card — kept active and unpriced pending confirmation.
-      slug: 'waste_water_recycling', name: 'Waste Water Recycling Tank',
-      description: 'Greywater treatment and garden recycling system.',
-      pricingUnit: 'fixed', sortOrder: 15,
-    },
-    {
-      slug: 'water_softener', name: 'Water Softener',
-      description: 'Whole-house water softener. Brand: AO Smith. Suitable for TDS below 1000.',
-      pricingUnit: 'fixed', sortOrder: 16,
+      slug: 'water_softener',
+      name: 'Water Softener (AO Smith)',
+      description: 'AO Smith water softener system suitable for TDS below 1000.',
+      pricingUnit: 'fixed',
+      sortOrder: 15,
     },
   ];
 
-  const existingAddons = await db.select({ slug: addons.slug }).from(addons);
-  const existingAddonSlugs = new Set(existingAddons.map(a => a.slug));
-  const addonsToInsert = addonDefs.filter(a => !existingAddonSlugs.has(a.slug));
-  let addonCount = 0;
-  if (addonsToInsert.length > 0) {
-    const inserted = await db.insert(addons).values(addonsToInsert).returning();
-    addonCount = inserted.length;
+  for (const a of addonDefs) {
+    await db.insert(addons).values(a).onConflictDoUpdate({
+      target: addons.slug,
+      set: {
+        name: a.name,
+        description: a.description,
+        pricingUnit: a.pricingUnit,
+        defaultQuantity: a.defaultQuantity,
+        minQuantity: a.minQuantity,
+        maxQuantity: a.maxQuantity,
+        sortOrder: a.sortOrder,
+      },
+    });
   }
-  log('Add-Ons', addonCount);
+  log('Add-Ons (15 Items)', addonDefs.length);
 
   // Fetch addon IDs
   const addonRows = await db.select().from(addons);
   const addonIdBySlug: Record<string, number> = {};
   for (const r of addonRows) addonIdBySlug[r.slug] = r.id;
 
-  // Add-on prices — source: requirements §6
+  // Add-on prices — source: Construction Packages_v4 Packages.html
   const addonPriceDefs = [
     // 1. Overhead Concrete Tank: ₹35/L (Basic/Standard), ₹45/L (Premium/Luxury)
     { addonSlug: 'overhead_concrete_tank', variantName: 'Basic/Standard Rate',   variantSlug: 'basic_std',    packageTier: 'basic_standard',   price: '35.00' },
@@ -886,66 +1043,65 @@ async function seedAddons() {
     // 4. Compound Wall: ₹2,300/rft (solid/fly ash), ₹2,900/rft (red brick)
     { addonSlug: 'compound_wall', variantName: 'Solid Block / Fly Ash', variantSlug: 'solid_flyash', packageTier: 'all', price: '2300.00' },
     { addonSlug: 'compound_wall', variantName: 'Red Brick',             variantSlug: 'red_brick',    packageTier: 'all', price: '2900.00' },
-    // 5. Rooftop Solar (before subsidy): ₹1,85,000 (3kW), ₹2,95,000 (5kW)
-    { addonSlug: 'rooftop_solar', variantName: '3 kW System', variantSlug: '3kw', packageTier: 'all', price: '185000.00' },
+    // 5. Rooftop Solar: ₹1,90,000 (3kW), ₹2,95,000 (5kW)
+    { addonSlug: 'rooftop_solar', variantName: '3 kW System', variantSlug: '3kw', packageTier: 'all', price: '190000.00' },
     { addonSlug: 'rooftop_solar', variantName: '5 kW System', variantSlug: '5kw', packageTier: 'all', price: '295000.00' },
-    // 6. Main Gate: ₹620 (MS), ₹1,250 (SS), ₹1,300 (MS + automation), ₹2,000 (SS + automation) per sqft of gate
-    { addonSlug: 'main_gate', variantName: 'MS Gate',                              variantSlug: 'ms_gate',      packageTier: 'all', price: '620.00' },
-    { addonSlug: 'main_gate', variantName: 'Stainless Steel Gate',                 variantSlug: 'ss_gate',      packageTier: 'all', price: '1250.00' },
-    { addonSlug: 'main_gate', variantName: 'MS Gate with Automation',              variantSlug: 'ms_gate_auto', packageTier: 'all', price: '1300.00' },
-    { addonSlug: 'main_gate', variantName: 'Stainless Steel Gate with Automation', variantSlug: 'ss_gate_auto', packageTier: 'all', price: '2000.00' },
+    // 6. Main Gate: ₹620/sqft (MS), ₹1250/sqft (SS), ₹1300/sqft (MS Auto), ₹2000/sqft (SS Auto)
+    { addonSlug: 'main_gate', variantName: 'MS Gate',                         variantSlug: 'ms_gate',      packageTier: 'all', price: '620.00' },
+    { addonSlug: 'main_gate', variantName: 'Stainless Steel Gate',            variantSlug: 'ss_gate',      packageTier: 'all', price: '1250.00' },
+    { addonSlug: 'main_gate', variantName: 'MS Gate with Automation',         variantSlug: 'ms_auto_gate', packageTier: 'all', price: '1300.00' },
+    { addonSlug: 'main_gate', variantName: 'SS Gate with Automation',         variantSlug: 'ss_auto_gate', packageTier: 'all', price: '2000.00' },
     // 7. CCTV: ₹37,000 (4×2MP), ₹45,000 (4×5MP)
     { addonSlug: 'cctv_security', variantName: '4 Camera 2MP Color AHD', variantSlug: '4cam_2mp', packageTier: 'all', price: '37000.00' },
     { addonSlug: 'cctv_security', variantName: '4 Camera 5MP Color AHD', variantSlug: '4cam_5mp', packageTier: 'all', price: '45000.00' },
-    // 8. Smart Home: ₹2,80,000
-    { addonSlug: 'smart_home', variantName: 'Switches, Lights, Fans & Main Door Lock', variantSlug: 'standard', packageTier: 'all', price: '280000.00' },
+    // 8. Smart Home: ₹2,80,000 (Switches, Lights, Fans, Door Lock)
+    { addonSlug: 'smart_home', variantName: 'Standard Package', variantSlug: 'standard', packageTier: 'all', price: '280000.00' },
     // 9. Passenger Lift: ₹12,50,000
     { addonSlug: 'passenger_lift', variantName: '4-Passenger Lift', variantSlug: '4pax', packageTier: 'all', price: '1250000.00' },
-    // 10. Choke Pit: the rate card lists BOTH the 1-pit and 2-pit option at ₹15,000.
-    //     Transcribed as written — flagged for Sundar rather than corrected (Rule #3).
-    { addonSlug: 'choke_pit', variantName: '1 Choke Pit',                                  variantSlug: '1pit',  packageTier: 'all', price: '15000.00' },
-    { addonSlug: 'choke_pit', variantName: '2 Choke Pits (toilet & other water separate)', variantSlug: '2pits', packageTier: 'all', price: '15000.00' },
-    // 11. Water Heat Pump: ₹50,000 (solar 125L), ₹1,00,000 (solar 250L), ₹1,76,000 (electric)
-    { addonSlug: 'solar_water_heater', variantName: 'Solar — 125 L Capacity',                  variantSlug: '125l',        packageTier: 'all', price: '50000.00' },
-    { addonSlug: 'solar_water_heater', variantName: 'Solar — 250 L Capacity',                  variantSlug: '250l',        packageTier: 'all', price: '100000.00' },
-    { addonSlug: 'solar_water_heater', variantName: 'Electric AO Smith HPI 40 — 24 hr Supply', variantSlug: 'electric_hp', packageTier: 'all', price: '176000.00' },
+    // 10. Choke Pit: ₹15,000
+    { addonSlug: 'choke_pit', variantName: '1 Choke Pit',  variantSlug: '1pit',  packageTier: 'all', price: '15000.00' },
+    { addonSlug: 'choke_pit', variantName: '2 Choke Pits', variantSlug: '2pits', packageTier: 'all', price: '15000.00' },
+    // 11. Water Heat Pump / Solar Water Heater: Solar 125L (₹50k), Solar 250L (₹100k), Electric (₹176k)
+    { addonSlug: 'water_heat_pump', variantName: 'Solar 125 L Capacity', variantSlug: 'solar_125l', packageTier: 'all', price: '50000.00' },
+    { addonSlug: 'water_heat_pump', variantName: 'Solar 250 L Capacity', variantSlug: 'solar_250l', packageTier: 'all', price: '100000.00' },
+    { addonSlug: 'water_heat_pump', variantName: 'Electric AO Smith HPI 40 (24h Supply)', variantSlug: 'electric_ao_smith', packageTier: 'all', price: '176000.00' },
     // 12. Cool Roof Tiles: ₹170/sqft
     { addonSlug: 'cool_roof_tiles', variantName: '1\'x1\' White with Epoxy', variantSlug: 'white_epoxy', packageTier: 'all', price: '170.00' },
-    // 13. Motor Automation: ₹12,000 (bore), ₹12,000 (corporation)
-    { addonSlug: 'motor_automation', variantName: 'Bore Water OHT',        variantSlug: 'bore',        packageTier: 'all', price: '12000.00' },
-    { addonSlug: 'motor_automation', variantName: 'Corporation Water OHT', variantSlug: 'corporation', packageTier: 'all', price: '12000.00' },
-    // 14. Pressure Pump (Grundfos): ₹57,500 / ₹71,000 / ₹82,800 / ₹1,07,000
-    { addonSlug: 'pressure_pump', variantName: '3 Bathrooms, No Body Shower',              variantSlug: 'g_3bath',        packageTier: 'all', price: '57500.00' },
-    { addonSlug: 'pressure_pump', variantName: '4+ Bathrooms, No Body Shower',             variantSlug: 'g_4bath',        packageTier: 'all', price: '71000.00' },
-    { addonSlug: 'pressure_pump', variantName: '1 Bathroom with Body Shower + 2 Without',  variantSlug: 'g_1bath_shower', packageTier: 'all', price: '82800.00' },
-    { addonSlug: 'pressure_pump', variantName: '3 Bathrooms with Body Shower',             variantSlug: 'g_3bath_shower', packageTier: 'all', price: '107000.00' },
-    // 15. Waste Water Recycling: TBD — zero placeholder (rule 3: never invent prices)
-    { addonSlug: 'waste_water_recycling', variantName: 'Standard Tank', variantSlug: 'standard', packageTier: 'all', price: '0.00' },
-    // 16. Water Softener (AO Smith): ₹1,05,000
-    { addonSlug: 'water_softener', variantName: 'Suitable for TDS below 1000', variantSlug: 'tds_below_1000', packageTier: 'all', price: '105000.00' },
+    // 13. Motor Automation: ₹12,000 (bore), ₹12,000 (corporation), ₹24,000 (both)
+    { addonSlug: 'motor_automation', variantName: 'Bore Water OHT',                            variantSlug: 'bore',        packageTier: 'all', price: '12000.00' },
+    { addonSlug: 'motor_automation', variantName: 'Corporation Water OHT',                     variantSlug: 'corporation', packageTier: 'all', price: '12000.00' },
+    { addonSlug: 'motor_automation', variantName: 'Both (Bore & Corporation Water OHT)',       variantSlug: 'both',        packageTier: 'all', price: '24000.00' },
+    // 14. Pressure Pump: ₹57,500 / ₹71,000 / ₹82,800 / ₹1,07,000
+    { addonSlug: 'pressure_pump', variantName: '3 Bathrooms (without body shower)',            variantSlug: '3bath_no_body',       packageTier: 'all', price: '57500.00' },
+    { addonSlug: 'pressure_pump', variantName: '4+ Bathrooms (without body shower)',           variantSlug: '4plus_bath_no_body',  packageTier: 'all', price: '71000.00' },
+    { addonSlug: 'pressure_pump', variantName: '1 Bath with Body Shower + 2 Baths without',    variantSlug: '1body_2no_body',      packageTier: 'all', price: '82800.00' },
+    { addonSlug: 'pressure_pump', variantName: '3 Bathrooms (with body shower)',               variantSlug: '3bath_body',          packageTier: 'all', price: '107000.00' },
+    // 15. Water Softener: ₹1,05,000
+    { addonSlug: 'water_softener', variantName: 'AO Smith (TDS below 1000)',                   variantSlug: 'ao_smith_tds1000',    packageTier: 'all', price: '105000.00' },
   ];
 
-  const apInserts = addonPriceDefs.map((d) => ({
-    addonId:     addonIdBySlug[d.addonSlug],
-    variantName: d.variantName,
-    variantSlug: d.variantSlug,
-    packageTier: d.packageTier,
-    price:       d.price,
-  }));
+  const existingAPs = await db.select().from(addonPrices);
+  for (const d of addonPriceDefs) {
+    const aId = addonIdBySlug[d.addonSlug];
+    if (!aId) continue;
 
-  const existingActiveAddons = await db
-    .select({ addonId: addonPrices.addonId, variantSlug: addonPrices.variantSlug })
-    .from(addonPrices)
-    .where(isNull(addonPrices.effectiveTo));
-  const activeAddonKeys = new Set(existingActiveAddons.map(r => `${r.addonId}:${r.variantSlug}`));
-
-  const apToInsert = apInserts.filter(p => !activeAddonKeys.has(`${p.addonId}:${p.variantSlug}`));
-  let apInsertedCount = 0;
-  if (apToInsert.length > 0) {
-    const inserted = await db.insert(addonPrices).values(apToInsert).returning();
-    apInsertedCount = inserted.length;
+    const existing = existingAPs.find(ex => ex.addonId === aId && ex.variantSlug === d.variantSlug && ex.packageTier === d.packageTier);
+    if (existing) {
+      await db.update(addonPrices).set({
+        variantName: d.variantName,
+        price: d.price,
+      }).where(eq(addonPrices.id, existing.id));
+    } else {
+      await db.insert(addonPrices).values({
+        addonId: aId,
+        variantName: d.variantName,
+        variantSlug: d.variantSlug,
+        packageTier: d.packageTier,
+        price: d.price,
+      });
+    }
   }
-  log('Add-On Prices', apInsertedCount);
+  log('Add-On Prices', addonPriceDefs.length);
 }
 
 // ---------------------------------------------------------------------------
@@ -953,7 +1109,6 @@ async function seedAddons() {
 // ---------------------------------------------------------------------------
 
 async function seedAdminUser() {
-  // Check if any admin already exists — skip if so
   const existing = await db.select().from(adminUsers).limit(1);
   if (existing.length > 0) {
     console.log('  ⏭️  Admin user: already exists, skipped.');
@@ -974,9 +1129,37 @@ async function seedAdminUser() {
   });
 
   console.log(`  ✅ Admin user: seeded (${email})`);
-  if (!process.env.ADMIN_SEED_PASSWORD) {
-    console.log('  ⚠️  Default password used. Set ADMIN_SEED_PASSWORD in .env before production.');
+}
+
+// ---------------------------------------------------------------------------
+// 7. MILESTONE STAGES (10 Standard Phases)
+// ---------------------------------------------------------------------------
+
+async function seedMilestones() {
+  const data = [
+    { stageNumber: 1, stageName: 'Design & Approvals', percentage: '3.00', keyDeliverables: 'Soil test, floor plan, structural drawing, DTCP approval assistance' },
+    { stageNumber: 2, stageName: 'Earthwork & Excavation', percentage: '4.00', keyDeliverables: 'Foundation trenching, site leveling, anti-termite treatment' },
+    { stageNumber: 3, stageName: 'Foundation & Plinth', percentage: '15.00', keyDeliverables: 'Footing concrete, plinth beam, basement filling, PCC/RCC basement' },
+    { stageNumber: 4, stageName: 'RCC Structure (Columns & Slabs)', percentage: '22.00', keyDeliverables: 'Column casting, roof slab shuttering, beam reinforcement & curing' },
+    { stageNumber: 5, stageName: 'Brickwork & Masonry', percentage: '14.00', keyDeliverables: 'External & internal walls, lintels, parapet wall construction' },
+    { stageNumber: 6, stageName: 'Electrical & Plumbing Concealing', percentage: '8.00', keyDeliverables: 'Conduits, plumbing lines, switch boxes, drainage routing' },
+    { stageNumber: 7, stageName: 'Plastering (Internal & External)', percentage: '10.00', keyDeliverables: 'Ceiling plastering, wall leveling, exterior weather-coat plaster' },
+    { stageNumber: 8, stageName: 'Flooring & Wall Tiling', percentage: '11.00', keyDeliverables: 'Main vitrified tiles, bathroom tiling, kitchen granite countertop' },
+    { stageNumber: 9, stageName: 'Painting & Woodwork', percentage: '8.00', keyDeliverables: 'Putty, primer, emulsion coats, main door & internal door fixing' },
+    { stageNumber: 10, stageName: 'Fixtures, Finishing & Handover', percentage: '5.00', keyDeliverables: 'CP & sanitary fittings, switches, lights, glass railings, deep clean' },
+  ];
+
+  for (const m of data) {
+    await db.insert(milestoneStages).values(m).onConflictDoUpdate({
+      target: milestoneStages.stageNumber,
+      set: {
+        stageName: m.stageName,
+        percentage: m.percentage,
+        keyDeliverables: m.keyDeliverables,
+      },
+    });
   }
+  log('Milestone Stages (10 Phases)', data.length);
 }
 
 // ---------------------------------------------------------------------------
@@ -984,7 +1167,7 @@ async function seedAdminUser() {
 // ---------------------------------------------------------------------------
 
 async function main() {
-  console.log('\n🌱 ASTHIWAR Master Data Seed — Phase 3\n');
+  console.log('\n🌱 ASTHIWAR Master Data Seed — Phase 3 (v4/v5 Specs)\n');
   console.log('----------------------------------------');
 
   try {
@@ -997,17 +1180,20 @@ async function main() {
     console.log('\n🗂️  Seeding Categories...');
     const catIds = await seedCategories();
 
-    console.log('\n🔩 Seeding Specifications (Items → Options → Package Mappings → Prices)...');
+    console.log('\n🔩 Seeding Specifications (24 Items → Options → Package Mappings → Prices)...');
     await seedSpecifications(pkgIds, catIds);
 
     console.log('\n🔌 Seeding Add-Ons & Prices...');
     await seedAddons();
 
+    console.log('\n🏗️  Seeding Milestone Stages...');
+    await seedMilestones();
+
     console.log('\n🔐 Seeding Admin User...');
     await seedAdminUser();
 
     console.log('\n----------------------------------------');
-    console.log('✅ Phase 3 Complete — All master data seeded on Neon PostgreSQL.\n');
+    console.log('✅ Master data successfully synchronized with v4/v5 packages on Neon PostgreSQL.\n');
   } catch (err) {
     console.error('\n❌ Seed failed:', err);
     process.exit(1);

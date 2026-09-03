@@ -925,8 +925,44 @@ Results: All Phase 10 Notification Engine Tests Passed!
 
 ---
 
+# Phase 13: 10-Stage Milestone Payment Schedule & Admin Editor
 
+**Date:** 2026-08-25  
+**Status:** ✅ Completed & Verified
 
+### 1. Implementation Summary
+* **Database Layer:** Created `milestone_stages` table storing the 10 sequential construction phases, percentage allocations, and deliverables scope.
+* **Backend API Layer:**
+  * Added `GET /api/v1/admin/config/milestones` to retrieve active stage configurations.
+  * Added `PUT /api/v1/admin/config/milestones` with 100.00% total validation guard.
+* **Admin Portal UI (`AdminPricingConfigManager.tsx`):**
+  * Added **Milestones (10)** tab with visual multi-color progress bar and interactive table editor.
+  * Live dynamic recalculation of project stage amounts (e.g. ₹50L project share).
+* **Public Calculator Integration:** Embedded dynamic 10-stage payment schedule into Step 5 Estimate Report and backend calculation snapshot.
 
+---
 
+# Phase 14: Brand Customisation Per-Package Pricing, 11 Exclusions & PDF Contract
+
+**Date:** 2026-09-03  
+**Status:** ✅ Completed & Verified
+
+### 1. Implementation Summary
+* **Brand Customisations Full CRUD & Package Pricing:**
+  * Overhauled `option_prices` schema to bind upgrade deltas strictly to package tiers (`Basic`, `Standard`, `Premium`, `Luxury`).
+  * Upgraded Admin Portal with interactive **✓ Free** vs **Upgrade Extra** rate toggles.
+  * Added `POST /api/v1/admin/config/options`, `PUT /api/v1/admin/config/options/:id/price`, and `DELETE /api/v1/admin/config/options/:id`.
+* **11 Standard Exclusions & Client Scope:**
+  * Integrated formal 11-point statutory, interior, and elevation exclusion cards in Step 5 Estimate Report.
+  * Embedded clean 2-column legal exclusion scope into the downloadable PDF contract in `pdf.service.ts`.
+* **PDF Vector Engine Layout Optimization:**
+  * Fixed footer bottom margins (`doc.page.margins.bottom = 0`) preventing ghost pages.
+  * Optimized table typography and spacing to guarantee strict 3-page quotation contract output.
+* **Dynamic Add-On Rules & Microcopy:**
+  * Automated complimentary roof weathering for Premium/Luxury and terrace > 2,000 sq.ft.
+  * Added contextual parking area helper note in Step 1 Dimensions.
+
+### 2. Verification Evidence
+* `npx tsc --noEmit`: **0 Errors** across all packages (`database`, `backend`, `frontend`).
+* Verified end-to-end estimation flow and admin dashboard configuration.
 

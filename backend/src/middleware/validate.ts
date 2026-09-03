@@ -1,14 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { AnyZodObject, ZodError } from 'zod';
 
-export function getValidatedQuery<T = any>(res: Response): T {
-  return (res.locals.query ?? {}) as T;
-}
-
-export function getValidatedParams<T = any>(res: Response): T {
-  return (res.locals.params ?? {}) as T;
-}
-
 export function validateRequest(schema: {
   body?: AnyZodObject;
   query?: AnyZodObject;
@@ -20,10 +12,10 @@ export function validateRequest(schema: {
         req.body = await schema.body.parseAsync(req.body);
       }
       if (schema.query) {
-        res.locals.query = await schema.query.parseAsync(req.query);
+        req.query = await schema.query.parseAsync(req.query);
       }
       if (schema.params) {
-        res.locals.params = await schema.params.parseAsync(req.params);
+        req.params = await schema.params.parseAsync(req.params);
       }
       next();
     } catch (error) {

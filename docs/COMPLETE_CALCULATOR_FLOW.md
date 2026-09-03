@@ -268,3 +268,20 @@ $$\begin{aligned}
   }
 }
 ```
+
+---
+
+## 3. 11 Standard Exclusions & Contract Transparency
+
+Step 5 and the generated official PDF estimate strictly display the 11 Standard Out-of-Scope Items for clear civil contract boundaries:
+1. **Elevation Work:** Custom architectural facade & exterior stone/HPL claddings beyond standard design.
+2. **Outer Area Development:** Setbacks, perimeter pavers, compound pathways & landscaping.
+3. **Interior Works & Carpentry:** Wardrobes, kitchen cabinets, modular woodwork & loose furniture.
+4. **Building Plan Sanction:** DTCP / Local body building plan approval & government liaison fees.
+5. **Electricity Board (EB):** Permanent line connection charges, meter deposit & statutory tariffs.
+6. **Gas Connection:** Piped gas line connection & municipal pipeline installation charges.
+7. **Water & Drainage (UGD):** Municipal drinking water & underground drainage connection fees.
+8. **Borewell Drilling:** Borewell drilling, PVC casing pipes & submersible pump depth piping.
+9. **Water Motors & Pumps:** Supply & installation of motors (unless chosen in Add-Ons).
+10. **Electrical Appliances:** TV, Refrigerator, Air Conditioners, Chimney, Hob & Geysers.
+11. **Taxes & Levies:** Vacant Land Tax (VLT), property assessment taxes & municipal duties.

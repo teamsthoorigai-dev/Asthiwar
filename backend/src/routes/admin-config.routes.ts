@@ -8,6 +8,7 @@ import {
   updateLocationSchema,
   updateAddonPriceSchema,
   updateAddonMetadataSchema,
+  createOptionSchema,
   updateOptionPriceSchema,
   updatePackageItemSchema,
   updateMilestonesSchema,
@@ -19,11 +20,14 @@ import {
   getLocationsController,
   createLocationController,
   updateLocationController,
+  deleteLocationController,
   getAddonsController,
   updateAddonPriceController,
   updateAddonMetadataController,
   getSpecificationsController,
+  createOptionController,
   updateOptionPriceController,
+  deleteOptionController,
   updatePackageItemController,
   getMilestonesController,
   updateMilestonesController,
@@ -63,6 +67,7 @@ router.patch(
   validateRequest({ body: updateLocationSchema }),
   updateLocationController
 );
+router.delete('/locations/:id', deleteLocationController);
 
 // ----------------------------------------------------
 // 3. Add-Ons Routes
@@ -83,11 +88,17 @@ router.patch(
 // 4. Specifications & Pricing Matrix Routes
 // ----------------------------------------------------
 router.get('/specifications', getSpecificationsController);
+router.post(
+  '/options',
+  validateRequest({ body: createOptionSchema }),
+  createOptionController
+);
 router.put(
   '/options/:id/price',
   validateRequest({ body: updateOptionPriceSchema }),
   updateOptionPriceController
 );
+router.delete('/options/:id', deleteOptionController);
 router.patch(
   '/package-items/:id',
   validateRequest({ body: updatePackageItemSchema }),

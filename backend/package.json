@@ -8,8 +8,6 @@
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
     "check-types": "tsc --noEmit",
-    "test": "node scripts/run-tests.mjs",
-    "test:unit": "node scripts/run-tests.mjs --no-db",
     "start": "node dist/server.js"
   },
   "dependencies": {

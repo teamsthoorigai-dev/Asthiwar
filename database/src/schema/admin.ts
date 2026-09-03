@@ -20,6 +20,3 @@ export const adminSessions = pgTable('admin_sessions', {
   userAgent: text('user_agent'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 });
-
-export type AdminUser = typeof adminUsers.$inferSelect;
-export type AdminSession = typeof adminSessions.$inferSelect;

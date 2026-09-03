@@ -1,4 +1,3 @@
-import { randomBytes } from 'crypto';
 import {
   db,
   packages,
@@ -13,6 +12,7 @@ import {
   estimates,
   estimateItems,
   estimateAddons,
+  enquiries,
   milestoneStages,
   schema,
   eq,
@@ -22,8 +22,6 @@ import {
   or,
   inArray,
   asc,
-  desc,
-  Column,
 } from '@asthiwar/database';
 import {
   AreaUnit,
@@ -35,30 +33,6 @@ import {
   CustomizationDetail,
   AddonDetail,
 } from './calculator.types.js';
-
-// ---------------------------------------------------------------------------
-// Price versioning
-// ---------------------------------------------------------------------------
-
-/**
- * The single definition of "the currently active price row".
- *
- * Price tables are append-only (Rules #7/#8): editing a price retires the old row
- * with `effectiveTo = NOW()` and inserts a new one. Every read that wants *today's*
- * price must filter on this, or it will also see retired history.
- *
- * Use this everywhere instead of re-typing the predicate. Copy-pasting it is what
- * let the catalog endpoints drift from the estimate engine and serve retired prices.
- */
-export function activePriceCondition(table: {
-  effectiveFrom: Column;
-  effectiveTo: Column;
-}) {
-  return and(
-    sql`${table.effectiveFrom} <= NOW()`,
-    or(isNull(table.effectiveTo), sql`${table.effectiveTo} > NOW()`)
-  );
-}
 
 // ---------------------------------------------------------------------------
 // Constants & Lookups
@@ -129,8 +103,8 @@ export function convertAreaToSqft(area: number, unit: AreaUnit = 'sqft'): number
 
 export function generateEstimateNumber(): string {
   const year = new Date().getFullYear();
-  const hexSuffix = randomBytes(3).toString('hex').toUpperCase();
-  return `EST-${year}-${hexSuffix}`;
+  const randomNum = Math.floor(100000 + Math.random() * 900000);
+  return `EST-${year}-${randomNum}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -173,14 +147,7 @@ export async function calculateEstimate(
     })
     .from(packages)
     .innerJoin(packagePrices, eq(packagePrices.packageId, packages.id))
-    .where(
-      and(
-        eq(packages.slug, input.packageSlug),
-        eq(packages.isActive, true),
-        activePriceCondition(packagePrices)
-      )
-    )
-    .orderBy(desc(packagePrices.effectiveFrom))
+    .where(and(eq(packages.slug, input.packageSlug), eq(packages.isActive, true)))
     .limit(1);
 
   if (pkgRows.length === 0) {
@@ -205,13 +172,11 @@ export async function calculateEstimate(
       .where(and(eq(locations.id, input.locationId), eq(locations.isActive, true)))
       .limit(1);
 
-    if (locRows.length === 0) {
-      throw new Error(`Location with ID ${input.locationId} not found or inactive`);
+    if (locRows.length > 0) {
+      locationMultiplier = Number(locRows[0].priceMultiplier);
+      locationName = locRows[0].name;
+      resolvedLocationId = locRows[0].id;
     }
-
-    locationMultiplier = Number(locRows[0].priceMultiplier);
-    locationName = locRows[0].name;
-    resolvedLocationId = locRows[0].id;
   } else if (input.plotLocation) {
     const normalizedLoc = input.plotLocation.toLowerCase().trim();
     const locRows = await db
@@ -219,43 +184,15 @@ export async function calculateEstimate(
       .from(locations)
       .where(eq(locations.isActive, true));
 
-    // Exact match first (by slug or full name)
-    const exactMatch = locRows.find(
-      (l) => l.slug.toLowerCase() === normalizedLoc || l.name.toLowerCase() === normalizedLoc
+    const matched = locRows.find(
+      (l) => l.slug.toLowerCase() === normalizedLoc || normalizedLoc.includes(l.slug.toLowerCase()) || normalizedLoc.includes(l.name.toLowerCase())
     );
 
-    if (exactMatch) {
-      locationMultiplier = Number(exactMatch.priceMultiplier);
-      locationName = exactMatch.name;
-      resolvedLocationId = exactMatch.id;
-    } else {
-      // Unambiguous prefix/subset match
-      const prefixMatches = locRows.filter(
-        (l) =>
-          l.name.toLowerCase().startsWith(normalizedLoc) ||
-          normalizedLoc.startsWith(l.name.toLowerCase()) ||
-          l.slug.toLowerCase().startsWith(normalizedLoc) ||
-          normalizedLoc.startsWith(l.slug.toLowerCase())
-      );
-
-      if (prefixMatches.length === 1) {
-        locationMultiplier = Number(prefixMatches[0].priceMultiplier);
-        locationName = prefixMatches[0].name;
-        resolvedLocationId = prefixMatches[0].id;
-      } else if (prefixMatches.length > 1) {
-        throw new Error(
-          `Location '${input.plotLocation}' is ambiguous and matches multiple locations (${prefixMatches
-            .map((l) => l.name)
-            .join(', ')}). Please select a specific location.`
-        );
-      } else {
-        throw new Error(
-          `Location '${input.plotLocation}' is not recognized. Please select a supported location.`
-        );
-      }
+    if (matched) {
+      locationMultiplier = Number(matched.priceMultiplier);
+      locationName = matched.name;
+      resolvedLocationId = matched.id;
     }
-  } else {
-    throw new Error('Plot location is required');
   }
 
   const effectiveRatePerSqft = Number((baseRatePerSqft * locationMultiplier).toFixed(2));
@@ -294,8 +231,7 @@ export async function calculateEstimate(
           .where(
             and(
               inArray(optionPrices.optionId, optionIds),
-              or(eq(optionPrices.packageId, pkg.id), isNull(optionPrices.packageId)),
-              activePriceCondition(optionPrices)
+              or(eq(optionPrices.packageId, pkg.id), isNull(optionPrices.packageId))
             )
           )
       : [];
@@ -388,16 +324,24 @@ export async function calculateEstimate(
         .where(
           and(
             eq(addonPrices.addonId, add.id),
-            eq(addonPrices.variantSlug, ad.variantSlug),
-            activePriceCondition(addonPrices)
+            eq(addonPrices.variantSlug, ad.variantSlug)
           )
         );
 
       const matchedPriceRow = apRows.find((p) => tierFilter.includes(p.packageTier)) ?? apRows[0];
       if (!matchedPriceRow) continue;
 
-      const unitPrice = Number(matchedPriceRow.price);
+      let unitPrice = Number(matchedPriceRow.price);
       const qty = ad.quantity !== undefined ? ad.quantity : Number(add.defaultQuantity ?? 1);
+
+      // Dynamic rule: Roof Weathering is complimentary in Premium & Luxury, and free for Basic/Standard if terrace > 2000 sq.ft
+      if (add.slug === 'cool_roof_tiles' || add.slug === 'roof_weathering') {
+        if (input.packageSlug === 'premium' || input.packageSlug === 'luxury') {
+          unitPrice = 0;
+        } else if (qty > 2000) {
+          unitPrice = 0;
+        }
+      }
 
       let totalPrice = 0;
       switch (add.pricingUnit) {
@@ -535,78 +479,89 @@ export async function calculateEstimate(
     disclaimers: STANDARD_EXCLUSIONS,
   };
 
-  // 8. Immutable DB Persistence if requested (Wrapped in atomic transaction - Fixes O9)
+  // 8. Immutable DB Persistence if requested
   if (optionsConfig.persist) {
-    await db.transaction(async (tx) => {
-      const [insertedEstimate] = await tx
-        .insert(estimates)
-        .values({
-          estimateNumber,
-          customerName: input.customerName,
-          customerPhone: input.customerPhone,
-          customerEmail: input.customerEmail ?? '',
-          plotLocation: input.plotLocation,
-          locationId: resolvedLocationId,
-          locationMultiplier: locationMultiplier.toFixed(4),
-          plotAreaSqft: plotAreaSqft.toFixed(2),
-          plotAreaUnit: input.plotAreaUnit ?? 'sqft',
-          builtupAreaPerFloorSqft: builtupPerFloorSqft.toFixed(2),
-          floorCount: input.floorCount === 0 ? 'Ground' : `G+${input.floorCount}`,
-          numberOfFloors: numberOfFloors,
-          floorBreakdownJson: input.floorBreakdown ?? null,
-          carParkingAreaSqft: carParkingAreaSqft.toFixed(2),
-          carCount,
-          totalBuiltupAreaSqft: totalBuiltupAreaSqft.toFixed(2),
-          packageId: pkg.id,
-          packageSlug: pkg.slug,
-          packageRatePerSqft: effectiveRatePerSqft.toFixed(2),
-          baseConstructionCost: baseConstructionCost.toFixed(2),
-          upgradesCost: upgradesCost.toFixed(2),
-          addonsCost: addonsCost.toFixed(2),
-          subtotalCost: subtotalCost.toFixed(2),
-          gstPercentage: gstPercentage.toFixed(2),
-          gstAmount: gstAmount.toFixed(2),
-          totalProjectCost: totalProjectCost.toFixed(2),
-          milestoneBreakdownJson: milestones,
-          fullSnapshotJson: result,
-          status: 'GENERATED',
-        })
-        .returning({ id: estimates.id });
+    const [insertedEstimate] = await db
+      .insert(estimates)
+      .values({
+        estimateNumber,
+        customerName: input.customerName,
+        customerPhone: input.customerPhone,
+        customerEmail: input.customerEmail ?? '',
+        plotLocation: input.plotLocation,
+        locationId: resolvedLocationId,
+        locationMultiplier: locationMultiplier.toFixed(4),
+        plotAreaSqft: plotAreaSqft.toFixed(2),
+        plotAreaUnit: input.plotAreaUnit ?? 'sqft',
+        builtupAreaPerFloorSqft: builtupPerFloorSqft.toFixed(2),
+        floorCount: input.floorCount === 0 ? 'Ground' : `G+${input.floorCount}`,
+        numberOfFloors: numberOfFloors,
+        floorBreakdownJson: input.floorBreakdown ?? null,
+        carParkingAreaSqft: carParkingAreaSqft.toFixed(2),
+        carCount,
+        totalBuiltupAreaSqft: totalBuiltupAreaSqft.toFixed(2),
+        packageId: pkg.id,
+        packageSlug: pkg.slug,
+        packageRatePerSqft: effectiveRatePerSqft.toFixed(2),
+        baseConstructionCost: baseConstructionCost.toFixed(2),
+        upgradesCost: upgradesCost.toFixed(2),
+        addonsCost: addonsCost.toFixed(2),
+        subtotalCost: subtotalCost.toFixed(2),
+        gstPercentage: gstPercentage.toFixed(2),
+        gstAmount: gstAmount.toFixed(2),
+        totalProjectCost: totalProjectCost.toFixed(2),
+        milestoneBreakdownJson: milestones,
+        fullSnapshotJson: result,
+        status: 'GENERATED',
+      })
+      .returning({ id: estimates.id });
 
-      result.estimateId = insertedEstimate.id;
+    result.estimateId = insertedEstimate.id;
 
-      // Insert customization items within transaction
-      if (customizationDetails.length > 0) {
-        await tx.insert(estimateItems).values(
-          customizationDetails.map((c) => ({
-            estimateId: insertedEstimate.id,
-            itemId: c.itemId,
-            itemSlug: c.itemSlug,
-            itemName: c.itemName,
-            selectedOptionId: c.selectedOptionId,
-            selectedOptionName: c.selectedOptionName,
-            unitPriceDelta: c.unitPriceDelta.toFixed(2),
-            calculatedPrice: c.calculatedPrice.toFixed(2),
-          }))
-        );
-      }
+    // Insert customization items
+    if (customizationDetails.length > 0) {
+      await db.insert(estimateItems).values(
+        customizationDetails.map((c) => ({
+          estimateId: insertedEstimate.id,
+          itemId: c.itemId,
+          itemSlug: c.itemSlug,
+          itemName: c.itemName,
+          selectedOptionId: c.selectedOptionId,
+          selectedOptionName: c.selectedOptionName,
+          unitPriceDelta: c.unitPriceDelta.toFixed(2),
+          calculatedPrice: c.calculatedPrice.toFixed(2),
+        }))
+      );
+    }
 
-      // Insert addon items within transaction
-      if (addonDetails.length > 0) {
-        await tx.insert(estimateAddons).values(
-          addonDetails.map((a) => ({
-            estimateId: insertedEstimate.id,
-            addonId: a.addonId,
-            addonSlug: a.addonSlug,
-            addonName: a.addonName,
-            selectedVariant: a.selectedVariantName,
-            quantity: a.quantity.toFixed(2),
-            unit: a.unit,
-            unitPrice: a.unitPrice.toFixed(2),
-            totalPrice: a.totalPrice.toFixed(2),
-          }))
-        );
-      }
+    // Insert addon items
+    if (addonDetails.length > 0) {
+      await db.insert(estimateAddons).values(
+        addonDetails.map((a) => ({
+          estimateId: insertedEstimate.id,
+          addonId: a.addonId,
+          addonSlug: a.addonSlug,
+          addonName: a.addonName,
+          selectedVariant: a.selectedVariantName,
+          quantity: a.quantity.toFixed(2),
+          unit: a.unit,
+          unitPrice: a.unitPrice.toFixed(2),
+          totalPrice: a.totalPrice.toFixed(2),
+        }))
+      );
+    }
+
+    // Auto-create CRM Lead Enquiry for this authoritative estimate
+    await db.insert(enquiries).values({
+      estimateId: insertedEstimate.id,
+      estimateNumber: estimateNumber,
+      fullName: input.customerName,
+      phone: input.customerPhone,
+      email: input.customerEmail ?? '',
+      plotLocation: input.plotLocation,
+      preferredContactTime: 'Anytime',
+      requirementNotes: `Generated estimate for ${pkg.name} (${totalBuiltupAreaSqft.toFixed(0)} sq.ft, ${input.floorCount === 0 ? 'Ground Floor' : `G+${input.floorCount}`}) in ${input.plotLocation}. Total: ₹${totalProjectCost.toLocaleString('en-IN')}`,
+      status: 'NEW',
     });
   }
 

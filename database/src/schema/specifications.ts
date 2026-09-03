@@ -48,7 +48,5 @@ export const optionPrices = pgTable('option_prices', {
   packageId: integer('package_id').references(() => packages.id, { onDelete: 'cascade' }), // null if universal
   priceDelta: numeric('price_delta', { precision: 10, scale: 2 }).default('0.00').notNull(), // rate addition if selected
   priceType: text('price_type').default('per_sqft').notNull(), // 'per_sqft', 'fixed', 'per_unit'
-  effectiveFrom: timestamp('effective_from', { withTimezone: true }).defaultNow().notNull(),
-  effectiveTo: timestamp('effective_to', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 });

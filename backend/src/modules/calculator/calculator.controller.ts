@@ -15,11 +15,10 @@ import {
   eq,
   and,
   asc,
-  desc,
   isNull,
   or,
 } from '@asthiwar/database';
-import { calculateEstimate, activePriceCondition } from './calculator.service.js';
+import { calculateEstimate } from './calculator.service.js';
 import { CalculatorInput } from './calculator.types.js';
 
 // ---------------------------------------------------------------------------
@@ -77,29 +76,13 @@ export async function getPackages(req: Request, res: Response, next: NextFunctio
       .from(packages)
       .innerJoin(packagePrices, eq(packagePrices.packageId, packages.id))
       .where(
-        and(
-          eq(packages.isActive, true),
-          // Price tables are append-only history; without this the join returns
-          // one row per retired price version as well as the current one.
-          activePriceCondition(packagePrices)
-        )
+        eq(packages.isActive, true)
       )
-      .orderBy(asc(packages.sortOrder), desc(packagePrices.effectiveFrom));
-
-    // Defence in depth: exactly one entry per package. The active-price filter above
-    // should already guarantee this, but a package must never appear twice in the
-    // catalogue even if two rows are somehow active. Ordered newest-first, so the
-    // first occurrence is the current price.
-    const seen = new Set<number>();
-    const currentPkgRows = pkgRows.filter((p) => {
-      if (seen.has(p.id)) return false;
-      seen.add(p.id);
-      return true;
-    });
+      .orderBy(asc(packages.sortOrder));
 
     res.json({
       success: true,
-      data: currentPkgRows.map((p) => ({
+      data: pkgRows.map((p) => ({
         id: p.id,
         slug: p.slug,
         name: p.name,
@@ -179,7 +162,7 @@ export async function getPackageConfig(req: Request, res: Response, next: NextFu
       )
       .orderBy(asc(items.sortOrder));
 
-    // Fetch options for customizable items (including universal prices)
+    // Fetch options for customizable items for the active package tier
     const optRows = await db
       .select({
         id: options.id,
@@ -197,20 +180,11 @@ export async function getPackageConfig(req: Request, res: Response, next: NextFu
         optionPrices,
         and(
           eq(optionPrices.optionId, options.id),
-          or(eq(optionPrices.packageId, pkg.id), isNull(optionPrices.packageId)),
-          activePriceCondition(optionPrices)
+          eq(optionPrices.packageId, pkg.id)
         )
       );
 
-    // Prioritize package-specific option price over universal price
-    const optionPricePriorityMap = new Map<number, typeof optRows[0]>();
-    for (const opt of optRows) {
-      const existing = optionPricePriorityMap.get(opt.id);
-      if (!existing || (opt.packageId !== null && existing.packageId === null)) {
-        optionPricePriorityMap.set(opt.id, opt);
-      }
-    }
-    const deduplicatedOptRows = Array.from(optionPricePriorityMap.values());
+    const deduplicatedOptRows = optRows;
 
     // Group items under categories
     const categoriesMap = catRows.map((cat) => {
@@ -259,18 +233,15 @@ export async function getPackageConfig(req: Request, res: Response, next: NextFu
       .where(eq(addons.isActive, true))
       .orderBy(asc(addons.sortOrder));
 
+    const tierFilter = ['all', pkg.slug === 'basic' || pkg.slug === 'standard' ? 'basic_standard' : 'premium_luxury'];
+
     const addonPriceRows = await db
       .select()
-      .from(addonPrices)
-      .where(activePriceCondition(addonPrices));
+      .from(addonPrices);
 
-    // Every variant is offered, including tier-named ones. The overhead concrete
-    // tank carries a Basic/Standard rate and a Premium/Luxury rate and the customer
-    // picks either — the tier is part of the variant's name, not a filter.
-    // `calculateEstimate` prices whichever variant slug comes back.
     const addonsData = addonRows.map((ad) => {
       const variants = addonPriceRows
-        .filter((p) => p.addonId === ad.id)
+        .filter((p) => p.addonId === ad.id && tierFilter.includes(p.packageTier))
         .map((p) => ({
           variantSlug: p.variantSlug,
           variantName: p.variantName,
@@ -284,7 +255,6 @@ export async function getPackageConfig(req: Request, res: Response, next: NextFu
         name: ad.name,
         description: ad.description,
         pricingUnit: ad.pricingUnit,
-        allowsMultiple: ad.allowsMultiple,
         defaultQuantity: ad.defaultQuantity ? Number(ad.defaultQuantity) : null,
         minQuantity: ad.minQuantity ? Number(ad.minQuantity) : null,
         maxQuantity: ad.maxQuantity ? Number(ad.maxQuantity) : null,

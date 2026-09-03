@@ -405,9 +405,9 @@ export async function getAdminDashboardAnalytics() {
     statusMap[row.status] = Number(row.count);
   }
 
-  const newEnquiriesCount = statusMap['new'] || statusMap['NEW'] || 0;
-  const closedWonCount = statusMap['converted'] || statusMap['CLOSED_WON'] || 0;
-  const conversionRate = totalEstimates > 0 ? Number(((totalEnquiries / totalEstimates) * 100).toFixed(2)) : 0;
+  const newEnquiriesCount = statusMap['NEW'] || 0;
+  const closedWonCount = statusMap['CLOSED_WON'] || 0;
+  const conversionRate = totalEnquiries > 0 ? Number(((closedWonCount / totalEnquiries) * 100).toFixed(2)) : 0;
 
   return {
     kpis: {

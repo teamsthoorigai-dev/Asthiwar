@@ -11,10 +11,10 @@
 
 The ASTHIWAR database architecture is built upon four core engineering principles:
 
-1. **Strict Immutability & Price Versioning (Mandatory Rules 7 & 8):**
-   - Live pricing data (`package_prices`, `addon_prices`, `option_prices`) is **never overwritten or hard-deleted**.
-   - Price modifications set `effective_to = NOW()` on the existing row and insert a new active row with `effective_from = NOW()` and `effective_to = NULL`.
-   - Every generated estimate permanently preserves the exact material rates and pricing formulas active at the moment of calculation.
+1. **Authoritative Estimation Snapshots & Schema Integrity:**
+   - Live pricing data (`package_prices`, `addon_prices`, `option_prices`) maintains active single-truth rates per package tier enforced via unique database constraints.
+   - Price updates on brand options use a clean-slate batch transaction pattern per option with package-level pricing.
+   - Every generated estimate permanently preserves an immutable standalone JSON snapshot (`full_snapshot_json` and `milestone_breakdown_json`), guaranteeing that past quotations and client contracts remain 100% reproducible regardless of future catalog changes.
 2. **Authoritative Estimation Snapshots:**
    - The `estimates` table stores normalized relational records in `estimate_items` and `estimate_addons`, while also embedding a complete, standalone `full_snapshot_json` and `milestone_breakdown_json`.
    - This ensures estimates remain 100% reproducible and verifiable for legal contract drafting and PDF generation even if future catalog specifications change.
@@ -75,6 +75,17 @@ erDiagram
         timestamp created_at
     }
 
+
+    %% Milestones Schedule
+    MILESTONE_STAGES {
+        int id PK
+        int stage_number UK
+        string stage_name
+        numeric percentage
+        string key_deliverables
+        timestamp created_at
+        timestamp updated_at
+    }
     ADMIN_USERS {
         uuid id PK
         string email UK
@@ -494,3 +505,17 @@ Asynchronously records all administrative price mutations, calculator submission
 | `ip_address` | `TEXT` | `NULLABLE` | — | Client IP address |
 | `user_agent` | `TEXT` | `NULLABLE` | — | Client browser User-Agent string |
 | `created_at` | `TIMESTAMP WITH TIME ZONE` | `NOT NULL` | `NOW()` | Timestamp of event |
+
+### 3.10 `milestone_stages` (10-Stage Payment Schedule)
+
+Stores the 10 standard construction milestone phases, their payment percentage shares, and deliverables scope.
+
+| Column | PostgreSQL Type | Constraints | Description |
+| :--- | :--- | :--- | :--- |
+| `id` | `SERIAL` | `PRIMARY KEY` | Auto-incrementing identifier |
+| `stage_number` | `INTEGER` | `NOT NULL, UNIQUE` | Sequential stage sequence (1 to 10) |
+| `stage_name` | `VARCHAR(100)` | `NOT NULL` | Descriptive name (e.g., "Foundation and Plinth") |
+| `percentage` | `NUMERIC(5,2)` | `NOT NULL` | Payment percentage share (Total = 100%) |
+| `key_deliverables` | `TEXT` | `NOT NULL` | Scope and key construction deliverables |
+| `created_at` | `TIMESTAMPTZ` | `DEFAULT NOW()` | Record creation timestamp |
+| `updated_at` | `TIMESTAMPTZ` | `DEFAULT NOW()` | Record modification timestamp |

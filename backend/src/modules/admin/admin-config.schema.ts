@@ -43,8 +43,25 @@ export const updateAddonMetadataSchema = z.object({
   sortOrder: z.coerce.number().int().optional(),
 });
 
+export const createOptionSchema = z.object({
+  itemId: z.coerce.number().int().positive('Item ID is required'),
+  name: z.string().min(1, 'Option name is required'),
+  slug: z.string().min(1).optional(),
+  description: z.string().optional(),
+  prices: z.array(z.object({
+    packageId: z.coerce.number().int().positive('Package ID is required'),
+    priceDelta: z.coerce.number().optional().default(0),
+    isComplimentary: z.boolean().optional(),
+  })).optional(),
+});
+
 export const updateOptionPriceSchema = z.object({
-  priceDelta: z.coerce.number().min(0, 'Price delta must be non-negative'),
+  name: z.string().optional(),
+  prices: z.array(z.object({
+    packageId: z.coerce.number().int().positive('Package ID is required'),
+    priceDelta: z.coerce.number().optional().default(0),
+    isComplimentary: z.boolean().optional(),
+  })).optional(),
 });
 
 export const updatePackageItemSchema = z.object({
@@ -86,6 +103,7 @@ export type CreateLocationDto = z.infer<typeof createLocationSchema>;
 export type UpdateLocationDto = z.infer<typeof updateLocationSchema>;
 export type UpdateAddonPriceDto = z.infer<typeof updateAddonPriceSchema>;
 export type UpdateAddonMetadataDto = z.infer<typeof updateAddonMetadataSchema>;
+export type CreateOptionDto = z.infer<typeof createOptionSchema>;
 export type UpdateOptionPriceDto = z.infer<typeof updateOptionPriceSchema>;
 export type UpdatePackageItemDto = z.infer<typeof updatePackageItemSchema>;
 export type MilestoneStageItemDto = z.infer<typeof milestoneStageItemSchema>;

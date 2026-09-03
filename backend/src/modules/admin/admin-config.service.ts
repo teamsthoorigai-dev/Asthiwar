@@ -7,7 +7,6 @@ import {
   desc,
   asc,
 } from '@asthiwar/database';
-import { activePriceCondition } from '../calculator/calculator.service.js';
 import {
   UpdatePackagePriceDto,
   UpdatePackageMetadataDto,
@@ -15,6 +14,7 @@ import {
   UpdateLocationDto,
   UpdateAddonPriceDto,
   UpdateAddonMetadataDto,
+  CreateOptionDto,
   UpdateOptionPriceDto,
   UpdatePackageItemDto,
   UpdateMilestonesDto,
@@ -31,29 +31,24 @@ export async function getAdminPackages() {
     .from(schema.packages)
     .orderBy(asc(schema.packages.sortOrder));
 
-  const activePrices = await db
-    .select()
-    .from(schema.packagePrices)
-    .where(activePriceCondition(schema.packagePrices));
-
   const allPrices = await db
     .select()
-    .from(schema.packagePrices)
-    .orderBy(desc(schema.packagePrices.createdAt));
+    .from(schema.packagePrices);
 
   return allPackages.map((pkg) => {
-    const activePrice = activePrices.find((p) => p.packageId === pkg.id) || null;
+    const activePrice = allPrices.find((p) => p.packageId === pkg.id) || null;
     return {
       ...pkg,
       activePrice,
-      priceHistory: allPrices.filter((p) => p.packageId === pkg.id),
+      priceHistory: activePrice ? [activePrice] : [],
     };
   });
 }
 
 export async function updateAdminPackagePrice(packageIdOrSlug: number | string, dto: UpdatePackagePriceDto) {
+  const isNumeric = !isNaN(Number(packageIdOrSlug));
   const pkg = await db.query.packages.findFirst({
-    where: typeof packageIdOrSlug === 'number' || !isNaN(Number(packageIdOrSlug))
+    where: isNumeric
       ? eq(schema.packages.id, Number(packageIdOrSlug))
       : eq(schema.packages.slug, String(packageIdOrSlug)),
   });
@@ -62,24 +57,15 @@ export async function updateAdminPackagePrice(packageIdOrSlug: number | string, 
     throw new AdminServiceError(404, 'PACKAGE_NOT_FOUND', `Package '${packageIdOrSlug}' not found`);
   }
 
-  // 1. Expire currently active price
-  await db
-    .update(schema.packagePrices)
-    .set({ effectiveTo: new Date() })
-    .where(and(eq(schema.packagePrices.packageId, pkg.id), isNull(schema.packagePrices.effectiveTo)));
-
-  // 2. Insert new versioned price record
   const [newPrice] = await db
-    .insert(schema.packagePrices)
-    .values({
-      packageId: pkg.id,
+    .update(schema.packagePrices)
+    .set({
       pricePerSqft: dto.pricePerSqft.toFixed(2),
       volumePricePerSqft: dto.volumePricePerSqft.toFixed(2),
       volumeDiscountThresholdSqft: dto.volumeDiscountThresholdSqft,
-      headRoomPricePerSqft: (dto.headRoomPricePerSqft ?? 0).toFixed(2),
-      effectiveFrom: new Date(),
-      effectiveTo: null,
+      ...(dto.headRoomPricePerSqft !== undefined && { headRoomPricePerSqft: dto.headRoomPricePerSqft.toFixed(2) }),
     })
+    .where(eq(schema.packagePrices.packageId, pkg.id))
     .returning();
 
   return newPrice;
@@ -169,6 +155,22 @@ export async function updateAdminLocation(locationId: number, dto: UpdateLocatio
   return updated;
 }
 
+export async function deleteAdminLocation(locationId: number) {
+  const existing = await db.query.locations.findFirst({
+    where: eq(schema.locations.id, locationId),
+  });
+
+  if (!existing) {
+    throw new AdminServiceError(404, 'LOCATION_NOT_FOUND', `Location with ID ${locationId} not found`);
+  }
+
+  await db
+    .delete(schema.locations)
+    .where(eq(schema.locations.id, locationId));
+
+  return { id: locationId, name: existing.name };
+}
+
 // ----------------------------------------------------
 // 3. ADDONS CONFIGURATION & PRICE VERSIONING
 // ----------------------------------------------------
@@ -179,28 +181,24 @@ export async function getAdminAddons() {
     .from(schema.addons)
     .orderBy(asc(schema.addons.sortOrder));
 
-  const activePrices = await db
-    .select()
-    .from(schema.addonPrices)
-    .where(activePriceCondition(schema.addonPrices));
-
   const allPrices = await db
     .select()
-    .from(schema.addonPrices)
-    .orderBy(desc(schema.addonPrices.createdAt));
+    .from(schema.addonPrices);
 
   return allAddons.map((addon) => {
+    const addonPricesList = allPrices.filter((p) => p.addonId === addon.id);
     return {
       ...addon,
-      activePrices: activePrices.filter((p) => p.addonId === addon.id),
-      allPriceHistory: allPrices.filter((p) => p.addonId === addon.id),
+      activePrices: addonPricesList,
+      allPriceHistory: addonPricesList,
     };
   });
 }
 
 export async function updateAdminAddonPrice(addonIdOrSlug: number | string, dto: UpdateAddonPriceDto) {
+  const isNumeric = !isNaN(Number(addonIdOrSlug));
   const addon = await db.query.addons.findFirst({
-    where: typeof addonIdOrSlug === 'number' || !isNaN(Number(addonIdOrSlug))
+    where: isNumeric
       ? eq(schema.addons.id, Number(addonIdOrSlug))
       : eq(schema.addons.slug, String(addonIdOrSlug)),
   });
@@ -209,38 +207,18 @@ export async function updateAdminAddonPrice(addonIdOrSlug: number | string, dto:
     throw new AdminServiceError(404, 'ADDON_NOT_FOUND', `Addon '${addonIdOrSlug}' not found`);
   }
 
-  const existingPrice = await db.query.addonPrices.findFirst({
-    where: and(
-      eq(schema.addonPrices.addonId, addon.id),
-      eq(schema.addonPrices.variantSlug, dto.variantSlug),
-      isNull(schema.addonPrices.effectiveTo)
-    ),
-  });
-
-  // 1. Expire currently active price
-  await db
+  // Update in-place!
+  const [updatedPrice] = await db
     .update(schema.addonPrices)
-    .set({ effectiveTo: new Date() })
+    .set({
+      price: dto.price.toFixed(2),
+    })
     .where(
       and(
         eq(schema.addonPrices.addonId, addon.id),
-        eq(schema.addonPrices.variantSlug, dto.variantSlug),
-        isNull(schema.addonPrices.effectiveTo)
+        eq(schema.addonPrices.variantSlug, dto.variantSlug)
       )
-    );
-
-  // 2. Insert new versioned price record
-  const [updatedPrice] = await db
-    .insert(schema.addonPrices)
-    .values({
-      addonId: addon.id,
-      variantName: existingPrice?.variantName || dto.variantSlug,
-      variantSlug: dto.variantSlug,
-      packageTier: existingPrice?.packageTier || 'all',
-      price: dto.price.toFixed(2),
-      effectiveFrom: new Date(),
-      effectiveTo: null,
-    })
+    )
     .returning();
 
   return updatedPrice;
@@ -289,11 +267,6 @@ export async function getAdminSpecifications() {
     .select()
     .from(schema.options);
 
-  const activeOptionPricesList = await db
-    .select()
-    .from(schema.optionPrices)
-    .where(activePriceCondition(schema.optionPrices));
-
   const optionPricesList = await db
     .select()
     .from(schema.optionPrices)
@@ -312,7 +285,7 @@ export async function getAdminSpecifications() {
           .map((opt) => ({
             ...opt,
             prices: optionPricesList.filter((p) => p.optionId === opt.id),
-            activePrice: activeOptionPricesList.find((p) => p.optionId === opt.id) || null,
+            activePrice: optionPricesList.find((p) => p.optionId === opt.id) || null,
           }));
 
         const itemPackageMappings = packageItemsList.filter((pi) => pi.itemId === item.id);
@@ -331,6 +304,87 @@ export async function getAdminSpecifications() {
   });
 }
 
+export async function createAdminOption(dto: CreateOptionDto) {
+  const item = await db.query.items.findFirst({
+    where: eq(schema.items.id, dto.itemId),
+  });
+
+  if (!item) {
+    throw new AdminServiceError(404, 'ITEM_NOT_FOUND', `Item with ID ${dto.itemId} not found`);
+  }
+
+  const rawSlug = (dto.slug?.trim() || dto.name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_')).replace(/^_+|_+$/g, '') || `opt_${Date.now()}`;
+
+  const [createdOption] = await db
+    .insert(schema.options)
+    .values({
+      itemId: dto.itemId,
+      brandName: dto.name,
+      slug: rawSlug,
+      specification: dto.description || '',
+    })
+    .returning();
+
+  const itemPriceType = item.unit === 'fixed' ? 'fixed' : 'per_sqft';
+  let createdPrices: any[] = [];
+  if (dto.prices && dto.prices.length > 0) {
+    // Deduplicate by packageId to prevent DB issues
+    const priceMap = new Map();
+    for (const p of dto.prices) {
+      priceMap.set(p.packageId, p);
+    }
+    const inserts = Array.from(priceMap.values()).map((p) => {
+      const isComp = p.isComplimentary === true;
+      const rawDelta = isComp ? 0 : Number(p.priceDelta);
+      const deltaVal = isNaN(rawDelta) ? 0 : rawDelta;
+      return {
+        optionId: createdOption.id,
+        packageId: p.packageId,
+        priceDelta: deltaVal.toFixed(2),
+        priceType: itemPriceType,
+      };
+    });
+    
+    createdPrices = await db.insert(schema.optionPrices).values(inserts).returning();
+  } else {
+    // Default to 0.00 for all active packages
+    const activePkgs = await db.query.packages.findMany({
+      where: eq(schema.packages.isActive, true),
+    });
+    if (activePkgs.length > 0) {
+      const inserts = activePkgs.map((pkg) => ({
+        optionId: createdOption.id,
+        packageId: pkg.id,
+        priceDelta: '0.00',
+        priceType: itemPriceType,
+      }));
+      createdPrices = await db.insert(schema.optionPrices).values(inserts).returning();
+    }
+  }
+
+  return {
+    ...createdOption,
+    name: createdOption.brandName,
+    activePrice: createdPrices[0] || null,
+    prices: createdPrices,
+  };
+}
+
+export async function deleteAdminOption(optionId: number) {
+  const option = await db.query.options.findFirst({
+    where: eq(schema.options.id, optionId),
+  });
+
+  if (!option) {
+    throw new AdminServiceError(404, 'OPTION_NOT_FOUND', `Option with ID ${optionId} not found`);
+  }
+
+  await db.delete(schema.optionPrices).where(eq(schema.optionPrices.optionId, optionId));
+  await db.delete(schema.options).where(eq(schema.options.id, optionId));
+
+  return { id: optionId, name: option.brandName };
+}
+
 export async function updateAdminOptionPrice(optionId: number, dto: UpdateOptionPriceDto) {
   const option = await db.query.options.findFirst({
     where: eq(schema.options.id, optionId),
@@ -340,33 +394,47 @@ export async function updateAdminOptionPrice(optionId: number, dto: UpdateOption
     throw new AdminServiceError(404, 'OPTION_NOT_FOUND', `Option with ID ${optionId} not found`);
   }
 
-  const existingPrice = await db.query.optionPrices.findFirst({
-    where: and(
-      eq(schema.optionPrices.optionId, optionId),
-      isNull(schema.optionPrices.effectiveTo)
-    ),
+  const parentItem = await db.query.items.findFirst({
+    where: eq(schema.items.id, option.itemId),
   });
+  const itemPriceType = parentItem?.unit === 'fixed' ? 'fixed' : 'per_sqft';
 
-  // 1. Expire currently active option price
-  await db
-    .update(schema.optionPrices)
-    .set({ effectiveTo: new Date() })
-    .where(and(eq(schema.optionPrices.optionId, optionId), isNull(schema.optionPrices.effectiveTo)));
+  // Update option brandName if provided
+  if (dto.name) {
+    await db
+      .update(schema.options)
+      .set({ brandName: dto.name })
+      .where(eq(schema.options.id, optionId));
+  }
 
-  // 2. Insert new versioned option price record
-  const [newPrice] = await db
-    .insert(schema.optionPrices)
-    .values({
-      optionId: option.id,
-      packageId: existingPrice?.packageId || null,
-      priceDelta: dto.priceDelta.toFixed(2),
-      priceType: existingPrice?.priceType || 'per_sqft',
-      effectiveFrom: new Date(),
-      effectiveTo: null,
-    })
-    .returning();
+  // Update option prices strictly per package
+  let newPrices: any[] = [];
+  
+  if (dto.prices && dto.prices.length > 0) {
+    // Delete existing prices
+    await db.delete(schema.optionPrices).where(eq(schema.optionPrices.optionId, optionId));
+    
+    // Deduplicate by packageId
+    const priceMap = new Map();
+    for (const p of dto.prices) {
+      priceMap.set(p.packageId, p);
+    }
+    const inserts = Array.from(priceMap.values()).map((p) => {
+      const isComp = p.isComplimentary === true;
+      const rawDelta = isComp ? 0 : Number(p.priceDelta);
+      const deltaVal = isNaN(rawDelta) ? 0 : rawDelta;
+      return {
+        optionId: optionId,
+        packageId: p.packageId,
+        priceDelta: deltaVal.toFixed(2),
+        priceType: itemPriceType,
+      };
+    });
+    
+    newPrices = await db.insert(schema.optionPrices).values(inserts).returning();
+  }
 
-  return newPrice;
+  return { id: optionId, name: dto.name || option.brandName, prices: newPrices };
 }
 
 export async function updateAdminPackageItem(packageItemId: number, dto: UpdatePackageItemDto) {

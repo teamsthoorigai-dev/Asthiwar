@@ -33,14 +33,14 @@ The ASTHIWAR backend is a high-performance, modular TypeScript service designed 
 │  ├── /api/v1/calculator/*            ──> CalculatorController (Packages, Locations, Preview, Estimate, PDF)            │
 │  ├── /api/v1/enquiries               ──> EnquiriesController (Lead Capture, Consultation Booking)                       │
 │  ├── /api/v1/admin/auth/*            ──> AuthController (Login, Logout, Session Verification)                          │
-│  ├── /api/v1/admin/config/*          ──> AdminConfigController (Versioned Pricing, Multipliers, Add-Ons, Specs)        │
+│  ├── /api/v1/admin/config/*          ──> AdminConfigController (Packages, Milestones, Brand CRUD, Cities, Add-Ons)      │
 │  └── /api/v1/admin/*                 ──> AdminController (CRM Enquiries, Estimates Explorer, Analytics, Audit Logs)   │
 ├────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
 │  [Business Service Layer]                                                                                              │
 │  ├── CalculatorService (Area normalization, volume discount rules, city multipliers, 10-stage milestones)             │
 │  ├── AuthService (Bcrypt 12-round hashing, 7-day token issuance, session store management)                             │
 │  ├── AdminService (CRM lead processing, estimate queries, aggregate revenue analytics)                                │
-│  ├── AdminConfigService (Immutable price versioning: effective_from / effective_to)                                   │
+│  ├── AdminConfigService (Package rates, per-package brand options, milestones, city factors)                                   │
 │  ├── PdfService (PDFKit multi-page vector quotation rendering & streaming)                                             │
 │  ├── NotificationService (Omnichannel Email & WhatsApp delivery, sales lead alerts, retry workers)                    │
 │  └── AuditService (Asynchronous PostgreSQL event logging, recursive sensitive-field redaction)                        │

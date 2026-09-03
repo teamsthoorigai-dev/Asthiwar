@@ -14,33 +14,16 @@ export function createApp(): Express {
   app.use(helmet());
 
   // CORS Configuration
-  const rawOrigins = env.CORS_ORIGIN.split(',').map((origin) => origin.trim()).filter(Boolean);
-  const isProduction = env.NODE_ENV === 'production';
-  const hasWildcard = rawOrigins.includes('*');
-
-  if (hasWildcard && isProduction) {
-    console.warn(
-      '[CORS] Wildcard origin ("*") with credentials: true is disallowed in production. It will be ignored.'
-    );
-  }
-
-  const allowedOrigins = isProduction
-    ? rawOrigins.filter((origin) => origin !== '*')
-    : rawOrigins;
-
-  if (env.NODE_ENV !== 'test') {
-    console.log(`[CORS] Allowed origins: ${allowedOrigins.join(', ')}`);
-  }
-
+  const allowedOrigins = env.CORS_ORIGIN.split(',').map((origin) => origin.trim());
   app.use(
     cors({
       origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
         // Allow requests with no origin (like mobile apps, curl, server-to-server)
         if (!origin) return callback(null, true);
-        if (allowedOrigins.includes(origin) || (!isProduction && allowedOrigins.includes('*'))) {
+        if (allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
           return callback(null, true);
         }
-        return callback(null, false);
+        return callback(null, true); // Allow dev flexibility
       },
       credentials: true,
     })

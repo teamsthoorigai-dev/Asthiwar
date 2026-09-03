@@ -6,11 +6,14 @@ import {
   getAdminLocations,
   createAdminLocation,
   updateAdminLocation,
+  deleteAdminLocation,
   getAdminAddons,
   updateAdminAddonPrice,
   updateAdminAddonMetadata,
   getAdminSpecifications,
+  createAdminOption,
   updateAdminOptionPrice,
+  deleteAdminOption,
   updateAdminPackageItem,
   getAdminMilestones,
   updateAdminMilestones,
@@ -22,6 +25,7 @@ import {
   UpdateLocationDto,
   UpdateAddonPriceDto,
   UpdateAddonMetadataDto,
+  CreateOptionDto,
   UpdateOptionPriceDto,
   UpdatePackageItemDto,
   UpdateMilestonesDto,
@@ -48,9 +52,10 @@ import { logAuditEvent } from '../../services/audit.service.js';
 
 export async function updatePackagePriceController(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const packageId = parseInt(req.params.id as string, 10);
+    const rawId = req.params.id as string;
+    const packageIdOrSlug = !isNaN(Number(rawId)) ? parseInt(rawId, 10) : rawId;
     const dto = req.body as UpdatePackagePriceDto;
-    const newPrice = await updateAdminPackagePrice(packageId, dto);
+    const newPrice = await updateAdminPackagePrice(packageIdOrSlug, dto);
 
     logAuditEvent({
       eventType: 'ADMIN_MUTATION',
@@ -62,7 +67,7 @@ export async function updatePackagePriceController(req: Request, res: Response, 
       httpMethod: req.method,
       statusCode: 200,
       metadata: {
-        packageId,
+        packageIdOrSlug,
         pricePerSqft: dto.pricePerSqft,
         volumePricePerSqft: dto.volumePricePerSqft,
         volumeDiscountThresholdSqft: dto.volumeDiscountThresholdSqft,
@@ -169,6 +174,42 @@ export async function updateLocationController(req: Request, res: Response, next
   }
 }
 
+export async function deleteLocationController(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const locationId = parseInt(req.params.id as string, 10);
+    const result = await deleteAdminLocation(locationId);
+
+    logAuditEvent({
+      eventType: 'ADMIN_MUTATION',
+      action: 'DELETE_LOCATION',
+      severity: 'HIGH',
+      actorType: 'ADMIN',
+      actorId: (req as any).user?.email || (req as any).user?.id,
+      endpoint: req.originalUrl,
+      httpMethod: req.method,
+      statusCode: 200,
+      metadata: { locationId },
+      ipAddress: req.ip || req.socket?.remoteAddress,
+      userAgent: req.headers['user-agent'],
+    }).catch(() => {});
+
+    res.json({
+      success: true,
+      message: `Location '${result.name}' deleted successfully`,
+      data: result,
+    });
+  } catch (error) {
+    if (error instanceof AdminServiceError) {
+      res.status(error.statusCode).json({
+        success: false,
+        error: { code: error.code, message: error.message },
+      });
+      return;
+    }
+    next(error);
+  }
+}
+
 // ----------------------------------------------------
 // ADDONS CONTROLLER
 // ----------------------------------------------------
@@ -187,9 +228,10 @@ export async function getAddonsController(req: Request, res: Response, next: Nex
 
 export async function updateAddonPriceController(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const addonId = parseInt(req.params.id as string, 10);
+    const rawId = req.params.id as string;
+    const addonIdOrSlug = !isNaN(Number(rawId)) ? parseInt(rawId, 10) : rawId;
     const dto = req.body as UpdateAddonPriceDto;
-    const newPrice = await updateAdminAddonPrice(addonId, dto);
+    const newPrice = await updateAdminAddonPrice(addonIdOrSlug, dto);
     res.json({
       success: true,
       message: 'Add-on variant price updated successfully with history versioning',
@@ -245,6 +287,48 @@ export async function getSpecificationsController(req: Request, res: Response, n
   }
 }
 
+export async function createOptionController(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const dto = req.body as CreateOptionDto;
+    const created = await createAdminOption(dto);
+    res.status(201).json({
+      success: true,
+      message: 'Brand option created successfully',
+      data: created,
+    });
+  } catch (error) {
+    if (error instanceof AdminServiceError) {
+      res.status(error.statusCode).json({
+        success: false,
+        error: { code: error.code, message: error.message },
+      });
+      return;
+    }
+    next(error);
+  }
+}
+
+export async function deleteOptionController(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const optionId = parseInt(req.params.id as string, 10);
+    const result = await deleteAdminOption(optionId);
+    res.json({
+      success: true,
+      message: `Brand option '${result.name}' deleted successfully`,
+      data: result,
+    });
+  } catch (error) {
+    if (error instanceof AdminServiceError) {
+      res.status(error.statusCode).json({
+        success: false,
+        error: { code: error.code, message: error.message },
+      });
+      return;
+    }
+    next(error);
+  }
+}
+
 export async function updateOptionPriceController(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const optionId = parseInt(req.params.id as string, 10);
@@ -252,7 +336,7 @@ export async function updateOptionPriceController(req: Request, res: Response, n
     const newPrice = await updateAdminOptionPrice(optionId, dto);
     res.json({
       success: true,
-      message: 'Option price delta updated with history versioning',
+      message: 'Option prices updated successfully',
       data: newPrice,
     });
   } catch (error) {
