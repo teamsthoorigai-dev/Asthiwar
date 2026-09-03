@@ -689,6 +689,55 @@ async function seedSpecifications(
     { optionSlug: 'rcc_basement', packageSlug: 'basic',    priceDelta: '40.00', priceType: 'per_sqft' },
     { optionSlug: 'rcc_basement', packageSlug: 'standard', priceDelta: '40.00', priceType: 'per_sqft' },
     { optionSlug: 'rcc_basement', packageSlug: 'premium',  priceDelta: '40.00', priceType: 'per_sqft' },
+
+    // -----------------------------------------------------------------------
+    // Brand upgrade deltas — migration 0012.
+    // Rule (confirmed by Sundar 2026-09-01): delta = cost at the option's tier
+    // minus cost at the customer's tier, clamped at zero. Tier costs come from
+    // tab 1821959866 of the rate card. See 0012_brand_upgrade_deltas.sql for the
+    // cross-check and for what is deliberately left out (painting, masonry).
+    // -----------------------------------------------------------------------
+    // Steel Rebar Fe 550D — 305 / 320 / 350 / 400
+    { optionSlug: 'spa_vizag_steel',    packageSlug: 'basic',    priceDelta: '15.00', priceType: 'per_sqft' },
+    { optionSlug: 'ars_suryadev_steel', packageSlug: 'basic',    priceDelta: '45.00', priceType: 'per_sqft' },
+    { optionSlug: 'ars_suryadev_steel', packageSlug: 'standard', priceDelta: '30.00', priceType: 'per_sqft' },
+    { optionSlug: 'jsw_tata_steel',     packageSlug: 'basic',    priceDelta: '95.00', priceType: 'per_sqft' },
+    { optionSlug: 'jsw_tata_steel',     packageSlug: 'standard', priceDelta: '80.00', priceType: 'per_sqft' },
+    { optionSlug: 'jsw_tata_steel',     packageSlug: 'premium',  priceDelta: '50.00', priceType: 'per_sqft' },
+    // Cement — 210 / 215 / 225 / 245
+    { optionSlug: 'jsw_cement',          packageSlug: 'basic',    priceDelta: '5.00',  priceType: 'per_sqft' },
+    { optionSlug: 'ramco_dalmia_cement', packageSlug: 'basic',    priceDelta: '15.00', priceType: 'per_sqft' },
+    { optionSlug: 'ramco_dalmia_cement', packageSlug: 'standard', priceDelta: '10.00', priceType: 'per_sqft' },
+    { optionSlug: 'ultratech_chettinad', packageSlug: 'basic',    priceDelta: '35.00', priceType: 'per_sqft' },
+    { optionSlug: 'ultratech_chettinad', packageSlug: 'standard', priceDelta: '30.00', priceType: 'per_sqft' },
+    { optionSlug: 'ultratech_chettinad', packageSlug: 'premium',  priceDelta: '20.00', priceType: 'per_sqft' },
+    // PVC & CPVC Pipes — 100 / 125 / 145 / 160
+    { optionSlug: 'watertec',        packageSlug: 'basic',    priceDelta: '25.00', priceType: 'per_sqft' },
+    { optionSlug: 'kavery_ashirwad', packageSlug: 'basic',    priceDelta: '45.00', priceType: 'per_sqft' },
+    { optionSlug: 'kavery_ashirwad', packageSlug: 'standard', priceDelta: '20.00', priceType: 'per_sqft' },
+    { optionSlug: 'finolex_supreme', packageSlug: 'basic',    priceDelta: '60.00', priceType: 'per_sqft' },
+    { optionSlug: 'finolex_supreme', packageSlug: 'standard', priceDelta: '35.00', priceType: 'per_sqft' },
+    { optionSlug: 'finolex_supreme', packageSlug: 'premium',  priceDelta: '15.00', priceType: 'per_sqft' },
+    // Sanitary & CP Fittings — 40 / 60 / 90 / 135
+    { optionSlug: 'parryware',   packageSlug: 'basic',    priceDelta: '20.00', priceType: 'per_sqft' },
+    { optionSlug: 'jaquar',      packageSlug: 'basic',    priceDelta: '50.00', priceType: 'per_sqft' },
+    { optionSlug: 'jaquar',      packageSlug: 'standard', priceDelta: '30.00', priceType: 'per_sqft' },
+    { optionSlug: 'toto_kohler', packageSlug: 'basic',    priceDelta: '95.00', priceType: 'per_sqft' },
+    { optionSlug: 'toto_kohler', packageSlug: 'standard', priceDelta: '75.00', priceType: 'per_sqft' },
+    { optionSlug: 'toto_kohler', packageSlug: 'premium',  priceDelta: '45.00', priceType: 'per_sqft' },
+    // Wires & Switches — wires 60/75/90/90 + switches 17/22/28/28 = 77 / 97 / 118 / 118
+    { optionSlug: 'rr_anchor_roma',  packageSlug: 'basic',    priceDelta: '20.00', priceType: 'per_sqft' },
+    { optionSlug: 'finolex_legrand', packageSlug: 'basic',    priceDelta: '41.00', priceType: 'per_sqft' },
+    { optionSlug: 'finolex_legrand', packageSlug: 'standard', priceDelta: '21.00', priceType: 'per_sqft' },
+    // Lights — 17 / 22 / 28 / 28
+    { optionSlug: 'luker_lights',   packageSlug: 'basic',    priceDelta: '5.00',  priceType: 'per_sqft' },
+    { optionSlug: 'philips_lights', packageSlug: 'basic',    priceDelta: '11.00', priceType: 'per_sqft' },
+    { optionSlug: 'philips_lights', packageSlug: 'standard', priceDelta: '6.00',  priceType: 'per_sqft' },
+    // Waterproofing — 0 / 10 / 10 / 10; all three brands are equivalent, so Basic
+    // pays ₹10 for any of them. Stated per option so the UI shows it.
+    { optionSlug: 'dr_fixit', packageSlug: 'basic', priceDelta: '10.00', priceType: 'per_sqft' },
+    { optionSlug: 'fosroc',   packageSlug: 'basic', priceDelta: '10.00', priceType: 'per_sqft' },
+    { optionSlug: 'bostik',   packageSlug: 'basic', priceDelta: '10.00', priceType: 'per_sqft' },
   ];
 
   const opInserts = opDefs.map((d) => ({
@@ -722,32 +771,33 @@ async function seedAddons() {
   const addonDefs = [
     {
       slug: 'overhead_concrete_tank', name: 'Overhead Concrete Tank',
-      description: 'Custom capacity overhead water storage tank. Capacity selected in Litres.',
-      pricingUnit: 'per_litre', defaultQuantity: '1000', minQuantity: '500', maxQuantity: '10000', sortOrder: 1,
+      description: 'Custom capacity overhead water storage tank. Capacity selected in Litres. A family of 4 opt for 2,500 Litres.',
+      pricingUnit: 'per_litre', defaultQuantity: '2500', minQuantity: '500', maxQuantity: '20000', sortOrder: 1,
     },
     {
       slug: 'conventional_septic_tank', name: 'Conventional Septic Tank',
-      description: 'Volume-based septic tank. Capacity selected in Litres.',
-      pricingUnit: 'per_litre', defaultQuantity: '2000', minQuantity: '1000', maxQuantity: '10000', sortOrder: 2,
+      description: 'Volume-based septic tank. Capacity selected in Litres. A family of 4 opt for 5,000 Litres.',
+      pricingUnit: 'per_litre', defaultQuantity: '5000', minQuantity: '1000', maxQuantity: '20000', sortOrder: 2,
     },
     {
       slug: 'underground_sump', name: 'Underground Sump',
-      description: 'Underground water sump. Capacity selected in Litres.',
-      pricingUnit: 'per_litre', defaultQuantity: '5000', minQuantity: '1000', maxQuantity: '20000', sortOrder: 3,
+      description: 'Underground water sump. Capacity selected in Litres. A family of 4 opt for 6,000 Litres.',
+      pricingUnit: 'per_litre', defaultQuantity: '6000', minQuantity: '1000', maxQuantity: '30000', sortOrder: 3,
     },
     {
-      slug: 'compound_wall', name: 'Compound Wall (up to 5\'6")',
-      description: 'Perimeter compound wall. Running feet entered by customer.',
+      slug: 'compound_wall', name: 'Compound Wall (upto 5\'6" Height)',
+      description: 'Perimeter compound wall up to 5\'6" height. Running feet entered by customer.',
       pricingUnit: 'per_rft', defaultQuantity: '50', minQuantity: '10', maxQuantity: '500', sortOrder: 4,
     },
     {
       slug: 'rooftop_solar', name: 'Rooftop Solar Panels',
-      description: 'Grid-tied rooftop solar system. Pricing after subsidy reduction.',
+      description: 'Grid-tied rooftop solar system. Pricing before subsidy reduction (subsidy approx. ₹78,000). 3 kW per day required for a 1 to 3 BHK home.',
       pricingUnit: 'fixed', sortOrder: 5,
     },
     {
+      // The rate card leaves the 2-car gate area blank, so it is not stated (Rule #3).
       slug: 'main_gate', name: 'Main Gate',
-      description: 'Main entrance gate. Price per sq.ft of gate area.',
+      description: 'Main entrance gate. Price per sq.ft of gate area. Guide: 1 car gate 10\' x 6\' = 60 sq.ft; wicket gate 3.5\' x 6\' = 21 sq.ft.',
       pricingUnit: 'per_sqft_gate', defaultQuantity: '60', minQuantity: '20', maxQuantity: '200', sortOrder: 6,
     },
     {
@@ -757,7 +807,7 @@ async function seedAddons() {
     },
     {
       slug: 'smart_home', name: 'Smart Home Automation',
-      description: 'Smart switches and mobile app control system.',
+      description: 'Smart switches, lights, fans and main door lock with mobile app control.',
       pricingUnit: 'fixed', sortOrder: 8,
     },
     {
@@ -767,12 +817,13 @@ async function seedAddons() {
     },
     {
       slug: 'choke_pit', name: 'Choke Pit & Rings',
-      description: '2 choke pits (toilet & greywater separate).',
+      description: 'Choke pits and rings. Two pits keep toilet and other water separate.',
       pricingUnit: 'fixed', sortOrder: 10,
     },
     {
-      slug: 'solar_water_heater', name: 'Solar Water Heater',
-      description: 'Rooftop solar water heating system. 200–250L recommended for family of 5.',
+      // Renamed on the rate card; the SLUG stays so existing estimate rows resolve.
+      slug: 'solar_water_heater', name: 'Water Heat Pump',
+      description: 'Solar or electric water heating. 200 to 250 Litres per day required for a family of 5.',
       pricingUnit: 'fixed', sortOrder: 11,
     },
     {
@@ -781,19 +832,26 @@ async function seedAddons() {
       pricingUnit: 'per_sqft_terrace', defaultQuantity: '100', minQuantity: '50', maxQuantity: '2000', sortOrder: 12,
     },
     {
+      // Fitted per tank, so bore-water and corporation-water may both be selected.
       slug: 'motor_automation', name: 'Motor Automation (Auto Cut-Off)',
       description: 'Automatic water controller with auto cut-off.',
-      pricingUnit: 'fixed', sortOrder: 13,
+      pricingUnit: 'fixed', sortOrder: 13, allowsMultiple: true,
     },
     {
       slug: 'pressure_pump', name: 'Pressure Pump',
-      description: 'High-pressure plumbing pump.',
+      description: 'High-pressure plumbing pump. Brand: Grundfos.',
       pricingUnit: 'fixed', sortOrder: 14,
     },
     {
+      // Not on the 2026-09 rate card — kept active and unpriced pending confirmation.
       slug: 'waste_water_recycling', name: 'Waste Water Recycling Tank',
       description: 'Greywater treatment and garden recycling system.',
       pricingUnit: 'fixed', sortOrder: 15,
+    },
+    {
+      slug: 'water_softener', name: 'Water Softener',
+      description: 'Whole-house water softener. Brand: AO Smith. Suitable for TDS below 1000.',
+      pricingUnit: 'fixed', sortOrder: 16,
     },
   ];
 
@@ -828,33 +886,43 @@ async function seedAddons() {
     // 4. Compound Wall: ₹2,300/rft (solid/fly ash), ₹2,900/rft (red brick)
     { addonSlug: 'compound_wall', variantName: 'Solid Block / Fly Ash', variantSlug: 'solid_flyash', packageTier: 'all', price: '2300.00' },
     { addonSlug: 'compound_wall', variantName: 'Red Brick',             variantSlug: 'red_brick',    packageTier: 'all', price: '2900.00' },
-    // 5. Rooftop Solar: ₹1,80,000 (3kW), ₹3,60,000 (5kW)
-    { addonSlug: 'rooftop_solar', variantName: '3 kW System', variantSlug: '3kw', packageTier: 'all', price: '180000.00' },
-    { addonSlug: 'rooftop_solar', variantName: '5 kW System', variantSlug: '5kw', packageTier: 'all', price: '360000.00' },
-    // 6. Main Gate: ₹150/sqft (MS), ₹300/sqft (SS)
-    { addonSlug: 'main_gate', variantName: 'MS Gate',             variantSlug: 'ms_gate', packageTier: 'all', price: '150.00' },
-    { addonSlug: 'main_gate', variantName: 'Stainless Steel Gate',variantSlug: 'ss_gate', packageTier: 'all', price: '300.00' },
+    // 5. Rooftop Solar (before subsidy): ₹1,85,000 (3kW), ₹2,95,000 (5kW)
+    { addonSlug: 'rooftop_solar', variantName: '3 kW System', variantSlug: '3kw', packageTier: 'all', price: '185000.00' },
+    { addonSlug: 'rooftop_solar', variantName: '5 kW System', variantSlug: '5kw', packageTier: 'all', price: '295000.00' },
+    // 6. Main Gate: ₹620 (MS), ₹1,250 (SS), ₹1,300 (MS + automation), ₹2,000 (SS + automation) per sqft of gate
+    { addonSlug: 'main_gate', variantName: 'MS Gate',                              variantSlug: 'ms_gate',      packageTier: 'all', price: '620.00' },
+    { addonSlug: 'main_gate', variantName: 'Stainless Steel Gate',                 variantSlug: 'ss_gate',      packageTier: 'all', price: '1250.00' },
+    { addonSlug: 'main_gate', variantName: 'MS Gate with Automation',              variantSlug: 'ms_gate_auto', packageTier: 'all', price: '1300.00' },
+    { addonSlug: 'main_gate', variantName: 'Stainless Steel Gate with Automation', variantSlug: 'ss_gate_auto', packageTier: 'all', price: '2000.00' },
     // 7. CCTV: ₹37,000 (4×2MP), ₹45,000 (4×5MP)
     { addonSlug: 'cctv_security', variantName: '4 Camera 2MP Color AHD', variantSlug: '4cam_2mp', packageTier: 'all', price: '37000.00' },
     { addonSlug: 'cctv_security', variantName: '4 Camera 5MP Color AHD', variantSlug: '4cam_5mp', packageTier: 'all', price: '45000.00' },
-    // 8. Smart Home: ₹50,000
-    { addonSlug: 'smart_home', variantName: 'Standard Package', variantSlug: 'standard', packageTier: 'all', price: '50000.00' },
+    // 8. Smart Home: ₹2,80,000
+    { addonSlug: 'smart_home', variantName: 'Switches, Lights, Fans & Main Door Lock', variantSlug: 'standard', packageTier: 'all', price: '280000.00' },
     // 9. Passenger Lift: ₹12,50,000
     { addonSlug: 'passenger_lift', variantName: '4-Passenger Lift', variantSlug: '4pax', packageTier: 'all', price: '1250000.00' },
-    // 10. Choke Pit: ₹15,000
-    { addonSlug: 'choke_pit', variantName: '2 Choke Pits', variantSlug: '2pits', packageTier: 'all', price: '15000.00' },
-    // 11. Solar Water Heater: ₹30,000 (125L), ₹60,000 (250L)
-    { addonSlug: 'solar_water_heater', variantName: '125 Litres', variantSlug: '125l', packageTier: 'all', price: '30000.00' },
-    { addonSlug: 'solar_water_heater', variantName: '250 Litres', variantSlug: '250l', packageTier: 'all', price: '60000.00' },
+    // 10. Choke Pit: the rate card lists BOTH the 1-pit and 2-pit option at ₹15,000.
+    //     Transcribed as written — flagged for Sundar rather than corrected (Rule #3).
+    { addonSlug: 'choke_pit', variantName: '1 Choke Pit',                                  variantSlug: '1pit',  packageTier: 'all', price: '15000.00' },
+    { addonSlug: 'choke_pit', variantName: '2 Choke Pits (toilet & other water separate)', variantSlug: '2pits', packageTier: 'all', price: '15000.00' },
+    // 11. Water Heat Pump: ₹50,000 (solar 125L), ₹1,00,000 (solar 250L), ₹1,76,000 (electric)
+    { addonSlug: 'solar_water_heater', variantName: 'Solar — 125 L Capacity',                  variantSlug: '125l',        packageTier: 'all', price: '50000.00' },
+    { addonSlug: 'solar_water_heater', variantName: 'Solar — 250 L Capacity',                  variantSlug: '250l',        packageTier: 'all', price: '100000.00' },
+    { addonSlug: 'solar_water_heater', variantName: 'Electric AO Smith HPI 40 — 24 hr Supply', variantSlug: 'electric_hp', packageTier: 'all', price: '176000.00' },
     // 12. Cool Roof Tiles: ₹170/sqft
     { addonSlug: 'cool_roof_tiles', variantName: '1\'x1\' White with Epoxy', variantSlug: 'white_epoxy', packageTier: 'all', price: '170.00' },
     // 13. Motor Automation: ₹12,000 (bore), ₹12,000 (corporation)
     { addonSlug: 'motor_automation', variantName: 'Bore Water OHT',        variantSlug: 'bore',        packageTier: 'all', price: '12000.00' },
     { addonSlug: 'motor_automation', variantName: 'Corporation Water OHT', variantSlug: 'corporation', packageTier: 'all', price: '12000.00' },
-    // 14. Pressure Pump: ₹50,000
-    { addonSlug: 'pressure_pump', variantName: 'Standard Pump', variantSlug: 'standard', packageTier: 'all', price: '50000.00' },
+    // 14. Pressure Pump (Grundfos): ₹57,500 / ₹71,000 / ₹82,800 / ₹1,07,000
+    { addonSlug: 'pressure_pump', variantName: '3 Bathrooms, No Body Shower',              variantSlug: 'g_3bath',        packageTier: 'all', price: '57500.00' },
+    { addonSlug: 'pressure_pump', variantName: '4+ Bathrooms, No Body Shower',             variantSlug: 'g_4bath',        packageTier: 'all', price: '71000.00' },
+    { addonSlug: 'pressure_pump', variantName: '1 Bathroom with Body Shower + 2 Without',  variantSlug: 'g_1bath_shower', packageTier: 'all', price: '82800.00' },
+    { addonSlug: 'pressure_pump', variantName: '3 Bathrooms with Body Shower',             variantSlug: 'g_3bath_shower', packageTier: 'all', price: '107000.00' },
     // 15. Waste Water Recycling: TBD — zero placeholder (rule 3: never invent prices)
     { addonSlug: 'waste_water_recycling', variantName: 'Standard Tank', variantSlug: 'standard', packageTier: 'all', price: '0.00' },
+    // 16. Water Softener (AO Smith): ₹1,05,000
+    { addonSlug: 'water_softener', variantName: 'Suitable for TDS below 1000', variantSlug: 'tds_below_1000', packageTier: 'all', price: '105000.00' },
   ];
 
   const apInserts = addonPriceDefs.map((d) => ({

@@ -95,7 +95,10 @@ async function runApiTests() {
     assert(Array.isArray(cfgRes.data.data.specifications), 'Returns specifications array');
     assert(cfgRes.data.data.specifications.length === 10, 'Contains 10 category groups');
     assert(Array.isArray(cfgRes.data.data.addons), 'Returns addons array');
-    assert(cfgRes.data.data.addons.length === 15, 'Contains 15 add-ons catalog items');
+    // 16 since migration 0011 added Water Softener from the 2026-09 rate card.
+    // Drops back to 15 if Sundar confirms Waste Water Recycling Tank should retire —
+    // it is in the DB but absent from that rate card. See TODO.md.
+    assert(cfgRes.data.data.addons.length === 16, 'Contains 16 add-ons catalog items');
 
     // -----------------------------------------------------------------------
     // Test 4: GET /api/v1/calculator/config/invalid-slug (404)

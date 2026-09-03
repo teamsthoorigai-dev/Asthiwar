@@ -40,11 +40,7 @@ export default function CostCalculatorPage() {
         aria-label="Interactive Construction Cost Calculator"
       >
         <div className="shell">
-          <SectionHeading
-            eyebrow="Interactive Cost Planning"
-            title="Real-time estimate engine. Backed by live project rates."
-            body="Select your dimensions, specification tier, brand preferences, and specialized infrastructure for an authoritative project snapshot."
-          />
+          
           <CalculatorWizard />
         </div>
       </section>

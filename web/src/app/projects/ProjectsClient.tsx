@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { PageHero } from '@/components/PageHero';
+import Link from 'next/link';
+import { FieldRecordSequence } from '@/components/FieldRecordSequence';
 import { ProjectCard } from '@/components/ProjectCard';
 import { SiteLayout } from '@/components/SiteShell';
 import { projects } from '@/data/site';
@@ -26,19 +27,26 @@ export function ProjectsClient() {
 
   return (
     <SiteLayout footerCta="land">
-      <PageHero
-        eyebrow="Projects"
+      <FieldRecordSequence
+        eyebrow="ASTHIWAR / Projects"
         title="Projects"
         intro="A collection of spaces shaped by context, material and intent."
-        meta={
+        cue="Scroll to the archive"
+        actions={
           <>
-            <span>Project information</span>
-            <span>Confirmed before publication</span>
+           
+            <Link href="/cost-calculator" className="button button--outline-light">
+              Cost calculator
+            </Link>
           </>
         }
       />
 
-      <section className="projects-archive section section--paper" aria-label="Project archive">
+      <section
+        id="project-archive"
+        className="projects-archive section section--paper"
+        aria-label="Project archive"
+      >
         <div className="shell">
           <div className="project-filters" role="group" aria-label="Filter projects by type">
             {projectFilters.map((filter) => {
@@ -71,6 +79,7 @@ export function ProjectsClient() {
                 project={project}
                 index={projects.findIndex((item) => item.slug === project.slug)}
                 featured={project.slug === visibleProjects[0]?.slug}
+                hoverGallery
               />
             ))}
           </div>

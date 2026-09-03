@@ -11,6 +11,9 @@ export const addons = pgTable('addons', {
   maxQuantity: numeric('max_quantity', { precision: 10, scale: 2 }),
   sortOrder: integer('sort_order').default(0).notNull(),
   isActive: boolean('is_active').default(true).notNull(),
+  // true when several variants may be fitted together (e.g. motor automation on
+  // both the bore-water and the corporation-water tank), false for either/or.
+  allowsMultiple: boolean('allows_multiple').default(false).notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 });

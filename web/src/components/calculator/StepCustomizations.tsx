@@ -3,7 +3,7 @@
 // Rule #5: no money is computed here. All figures come from the backend.
 
 import React from 'react';
-import { Check, ArrowRight, ArrowLeft, Loader2, Sliders } from 'lucide-react';
+import { Check, ArrowRight, ArrowLeft, Loader2 } from 'lucide-react';
 import type {
   EstimateFormState,
   PackageConfigResponse,
@@ -52,11 +52,11 @@ export function StepCustomizations({
 
   return (
     <div className="calculator-step animate-fade-in">
-      <div className="calculator-step__header">
-        <span className="calculator-step__badge">Step 4 of 5 • Material Customisations</span>
-        <h2 className="calculator-step__title">Brand Upgrades & Specifications</h2>
+      <div className="calculator-step__header text-center">
+        <span className="calculator-step__badge">Step 3 of 5 • Material Customisations</span>
+        <h2 className="calculator-step__title">Brand Upgrades &amp; Specifications</h2>
         <p className="calculator-step__intro">
-          Personalize structural materials, sanitary ware, flooring, and finishing brands.
+          Personalize materials and brand selections for structural and finishing works.
         </p>
       </div>
 
@@ -105,14 +105,16 @@ export function StepCustomizations({
                       >
                         <div className="flex items-center justify-between mb-1">
                           <span className="text-xs font-bold">{opt.brandName}</span>
-                          {isSelected && <Check size={14} className="text-foreground" />}
+                          <span className="calculator-tick calculator-tick--sm">
+                            <Check size={11} strokeWidth={3} aria-hidden="true" />
+                          </span>
                         </div>
                         <div className="text-[11px] text-muted">
                           {opt.priceDelta > 0
-                            ? `+₹${opt.priceDelta}/sq.ft`
+                            ? `+₹${opt.priceDelta}/sqft`
                             : opt.priceDelta < 0
-                            ? `-₹${Math.abs(opt.priceDelta)}/sq.ft`
-                            : 'Included in package'}
+                            ? `-₹${Math.abs(opt.priceDelta)}/sqft`
+                            : 'Included'}
                         </div>
                       </button>
                     );
@@ -131,14 +133,14 @@ export function StepCustomizations({
           className="button button--ghost flex items-center gap-2"
         >
           <ArrowLeft size={16} aria-hidden="true" />
-          <span>Back</span>
+          <span>Back to Packages</span>
         </button>
         <button
           type="button"
           onClick={onNext}
           className="button button--solid flex items-center gap-2"
         >
-          <span>Select Add-Ons</span>
+          <span>Continue to Add-Ons</span>
           <ArrowRight size={16} aria-hidden="true" />
         </button>
       </div>

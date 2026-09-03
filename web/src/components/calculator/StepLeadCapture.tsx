@@ -34,11 +34,12 @@ export function StepLeadCapture({
 
   return (
     <div className="calculator-step animate-fade-in">
-      <div className="calculator-step__header">
-        <span className="calculator-step__badge">Step 5 of 5 • Final Authorization</span>
-        <h2 className="calculator-step__title">Generate Authoritative Estimate</h2>
+      <div className="calculator-step__header text-center">
+        <span className="calculator-step__badge">Step 5 of 5 • Contact Details</span>
+        <h2 className="calculator-step__title">Almost Done!</h2>
         <p className="calculator-step__intro">
-          Enter your contact details to generate and lock your customized construction budget.
+          Enter your details to view your instant, 100% authoritative construction budget and
+          milestone schedule.
         </p>
       </div>
 
@@ -115,7 +116,8 @@ export function StepLeadCapture({
         <div className="form-group">
           <label className="form-label flex items-center gap-1.5" htmlFor="summary-location">
             <MapPin size={16} aria-hidden="true" />
-            <span>Plot Location</span>
+            <span>Plot Location (Tamil Nadu)</span>
+            <span className="text-red-500">*</span>
           </label>
           <select
             id="summary-location"
@@ -135,6 +137,9 @@ export function StepLeadCapture({
               </option>
             ))}
           </select>
+          {stepErrors.plotLocation && (
+            <p className="form-error">{stepErrors.plotLocation}</p>
+          )}
         </div>
 
         <div className="calculator-actions pt-4 border-t border-border flex items-center justify-between">
@@ -159,7 +164,7 @@ export function StepLeadCapture({
               </>
             ) : (
               <>
-                <span>View Authoritative Estimate</span>
+                <span>View Estimate</span>
                 <ArrowRight size={16} aria-hidden="true" />
               </>
             )}
@@ -168,7 +173,7 @@ export function StepLeadCapture({
 
         <div className="flex items-center justify-center gap-2 pt-2 text-[11px] text-muted">
           <Shield size={14} className="text-emerald-600 dark:text-emerald-400" />
-          <span>Strictly confidential. No spam or unsolicited contractor calls.</span>
+          <span>Your information is strictly protected and never shared with 3rd parties.</span>
         </div>
       </form>
     </div>

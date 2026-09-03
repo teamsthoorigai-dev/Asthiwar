@@ -15,22 +15,17 @@ export const addonItemSchema = z.object({
   quantity: z.number().positive('Quantity must be greater than 0').optional(),
 });
 
-// Step 0: Dimensions Schema
+// Step 1: Dimensions, floor configuration and additional areas
 export const dimensionsStepSchema = z.object({
-  plotLocation: z.string().min(2, 'Plot location is required'),
-  locationId: z.number().int().positive().optional(),
   plotArea: z.number().positive('Plot area must be greater than 0'),
   plotAreaUnit: AreaUnitEnum.default('sqft'),
-  builtupAreaPerFloor: z.number().positive('Built-up area per floor must be greater than 0'),
-  builtupAreaUnit: AreaUnitEnum.default('sqft'),
-  carParkingAreaSqft: z.number().min(0, 'Car parking area cannot be negative').default(0),
-  carCount: z.number().int().min(0).max(10).default(1),
-});
-
-// Step 1: Floors Schema
-export const floorsStepSchema = z.object({
   floorCount: FloorCountEnum,
-  floorBreakdown: z.array(z.number().positive()).optional(),
+  builtupAreaPerFloor: z.number().positive('Built-up area is required'),
+  builtupAreaUnit: AreaUnitEnum.default('sqft'),
+  floorBreakdown: z
+    .array(z.number().positive('Every floor needs a built-up area'))
+    .optional(),
+  carParkingAreaSqft: z.number().min(0, 'Car parking area cannot be negative').default(0),
   headRoomAreaSqft: z.number().min(0, 'Head room area cannot be negative').default(0),
 });
 
@@ -39,7 +34,7 @@ export const packageStepSchema = z.object({
   packageSlug: PackageSlugEnum,
 });
 
-// Step 3: Customizations & Addons Schema
+// Step 3: Customizations & Add-ons Schema
 export const customizationsStepSchema = z.object({
   customizations: z.array(customizationItemSchema).default([]),
 });
@@ -48,7 +43,7 @@ export const addonsStepSchema = z.object({
   addons: z.array(addonItemSchema).default([]),
 });
 
-// Step 4: Lead Capture Schema
+// Step 5: Contact Details Schema
 export const leadCaptureStepSchema = z.object({
   customerName: z.string().min(2, 'Customer name must be at least 2 characters'),
   customerPhone: z
@@ -57,6 +52,7 @@ export const leadCaptureStepSchema = z.object({
     .max(15, 'Phone number cannot exceed 15 characters')
     .regex(/^[0-9+ -]+$/, 'Invalid phone number format'),
   customerEmail: z.string().email('Invalid email address').optional().or(z.literal('')),
+  plotLocation: z.string().min(2, 'Plot location is required'),
 });
 
 // Full Aggregate Calculate Estimate DTO

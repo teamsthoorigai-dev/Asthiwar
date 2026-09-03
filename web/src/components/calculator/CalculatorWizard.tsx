@@ -5,17 +5,15 @@
 import React from 'react';
 import {
   Ruler,
-  Layers,
   Package as PackageIcon,
-  Sliders,
+  SlidersHorizontal,
   Sparkles,
   User,
   Loader2,
   AlertCircle,
 } from 'lucide-react';
-import { useCalculatorWizard } from '@/lib/calculator/useCalculatorWizard';
+import { useCalculatorWizard, LAST_FORM_STEP } from '@/lib/calculator/useCalculatorWizard';
 import { StepDimensions } from './StepDimensions';
-import { StepFloors } from './StepFloors';
 import { StepPackages } from './StepPackages';
 import { StepCustomizations } from './StepCustomizations';
 import { StepAddons } from './StepAddons';
@@ -24,11 +22,10 @@ import { StepEstimateReport } from './StepEstimateReport';
 
 const STEP_TABS = [
   { step: 0, label: 'Dimensions', icon: Ruler },
-  { step: 1, label: 'Floors', icon: Layers },
-  { step: 2, label: 'Package', icon: PackageIcon },
-  { step: 3, label: 'Brands', icon: Sliders },
-  { step: 4, label: 'Add-Ons', icon: Sparkles },
-  { step: 5, label: 'Authorize', icon: User },
+  { step: 1, label: 'Package', icon: PackageIcon },
+  { step: 2, label: 'Customise', icon: SlidersHorizontal },
+  { step: 3, label: 'Add-Ons', icon: Sparkles },
+  { step: 4, label: 'Details', icon: User },
 ];
 
 export function CalculatorWizard() {
@@ -70,10 +67,10 @@ export function CalculatorWizard() {
   return (
     <div className="calculator-wizard max-w-5xl mx-auto py-8 px-4 sm:px-6">
       {/* Stepper Progress Tabs */}
-      {currentStep < 5 && !estimateResult && (
+      {!estimateResult && (
         <div className="max-w-2xl mx-auto mb-8">
           <div className="grid grid-cols-5 gap-2 text-center">
-            {STEP_TABS.slice(0, 5).map((s) => {
+            {STEP_TABS.map((s) => {
               const Icon = s.icon;
               const isCompleted = currentStep > s.step;
               const isActive = currentStep === s.step;
@@ -120,57 +117,47 @@ export function CalculatorWizard() {
           <div className="w-full bg-border h-1 rounded-full overflow-hidden mt-3">
             <div
               className="bg-foreground h-full transition-all duration-300"
-              style={{ width: `${((currentStep + 1) / 5) * 100}%` }}
+              style={{ width: `${((currentStep + 1) / STEP_TABS.length) * 100}%` }}
             />
           </div>
         </div>
       )}
 
-      {error && !calculating && currentStep < 5 && (
+      {error && !calculating && !estimateResult && (
         <div className="mb-6 p-4 rounded border border-red-500/30 bg-red-500/10 text-red-600 dark:text-red-400 text-xs flex items-center gap-2 max-w-xl mx-auto">
           <AlertCircle size={16} className="shrink-0" />
           <span>{error}</span>
         </div>
       )}
 
-      {previewError && !error && currentStep >= 2 && currentStep < 5 && (
+      {previewError && !error && currentStep >= 1 && !estimateResult && (
         <div className="mb-4 text-center text-xs text-muted">
           <span>{previewError}</span>
         </div>
       )}
 
       {/* Step Renderings */}
-      {currentStep === 0 && (
+      {!estimateResult && currentStep === 0 && (
         <StepDimensions
           formData={formData}
-          locations={locations}
           stepErrors={stepErrors}
           onChange={updateForm}
           onNext={nextStep}
         />
       )}
 
-      {currentStep === 1 && (
-        <StepFloors
-          formData={formData}
-          stepErrors={stepErrors}
-          onChange={updateForm}
-          onNext={nextStep}
-          onBack={prevStep}
-        />
-      )}
-
-      {currentStep === 2 && (
+      {!estimateResult && currentStep === 1 && (
         <StepPackages
           formData={formData}
           packages={packages}
+          previewResult={previewResult}
           onChange={updateForm}
           onNext={nextStep}
           onBack={prevStep}
         />
       )}
 
-      {currentStep === 3 && (
+      {!estimateResult && currentStep === 2 && (
         <StepCustomizations
           formData={formData}
           packageConfig={packageConfig}
@@ -181,7 +168,7 @@ export function CalculatorWizard() {
         />
       )}
 
-      {currentStep === 4 && (
+      {!estimateResult && currentStep === 3 && (
         <StepAddons
           formData={formData}
           packageConfig={packageConfig}
@@ -189,12 +176,12 @@ export function CalculatorWizard() {
           previewResult={previewResult}
           previewLoading={previewLoading}
           onChange={updateForm}
-          onNext={() => goToStep(5)}
+          onNext={nextStep}
           onBack={prevStep}
         />
       )}
 
-      {currentStep === 5 && !estimateResult && (
+      {!estimateResult && currentStep === LAST_FORM_STEP && (
         <StepLeadCapture
           formData={formData}
           locations={locations}
@@ -203,7 +190,7 @@ export function CalculatorWizard() {
           error={error}
           onChange={updateForm}
           onSubmit={calculate}
-          onBack={() => goToStep(4)}
+          onBack={prevStep}
         />
       )}
 

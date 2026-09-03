@@ -24,3 +24,6 @@ export const INITIAL_FORM_STATE: EstimateFormState = {
   customizations: [],
   addons: [],
 };
+
+/** Approximate covered parking footprint per car, per the ASTHIWAR rate card. */
+export const SQFT_PER_CAR = 200;

@@ -259,16 +259,18 @@ export async function getPackageConfig(req: Request, res: Response, next: NextFu
       .where(eq(addons.isActive, true))
       .orderBy(asc(addons.sortOrder));
 
-    const tierFilter = ['all', pkg.slug === 'basic' || pkg.slug === 'standard' ? 'basic_standard' : 'premium_luxury'];
-
     const addonPriceRows = await db
       .select()
       .from(addonPrices)
       .where(activePriceCondition(addonPrices));
 
+    // Every variant is offered, including tier-named ones. The overhead concrete
+    // tank carries a Basic/Standard rate and a Premium/Luxury rate and the customer
+    // picks either — the tier is part of the variant's name, not a filter.
+    // `calculateEstimate` prices whichever variant slug comes back.
     const addonsData = addonRows.map((ad) => {
       const variants = addonPriceRows
-        .filter((p) => p.addonId === ad.id && tierFilter.includes(p.packageTier))
+        .filter((p) => p.addonId === ad.id)
         .map((p) => ({
           variantSlug: p.variantSlug,
           variantName: p.variantName,
@@ -282,6 +284,7 @@ export async function getPackageConfig(req: Request, res: Response, next: NextFu
         name: ad.name,
         description: ad.description,
         pricingUnit: ad.pricingUnit,
+        allowsMultiple: ad.allowsMultiple,
         defaultQuantity: ad.defaultQuantity ? Number(ad.defaultQuantity) : null,
         minQuantity: ad.minQuantity ? Number(ad.minQuantity) : null,
         maxQuantity: ad.maxQuantity ? Number(ad.maxQuantity) : null,

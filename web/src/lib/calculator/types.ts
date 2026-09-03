@@ -74,6 +74,8 @@ export interface AddonItem {
   name: string;
   description: string | null;
   pricingUnit: string;
+  /** true when several variants may be fitted together (e.g. motor automation). */
+  allowsMultiple: boolean;
   defaultQuantity: number | null;
   minQuantity: number | null;
   maxQuantity: number | null;

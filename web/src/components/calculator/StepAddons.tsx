@@ -3,7 +3,7 @@
 // Rule #5: no money is computed here. All figures come from the backend.
 
 import React from 'react';
-import { Check, ArrowRight, ArrowLeft, Loader2, Sparkles, Plus, Minus } from 'lucide-react';
+import { Check, ArrowRight, ArrowLeft, Loader2, Sparkles } from 'lucide-react';
 import type {
   EstimateFormState,
   PackageConfigResponse,
@@ -23,6 +23,18 @@ interface StepAddonsProps {
   onBack: () => void;
 }
 
+/** Quantity captions per pricing unit — the unit itself is backend data. */
+const QUANTITY_LABELS: Record<string, string> = {
+  per_litre: 'Capacity (Litres)',
+  per_sqft_terrace: 'Terrace Area (Sq.Ft)',
+  per_sqft_gate: 'Gate Area (Sq.Ft)',
+  per_rft: 'Running Feet (R.Ft)',
+};
+
+function unitBadgeLabel(pricingUnit: string): string {
+  return pricingUnit.replace(/_/g, ' ').toUpperCase();
+}
+
 export function StepAddons({
   formData,
   packageConfig,
@@ -30,29 +42,34 @@ export function StepAddons({
   previewResult,
   previewLoading,
   onChange,
-  onNext,
   onBack,
+  onNext,
 }: StepAddonsProps) {
-  const toggleAddon = (
-    addonSlug: string,
-    variantSlug: string,
-    defaultQty: number = 1
-  ) => {
-    const exists = formData.addons.some(
-      (a) => a.addonSlug === addonSlug && a.variantSlug === variantSlug
+  /**
+   * Most add-ons are either/or — picking a second variant replaces the first.
+   * Where the catalogue marks `allowsMultiple` (motor automation fits the
+   * bore-water and corporation-water tanks independently) both can be held.
+   */
+  const toggleAddon = (addon: AddonItem, variantSlug: string) => {
+    const isSelected = formData.addons.some(
+      (a) => a.addonSlug === addon.slug && a.variantSlug === variantSlug
     );
-    if (exists) {
+
+    if (isSelected) {
       onChange({
         addons: formData.addons.filter(
-          (a) => !(a.addonSlug === addonSlug && a.variantSlug === variantSlug)
+          (a) => !(a.addonSlug === addon.slug && a.variantSlug === variantSlug)
         ),
       });
-    } else {
-      const filtered = formData.addons.filter((a) => a.addonSlug !== addonSlug);
-      onChange({
-        addons: [...filtered, { addonSlug, variantSlug, quantity: defaultQty }],
-      });
+      return;
     }
+
+    const quantity = Number(addon.defaultQuantity ?? 1);
+    const kept = addon.allowsMultiple
+      ? formData.addons
+      : formData.addons.filter((a) => a.addonSlug !== addon.slug);
+
+    onChange({ addons: [...kept, { addonSlug: addon.slug, variantSlug, quantity }] });
   };
 
   const updateAddonQty = (addonSlug: string, qty: number) => {
@@ -63,8 +80,9 @@ export function StepAddons({
     });
   };
 
-  // Rule #5: The authoritative add-on subtotal is returned directly by the backend preview engine
+  // Rule #5: the authoritative add-on subtotal is returned by the backend preview engine.
   const backendAddonsCost = previewResult?.breakdown?.addonsCost ?? 0;
+  const selectedCount = formData.addons.length;
 
   if (configLoading) {
     return (
@@ -77,29 +95,32 @@ export function StepAddons({
 
   return (
     <div className="calculator-step animate-fade-in">
-      <div className="calculator-step__header">
-        <span className="calculator-step__badge">Step 5 of 5 • Infrastructure & Add-Ons</span>
-        <h2 className="calculator-step__title">Specialized Add-Ons & Infrastructure</h2>
+      <div className="calculator-step__header text-center">
+        <span className="calculator-step__badge">Step 4 of 5 • Additional Add-Ons</span>
+        <h2 className="calculator-step__title">
+          {packageConfig?.addons.length ?? 15} Add-Ons &amp; Infrastructure Catalog
+        </h2>
         <p className="calculator-step__intro">
-          Elevate your home with sustainable energy, rainwater management, and security infrastructure.
+          Elevate your home with sustainable energy, water management, perimeter security,
+          and luxury convenience systems.
         </p>
       </div>
 
-      {/* Selected Add-Ons Counter & Backend Subtotal */}
-      <div className="p-4 mb-6 rounded-lg border border-border bg-surface flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      {/* Selection Counter & Backend Subtotal */}
+      <div className="calculator-card p-4 mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-full bg-surface-active flex items-center justify-center text-foreground shrink-0">
             <Sparkles size={16} aria-hidden="true" />
           </div>
           <div>
             <div className="text-sm font-bold">
-              {formData.addons.length === 0
+              {selectedCount === 0
                 ? 'No Add-Ons Selected (Optional)'
-                : `${formData.addons.length} Add-On${formData.addons.length > 1 ? 's' : ''} Selected`}
+                : `${selectedCount} Add-On${selectedCount > 1 ? 's' : ''} Selected`}
             </div>
             <div className="text-xs text-muted">
-              {formData.addons.length === 0
-                ? 'Select any items below or click continue to proceed.'
+              {selectedCount === 0
+                ? 'Select any items below or click continue to skip.'
                 : 'Included in your comprehensive civil construction estimate.'}
             </div>
           </div>
@@ -107,10 +128,10 @@ export function StepAddons({
 
         <div className="text-right sm:border-l sm:border-border sm:pl-5">
           <div className="text-[10px] uppercase tracking-wider text-muted font-semibold">
-            Add-Ons Subtotal
+            Add-Ons Investment
           </div>
           <div
-            className={`text-lg font-mono font-bold transition-opacity ${
+            className={`text-lg tabular-nums font-bold transition-opacity ${
               previewLoading ? 'opacity-60' : 'opacity-100'
             }`}
           >
@@ -120,118 +141,90 @@ export function StepAddons({
       </div>
 
       {/* Add-Ons Catalog Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+      <div className="calculator-addon-grid mb-6">
         {packageConfig?.addons.map((addon: AddonItem) => {
-          const selectedVariant = formData.addons.find((a) => a.addonSlug === addon.slug);
-          const isChecked = Boolean(selectedVariant);
+          const selections = formData.addons.filter((a) => a.addonSlug === addon.slug);
+          const isChecked = selections.length > 0;
+          const quantityLabel = QUANTITY_LABELS[addon.pricingUnit];
+          const showQuantity = isChecked && Boolean(quantityLabel);
 
           return (
             <div
               key={addon.id}
               data-has-selection={isChecked || undefined}
-              className={`calculator-addon-card p-4 rounded-lg border transition-all flex flex-col justify-between ${
-                isChecked
-                  ? 'border-foreground bg-surface-active shadow-sm'
-                  : 'border-border bg-surface'
-              }`}
+              className="calculator-addon-card p-4 rounded-lg border transition-all"
             >
-              <div>
-                <div className="flex items-start justify-between gap-2 mb-2">
+              <div className="calculator-addon-card__head">
+                <div className="flex items-start justify-between gap-3">
                   <div>
                     <h3 className="text-sm font-bold">{addon.name}</h3>
                     {addon.description && (
                       <p className="text-xs text-muted mt-0.5">{addon.description}</p>
                     )}
                   </div>
+                  <span className="calculator-unit-badge">
+                    {unitBadgeLabel(addon.pricingUnit)}
+                  </span>
                 </div>
 
-                {/* Variant Radio Buttons */}
-                <div className="space-y-1.5 mt-3 mb-4">
+                {addon.allowsMultiple && (
+                  <p className="text-[11px] text-muted mt-1.5">Select one or both.</p>
+                )}
+              </div>
+
+              <div className="calculator-addon-card__variants space-y-1.5">
                   {addon.variants.map((v: AddonVariantItem) => {
-                    const isVarSelected =
-                      selectedVariant?.variantSlug === v.variantSlug;
+                    const isVarSelected = selections.some(
+                      (a) => a.variantSlug === v.variantSlug
+                    );
+                    const price = Number(v.price);
                     return (
                       <button
                         key={v.variantSlug}
                         type="button"
-                        onClick={() =>
-                          toggleAddon(
-                            addon.slug,
-                            v.variantSlug,
-                            addon.defaultQuantity ?? 1
-                          )
-                        }
+                        onClick={() => toggleAddon(addon, v.variantSlug)}
                         aria-pressed={isVarSelected}
                         data-selected={isVarSelected || undefined}
-                        className={`calculator-choice w-full p-2.5 rounded border text-left text-xs flex items-center justify-between transition-all ${
-                          isVarSelected
-                            ? 'border-foreground bg-background font-semibold text-foreground'
-                            : 'border-border/50 bg-background/50 text-muted hover:border-border'
-                        }`}
+                        className="calculator-choice calculator-variant-row w-full p-2.5 rounded border text-left text-xs flex items-center justify-between gap-3"
                       >
-                        <div className="flex items-center gap-2">
-                          <div
-                            className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] ${
-                              isVarSelected
-                                ? 'bg-foreground text-background font-bold'
-                                : 'border border-border'
-                            }`}
-                          >
-                            {isVarSelected && <Check size={10} strokeWidth={3} />}
-                          </div>
+                        <span className="flex items-center gap-2">
+                          <span className="calculator-tick calculator-tick--sm">
+                            <Check size={10} strokeWidth={3} aria-hidden="true" />
+                          </span>
                           <span>{v.variantName}</span>
-                        </div>
-                        <span className="font-mono">
-                          ₹{v.price.toLocaleString('en-IN')}{' '}
-                          {addon.pricingUnit && addon.pricingUnit !== 'lumpsum'
-                            ? `/${addon.pricingUnit}`
-                            : ''}
+                        </span>
+                        <span className="tabular-nums whitespace-nowrap">
+                          {price > 0 ? `₹${price.toLocaleString('en-IN')}` : 'Custom Quote'}
                         </span>
                       </button>
                     );
                   })}
-                </div>
               </div>
 
-              {/* Quantity Adjuster if applicable */}
-              {isChecked && addon.pricingUnit && addon.pricingUnit !== 'lumpsum' && (
-                <div className="pt-2 border-t border-border flex items-center justify-between text-xs">
-                  <span className="text-muted">
-                    Quantity ({addon.pricingUnit}):
-                  </span>
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      className="button button--ghost p-1 h-7 w-7 flex items-center justify-center rounded"
-                      onClick={() =>
-                        updateAddonQty(
-                          addon.slug,
-                          (selectedVariant?.quantity || 1) - 1
-                        )
+              {/* Quantity for everything not priced as a flat lump sum. The row is
+                  always rendered — an empty one still holds its place, so a card
+                  with a quantity control cannot pull its neighbour out of step. */}
+              <div className="calculator-addon-card__foot">
+                {showQuantity && (
+                  <div className="calculator-addon-qty">
+                    <label className="text-muted" htmlFor={`addon-qty-${addon.slug}`}>
+                      {quantityLabel}
+                    </label>
+                    <input
+                      id={`addon-qty-${addon.slug}`}
+                      type="number"
+                      min={Number(addon.minQuantity ?? 1)}
+                      max={Number(addon.maxQuantity ?? 100000)}
+                      step="1"
+                      className="form-input calculator-addon-qty__input"
+                      value={selections[0]?.quantity ?? Number(addon.defaultQuantity ?? 1)}
+                      onChange={(e) =>
+                        updateAddonQty(addon.slug, parseFloat(e.target.value) || 0)
                       }
-                      aria-label="Decrease quantity"
-                    >
-                      <Minus size={12} />
-                    </button>
-                    <span className="font-bold font-mono px-2">
-                      {selectedVariant?.quantity || 1}
-                    </span>
-                    <button
-                      type="button"
-                      className="button button--ghost p-1 h-7 w-7 flex items-center justify-center rounded"
-                      onClick={() =>
-                        updateAddonQty(
-                          addon.slug,
-                          (selectedVariant?.quantity || 1) + 1
-                        )
-                      }
-                      aria-label="Increase quantity"
-                    >
-                      <Plus size={12} />
-                    </button>
+                    />
                   </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           );
         })}
@@ -244,14 +237,14 @@ export function StepAddons({
           className="button button--ghost flex items-center gap-2"
         >
           <ArrowLeft size={16} aria-hidden="true" />
-          <span>Back</span>
+          <span>Back to Customisations</span>
         </button>
         <button
           type="button"
           onClick={onNext}
           className="button button--solid flex items-center gap-2"
         >
-          <span>Contact Details</span>
+          <span>Continue to Contact Details</span>
           <ArrowRight size={16} aria-hidden="true" />
         </button>
       </div>

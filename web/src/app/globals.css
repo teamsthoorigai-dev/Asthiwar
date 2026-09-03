@@ -6,6 +6,7 @@
   --carbon-raised: #304238;
   --mineral: #e4e1da;
   --paper: #efeae3;
+  --clay: #ddd6c9;
   --oxide: #b8854f;
   --oxide-deep: #76522f;
   --forest: #243228;
@@ -186,6 +187,15 @@ summary:focus-visible {
 
 .section--mineral {
   background: var(--mineral);
+  color: var(--carbon);
+}
+
+/* Warmer and a step deeper than --mineral. --line is re-pointed inside the
+   section because #d1cac0 all but disappears against this ground; the hairlines
+   have to stay readable for the field rows to hold their structure. */
+.section--clay {
+  --line: #cbc3b5;
+  background: var(--clay);
   color: var(--carbon);
 }
 
@@ -397,6 +407,23 @@ summary:focus-visible {
   border-bottom: 1px solid oklch(0.9271 0.0081 98.9 / 0.14);
   background: var(--carbon);
   color: var(--paper);
+  transition:
+    background-color 420ms var(--ease-state),
+    border-color 420ms var(--ease-state),
+    color 420ms var(--ease-state);
+}
+
+.site-header--home {
+  border-bottom-color: transparent;
+  background: transparent;
+}
+
+.site-header--home[data-scrolled="true"] {
+  border-bottom-color: rgb(36 50 40 / 0.14);
+  background: rgb(239 234 227 / 0.96);
+  color: var(--carbon);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
 }
 
 .site-header__inner {
@@ -418,41 +445,13 @@ summary:focus-visible {
 .brand-mark {
   display: inline-flex;
   align-items: center;
-  gap: 0.65rem;
-  color: var(--carbon);
 }
 
-.brand-mark--inverted {
-  color: var(--paper);
-}
-
-.brand-mark__monogram {
-  position: relative;
-  display: grid;
-  width: 1.85rem;
-  height: 1.85rem;
-  place-items: center;
-  border: 1px solid currentColor;
-  color: inherit;
-  font-size: 0.8rem;
-  font-weight: 700;
-  line-height: 1;
-}
-
-.brand-mark__monogram::after {
-  position: absolute;
-  right: -0.22rem;
-  bottom: -0.22rem;
-  width: 0.48rem;
-  height: 0.48rem;
-  background: var(--oxide);
-  content: "";
-}
-
-.brand-mark__word {
-  font-size: 0.86rem;
-  font-weight: 700;
-  letter-spacing: 0.14em;
+.brand-mark__logo {
+  display: block;
+  width: clamp(8.5rem, 10vw, 9.5rem);
+  height: auto;
+  border-radius: 0;
 }
 
 .site-header__nav,
@@ -470,6 +469,31 @@ summary:focus-visible {
   border-radius: 2px;
   background: transparent;
   color: var(--paper);
+}
+
+.site-header--home[data-scrolled="true"] .site-header__menu-button {
+  border-color: rgb(36 50 40 / 0.28);
+  color: var(--carbon);
+}
+
+.site-header--home[data-scrolled="true"] .site-header__link {
+  color: var(--carbon);
+}
+
+.site-header--home[data-scrolled="true"] .site-header__link:hover,
+.site-header--home[data-scrolled="true"] .site-header__link[data-current="true"] {
+  color: var(--carbon);
+}
+
+.site-header--home[data-scrolled="true"] .button--header {
+  border-color: rgb(36 50 40 / 0.32);
+  color: var(--carbon);
+}
+
+.site-header--home[data-scrolled="true"] .button--header:hover {
+  border-color: var(--carbon);
+  background: var(--carbon);
+  color: #fff;
 }
 
 .mobile-menu {
@@ -574,14 +598,14 @@ summary:focus-visible {
 }
 
 .site-footer__cta {
-  padding-block: clamp(4.5rem, 10vw, 8rem);
+  padding-block: clamp(3rem, 6vw, 5rem);
   border-bottom: 1px solid oklch(0.9271 0.0081 98.9 / 0.18);
 }
 
 .site-footer__cta-grid {
   display: grid;
-  gap: 2rem;
-  margin-top: 2rem;
+  gap: clamp(1.5rem, 3vw, 2rem);
+  margin-top: clamp(1.25rem, 2.5vw, 1.75rem);
 }
 
 .site-footer__cta h2 {
@@ -603,10 +627,40 @@ summary:focus-visible {
   margin-top: 1.5rem;
 }
 
+.site-footer__project-cta {
+  width: fit-content;
+  margin-top: 1.125rem;
+  border-color: #fff;
+  background: #fff;
+  color: var(--carbon);
+}
+
+.site-footer__project-cta:hover {
+  border-color: var(--oxide);
+  background: #fff;
+  color: var(--carbon);
+}
+
 .site-footer__base {
   display: grid;
-  gap: 3rem;
+  column-gap: clamp(2rem, 4vw, 4rem);
+  row-gap: clamp(2rem, 5vw, 3rem);
   padding-block: 3.5rem;
+}
+
+.site-footer__brand-link {
+  display: inline-flex;
+  width: fit-content;
+  max-width: 100%;
+}
+
+.site-footer__brand .brand-mark,
+.site-footer__brand .brand-mark__logo {
+  max-width: 100%;
+}
+
+.site-footer__brand .brand-mark__logo {
+  width: clamp(15rem, 22vw, 20rem);
 }
 
 .site-footer__brand > p {
@@ -618,16 +672,18 @@ summary:focus-visible {
 
 .site-footer__links {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.5rem 1.5rem;
+  grid-template-columns: 1fr;
+  gap: 0;
+  align-content: start;
 }
 
 .site-footer__services {
   grid-template-columns: 1fr;
 }
 
-.site-footer__services > p {
-  margin-bottom: 0.5rem;
+.site-footer__services > .eyebrow,
+.site-footer__contact > .eyebrow {
+  margin: 0 0 0.5rem;
 }
 
 .site-footer__links a,
@@ -650,8 +706,8 @@ summary:focus-visible {
   align-content: start;
 }
 
-.site-footer__contact > p {
-  margin-top: 1rem;
+.site-footer__contact > p:not(.eyebrow) {
+  margin: 0;
   color: oklch(0.9271 0.0081 98.9 / 0.42);
   font-size: 0.78rem;
 }
@@ -762,6 +818,9 @@ summary:focus-visible {
   position: relative;
   z-index: 2;
   width: min(100%, var(--shell));
+  /* The intro row and the image were flush. Let the hero copy breathe before
+     the picture starts. */
+  margin-top: clamp(1.75rem, 3.2vw, 2.75rem);
   margin-inline: auto;
   background: var(--carbon-raised);
 }
@@ -1015,90 +1074,6 @@ summary:focus-visible {
 
 .hero-overlay__rail {
   display: none;
-}
-
-/* Homepage content */
-
-.home-intro.section {
-  padding-bottom: var(--space-section);
-}
-
-.home-intro__statement {
-  display: grid;
-  gap: 2rem;
-  margin-top: 2rem;
-}
-
-.home-intro__statement h2 {
-  max-width: 15ch;
-  font-size: clamp(2.65rem, 7vw, 6rem);
-  line-height: 0.92;
-}
-
-.home-intro__statement > div > p {
-  max-width: 40rem;
-  color: var(--muted-ink);
-  font-size: clamp(1rem, 1.5vw, 1.2rem);
-}
-
-.home-intro__statement .text-link {
-  margin-top: 1.5rem;
-}
-
-.home-intro__material {
-  margin-top: clamp(2.5rem, 5vw, 4.5rem);
-}
-
-.home-intro__material img {
-  width: 100%;
-  aspect-ratio: 4 / 3;
-  object-fit: cover;
-}
-
-.home-intro__material figcaption {
-  display: flex;
-  justify-content: space-between;
-  gap: 1rem;
-  border-bottom: 1px solid var(--line);
-  padding-block: 0.8rem;
-  color: var(--muted-ink);
-  font-size: 0.62rem;
-  font-weight: 700;
-  letter-spacing: 0.13em;
-  text-transform: uppercase;
-}
-
-.home-intro__facts {
-  display: grid;
-  margin-top: 3rem;
-  border-top: 1px solid var(--line);
-}
-
-.home-intro__facts > div {
-  display: grid;
-  grid-template-columns: 2rem 1fr;
-  gap: 0.75rem 1rem;
-  border-bottom: 1px solid var(--line);
-  padding-block: 1.75rem;
-}
-
-.home-intro__facts span,
-.home-intro__facts p {
-  color: var(--muted-ink);
-  font-size: 0.74rem;
-}
-
-.home-intro__facts h3 {
-  font-size: 1.3rem;
-  font-weight: 500;
-  letter-spacing: -0.02em;
-  line-height: 1.15;
-}
-
-.home-intro__facts p {
-  grid-column: 2;
-  max-width: 25rem;
-  line-height: 1.6;
 }
 
 /* Layered architectural assembly supplied for the root homepage */
@@ -1692,7 +1667,6 @@ summary:focus-visible {
   transition: transform 200ms var(--ease-state);
 }
 
-.featured-projects__grid,
 .projects-archive__grid,
 .related-projects__grid {
   display: grid;
@@ -1729,15 +1703,13 @@ summary:focus-visible {
    line; object-fit: cover handles the crop. */
 .home-projects__grid .project-card__figure,
 .projects-archive__grid .project-card__figure,
-.related-projects__grid .project-card__figure,
-.featured-projects__grid .project-card__figure {
+.related-projects__grid .project-card__figure {
   height: clamp(18rem, 30vw, 34rem);
 }
 
 .home-projects__grid .project-card__figure img,
 .projects-archive__grid .project-card__figure img,
-.related-projects__grid .project-card__figure img,
-.featured-projects__grid .project-card__figure img {
+.related-projects__grid .project-card__figure img {
   height: 100%;
   aspect-ratio: auto;
   object-fit: cover;
@@ -1769,6 +1741,108 @@ summary:focus-visible {
   color: var(--paper);
   transform: translateY(-100%);
   transition: transform 250ms var(--ease-state);
+}
+
+/* Archive cards run their own frames: hold to advance, click to freeze. The
+   frames are stacked and cross-faded, so the figure keeps its fixed height. */
+.project-card__figure img.project-card__frame {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
+  object-fit: cover;
+  opacity: 0;
+  transition: opacity 420ms var(--ease-state);
+}
+
+.project-card__figure img.project-card__frame[data-visible] {
+  opacity: 1;
+}
+
+.project-card__viewer {
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  cursor: zoom-in;
+}
+
+.project-card__figure[data-paused] .project-card__viewer {
+  cursor: zoom-out;
+}
+
+.project-card__viewer:focus-visible {
+  outline: 2px solid var(--oxide);
+  outline-offset: -4px;
+}
+
+.project-card__paused {
+  position: absolute;
+  z-index: 3;
+  top: 0.85rem;
+  left: 0.85rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: var(--oxide);
+  color: var(--paper);
+  padding: 0.32rem 0.55rem;
+  font-size: 0.55rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  opacity: 0;
+  transform: translateY(-0.35rem);
+  transition:
+    opacity 200ms var(--ease-state),
+    transform 200ms var(--ease-state);
+  pointer-events: none;
+}
+
+.project-card__figure[data-paused] .project-card__paused {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.project-card__dots {
+  position: absolute;
+  z-index: 3;
+  bottom: 0.9rem;
+  left: 0.9rem;
+  display: flex;
+  gap: 0.3rem;
+  pointer-events: none;
+}
+
+.project-card__dots > span {
+  width: 1.2rem;
+  height: 2px;
+  background: oklch(0.9271 0.0081 98.9 / 0.42);
+  transition: background-color 220ms var(--ease-state);
+}
+
+.project-card__dots > span[data-active] {
+  background: var(--oxide);
+}
+
+.project-card--gallery .project-card__figure figcaption {
+  z-index: 3;
+  pointer-events: none;
+}
+
+.project-card__title-link {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  transition: color 200ms var(--ease-state);
+}
+
+.project-card__title-link:hover {
+  color: var(--oxide-deep);
 }
 
 .project-card__body {
@@ -1963,131 +2037,85 @@ summary:focus-visible {
   text-transform: uppercase;
 }
 
-.sustainability-band__elements {
-  display: grid;
-  gap: 1.5rem;
-}
-
-.sustainability-band__elements-heading {
-  display: grid;
-  gap: 0.5rem;
-}
-
-.sustainability-band__elements-heading h3 {
-  font-size: clamp(1.6rem, 3vw, 2.35rem);
-  font-weight: 500;
-  letter-spacing: -0.03em;
-  line-height: 1;
-}
-
-.sustainability-band__elements-heading p {
-  max-width: 34rem;
-  color: oklch(0.9271 0.0081 98.9 / 0.68);
-  font-size: 0.86rem;
-}
-
-.sustainability-band__cards {
-  display: grid;
-  gap: clamp(0.85rem, 1.5vw, 1.35rem);
-}
-
-.sustainability-card {
-  position: relative;
-  display: block;
-  min-height: 24rem;
+.sustainability-principles {
   overflow: hidden;
-  border: 1px solid oklch(0.9271 0.0081 98.9 / 0.48);
-  border-radius: 4px;
-  background: var(--forest-deep);
-  color: var(--paper);
+  border-block: 1px solid rgb(25 36 29 / 0.34);
+  background: #c7c7c5;
+  color: #111712;
 }
 
-.sustainability-card > img {
+.sustainability-principles:focus-visible {
+  outline: 2px solid var(--oxide);
+  outline-offset: 3px;
+}
+
+.sustainability-principles__track {
+  display: flex;
+  width: max-content;
+  transform: translate3d(-50%, 0, 0);
+  animation: sustainability-principles-loop 24s linear infinite;
+  will-change: transform;
+}
+
+.sustainability-principles__group {
+  display: grid;
+  flex: 0 0 clamp(52rem, 92vw, 92rem);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sustainability-principles__group > li {
+  display: grid;
+  min-height: clamp(8.5rem, 11vw, 10.25rem);
+  grid-template-rows: 3.9rem auto;
+  place-items: center;
+  align-content: center;
+  gap: 0.35rem;
+  border-inline-start: 1px solid rgb(25 36 29 / 0.34);
+  padding: 0.8rem 1rem 0.9rem;
+  text-align: center;
+}
+
+.sustainability-principles__icon {
+  display: grid;
+  width: 3.75rem;
+  height: 3.75rem;
+  place-items: center;
+}
+
+.sustainability-principles__icon img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
-  transition: transform 500ms var(--ease-cinematic);
+  object-fit: contain;
 }
 
-.sustainability-card__scrim {
-  position: absolute;
-  inset: 0;
-  /* The clear edge lands exactly on the top-left -> bottom-right diagonal, so the
-     card splits in half along that slant: shaded lower-left, image clear upper-right. */
-  background: linear-gradient(
-    to top right,
-    rgb(0 0 0 / 0.85) 0%,
-    rgb(0 0 0 / 0.62) 25%,
-    rgb(0 0 0 / 0) 50%
-  );
-  transition: background-color 300ms var(--ease-state);
-}
-
-.sustainability-card__index {
-  position: absolute;
-  top: 1rem;
-  left: 1rem;
-  color: var(--oxide);
-  font-size: 0.64rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-}
-
-.sustainability-card__copy {
-  position: absolute;
-  top: clamp(4.25rem, 7vw, 5.25rem);
-  right: 4.5rem;
-  bottom: auto;
-  left: 1rem;
+.sustainability-principles__label {
   display: grid;
-  gap: 0.75rem;
+  color: currentColor;
+  font-size: clamp(0.82rem, 1vw, 0.96rem);
+  font-weight: 500;
+  line-height: 1.15;
 }
 
-.sustainability-card__copy strong {
-  /* 9ch: wide enough for "construction" (8.3ch) but narrow enough that every
-     title wraps to two lines, as in the reference design. */
-  max-width: 9ch;
-  font-size: clamp(1.9rem, 3vw, 2.9rem);
-  font-weight: 700;
-  letter-spacing: -0.035em;
-  line-height: 0.95;
-  text-wrap: balance;
+@media (hover: hover) {
+  .sustainability-principles:hover .sustainability-principles__track {
+    animation-play-state: paused;
+  }
 }
 
-.sustainability-card__copy > span {
-  max-width: 23ch;
-  color: oklch(0.9271 0.0081 98.9 / 0.88);
-  font-size: clamp(0.8rem, 1.05vw, 0.94rem);
-  line-height: 1.5;
-  text-wrap: pretty;
+.sustainability-principles:focus-visible .sustainability-principles__track {
+  animation-play-state: paused;
 }
 
-.sustainability-card__arrow {
-  position: absolute;
-  right: 1rem;
-  bottom: 1rem;
-  display: grid;
-  width: 2.5rem;
-  height: 2.5rem;
-  place-items: center;
-  border: 1px solid oklch(0.9271 0.0081 98.9 / 0.5);
-  border-radius: 50%;
-  background: rgb(25 36 29 / 0.55);
-  transition:
-    border-color 220ms var(--ease-state),
-    background-color 220ms var(--ease-state),
-    transform 220ms var(--ease-state);
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .sustainability-card:hover > img {
-    transform: scale(1.035);
+@keyframes sustainability-principles-loop {
+  from {
+    transform: translate3d(-50%, 0, 0);
   }
 
-  .sustainability-card:hover .sustainability-card__arrow {
-    border-color: var(--paper);
-    background: var(--oxide-deep);
-    transform: translate(2px, -2px);
+  to {
+    transform: translate3d(0, 0, 0);
   }
 }
 
@@ -2101,54 +2129,147 @@ summary:focus-visible {
 }
 
 .estimate-band__intro h2 {
-  max-width: 11ch;
+  /* Measured at the live 74.88px: "your budget" is the longest line we want at
+     7.68ch, and "Understand your" — the break we do not want — is 10.6ch. 8.5ch
+     sits between them, so the headline always stacks four lines as in the
+     approved design. ch scales with the clamp, so the break holds at every width. */
+  max-width: 8.5ch;
   margin-top: 1.25rem;
-  font-size: clamp(2.75rem, 5.2vw, 4.9rem);
+  /* 6vw hits 92px at 1536, the size the approved design's headline holds
+     relative to the panel. The old 5.2vw/4.9rem froze at 78px from 1508px up,
+     so the headline shrank against the layout on every large screen. */
+  font-size: clamp(2.75rem, 6.4vw, 6.3rem);
   font-weight: 500;
   letter-spacing: -0.04em;
-  /* 0.94 let the descenders of "project budget" collide with the ascenders of
-     "before you begin"; glyph metrics need at least 0.969 to clear. */
+  /* 0.94 let the descenders of "your budget" collide with the ascenders of
+     "before you"; glyph metrics need at least 0.969 to clear. */
   line-height: 1.02;
-  text-wrap: balance;
+  /* Deliberately not balanced: at 8.5ch, greedy wrapping gives the approved
+     break — Understand / your budget / before you / design. Balancing pulls
+     "you" up onto line three and orphans "before". */
+  text-wrap: wrap;
 }
 
 .estimate-band__panel {
   border-top: 1px solid var(--line);
 }
 
-.estimate-band__figure {
+.estimate-band__fields {
   display: grid;
-  justify-items: start;
-  border-bottom: 1px solid var(--line);
-  padding-block: 1.75rem 2.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
-.estimate-band__number {
+.estimate-field {
   display: flex;
-  align-items: flex-start;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1.5rem;
+  border-bottom: 1px solid var(--line);
+  padding-block: clamp(1.15rem, 1.55vw, 1.85rem);
+  color: inherit;
+  text-decoration: none;
+  transition:
+    color 0.28s ease,
+    border-color 0.28s ease;
 }
 
-.estimate-band__number > span {
-  color: var(--oxide);
-  font-size: 1rem;
-  line-height: 1.2;
-}
-
-.estimate-band__number strong {
-  font-size: clamp(3.25rem, 7vw, 5.5rem);
-  font-weight: 500;
-  letter-spacing: -0.04em;
-  line-height: 0.82;
-  font-variant-numeric: tabular-nums;
-}
-
-.estimate-band__figure p {
-  margin-top: 0.85rem;
-  color: var(--muted-ink);
-  font-size: 0.62rem;
+.estimate-field__label,
+.estimate-field__action {
+  /* Scales with the panel. At 1536 this is 21px, which puts
+     "CONSTRUCTION QUALITY" at half the panel width as the design has it;
+     the old flat 0.66rem left it at under a quarter. */
+  font-size: clamp(0.66rem, 1.47vw, 1.45rem);
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
+}
+
+.estimate-field__action {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: var(--muted-ink);
+  white-space: nowrap;
+  transition: color 0.28s ease;
+}
+
+.estimate-field__action svg {
+  transition: transform 0.28s ease;
+}
+
+.estimate-field:hover,
+.estimate-field:focus-visible {
+  border-color: var(--carbon);
+}
+
+.estimate-field:hover .estimate-field__action,
+.estimate-field:focus-visible .estimate-field__action {
+  color: var(--carbon);
+}
+
+.estimate-field:hover .estimate-field__action svg,
+.estimate-field:focus-visible .estimate-field__action svg {
+  transform: translate3d(2px, 2px, 0);
+}
+
+.estimate-band__figure {
+  display: grid;
+  justify-items: start;
+  padding-block: 1.75rem 0;
+}
+
+/* The rupee mark sits on the figure's own baseline at the figure's own size and
+   ink, as in the approved design. It used to be 1rem of oxide against an 88px
+   dash under align-items: flex-start, which read as a small gold mark stranded
+   above a black bar rather than as one "Rs —" figure. */
+.estimate-band__number {
+  display: flex;
+  align-items: baseline;
+  gap: 0.22em;
+  font-size: clamp(3.25rem, 6.5vw, 6.3rem);
+  font-weight: 500;
+  letter-spacing: -0.04em;
+  line-height: 0.9;
+}
+
+.estimate-band__number > span {
+  font-size: inherit;
+  line-height: inherit;
+}
+
+.estimate-band__number strong {
+  font-size: inherit;
+  font-weight: inherit;
+  letter-spacing: inherit;
+  line-height: inherit;
+  font-variant-numeric: tabular-nums;
+}
+
+.estimate-band__label {
+  margin-top: 0.85rem;
+  color: inherit;
+  font-size: clamp(0.62rem, 1.5vw, 1.48rem);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+/* The disclaimer sits tight under the label, not below the CTA, so the panel
+   reads figure -> label -> caveat the way the approved design does. */
+.estimate-band__note {
+  max-width: 34rem;
+  margin-top: 0.9rem;
+  color: var(--muted-ink);
+  font-size: clamp(0.85rem, 1.06vw, 1.05rem);
+  line-height: 1.6;
+}
+
+/* .eyebrow is global; this scales it only inside the cost band, in step with
+   the field labels it sits above. */
+.estimate-band .eyebrow {
+  font-size: clamp(0.7rem, 1.45vw, 1.43rem);
 }
 
 .estimate-band__figure .button {
@@ -2161,22 +2282,6 @@ summary:focus-visible {
 .estimate-band__figure .button:hover {
   border-color: #2e4435;
   background: #2e4435;
-}
-
-.estimate-band__copy {
-  padding-top: 1.75rem;
-}
-
-.estimate-band__copy > p {
-  max-width: 39rem;
-  color: var(--muted-ink);
-  font-size: 0.9rem;
-  line-height: 1.65;
-}
-
-.estimate-band__copy .text-link {
-  margin-top: 1.25rem;
-  font-size: 0.66rem;
 }
 
 .notes-questions__grid {
@@ -2287,7 +2392,8 @@ summary:focus-visible {
   transition: opacity 180ms var(--ease-state);
 }
 
-body.assembly-hero-active .home-social-dock {
+body.assembly-hero-active .home-social-dock,
+body.home-image-hero-active .home-social-dock {
   pointer-events: none;
   opacity: 0;
 }
@@ -3853,32 +3959,11 @@ body.assembly-hero-active .home-social-dock {
     justify-content: space-between;
   }
 
-  .home-intro__facts {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    border-bottom: 1px solid var(--line);
-  }
-
-  .home-intro__facts > div {
-    align-content: start;
-    border-bottom: 0;
-    padding-inline: 1.25rem;
-  }
-
-  .home-intro__facts > div:first-child {
-    padding-left: 0;
-  }
-
-  .home-intro__facts > div + div {
-    border-left: 1px solid var(--line);
-  }
-
-  .featured-projects__grid,
   .projects-archive__grid,
   .related-projects__grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .featured-projects__grid .project-card--featured,
   .projects-archive__grid .project-card--featured {
     grid-column: 1 / -1;
   }
@@ -3941,12 +4026,18 @@ body.assembly-hero-active .home-social-dock {
     transition: color 180ms var(--ease-state);
   }
 
-  .site-header__link::after {
+  .site-header__link-label {
+    position: relative;
+    display: inline-block;
+    line-height: 1;
+  }
+
+  .site-header__link-label::after {
     position: absolute;
     right: 0;
-    bottom: -1px;
+    bottom: -0.38rem;
     left: 0;
-    height: 1px;
+    height: 2px;
     background: var(--oxide);
     content: "";
     transform: scaleX(0);
@@ -3959,7 +4050,7 @@ body.assembly-hero-active .home-social-dock {
     color: var(--paper);
   }
 
-  .site-header__link[data-current="true"]::after {
+  .site-header__link[data-current="true"] .site-header__link-label::after {
     transform: scaleX(1);
   }
 
@@ -3982,7 +4073,6 @@ body.assembly-hero-active .home-social-dock {
 
   .site-footer__cta-grid,
   .section-heading__grid,
-  .home-intro__statement,
   .about-position__grid,
   .sustainability-position__grid,
   .about-next__grid,
@@ -3994,7 +4084,6 @@ body.assembly-hero-active .home-social-dock {
 
   .site-footer__cta-grid > div,
   .section-heading__grid > p,
-  .home-intro__statement > div,
   .about-position__grid > div,
   .sustainability-position__grid > div,
   .about-next__grid > div,
@@ -4170,24 +4259,6 @@ body.assembly-hero-active .home-social-dock {
 
   .sustainability-band__copy {
     max-width: min(48rem, 65%);
-  }
-
-  .sustainability-band__elements-heading {
-    grid-template-columns: 1fr minmax(18rem, 0.55fr);
-    align-items: end;
-  }
-
-  .sustainability-band__elements-heading p {
-    justify-self: end;
-    text-align: right;
-  }
-
-  .sustainability-band__cards {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
-  .sustainability-card {
-    min-height: clamp(18rem, 27vw, 24rem);
   }
 
   .estimate-band__grid {
@@ -4391,15 +4462,7 @@ body.assembly-hero-active .home-social-dock {
   }
 
   .site-footer__base {
-    grid-template-columns: 1.2fr 1fr 0.8fr 0.8fr;
-  }
-
-  .home-intro__facts {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
-
-  .home-intro__facts--three {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: minmax(18rem, 1.35fr) repeat(3, minmax(0, 1fr));
   }
 
   .hero-overlay__intro,
@@ -4409,20 +4472,6 @@ body.assembly-hero-active .home-social-dock {
 
   .hero-overlay__intro h1 {
     max-width: 10ch;
-  }
-
-  .home-intro__material img {
-    aspect-ratio: 16 / 7;
-  }
-
-  .featured-projects__grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    align-items: start;
-  }
-
-  .featured-projects__grid .project-card {
-    grid-column: auto;
-    margin-top: 0;
   }
 
   .projects-archive__grid {
@@ -4553,6 +4602,27 @@ body.assembly-hero-active .home-social-dock {
 
   .project-card__open {
     transform: translateY(0);
+  }
+
+  .sustainability-principles__track {
+    width: 100%;
+    transform: none;
+    animation: none;
+    will-change: auto;
+  }
+
+  .sustainability-principles__group {
+    flex-basis: 100%;
+  }
+
+  .sustainability-principles__group[aria-hidden="true"] {
+    display: none;
+  }
+}
+
+@media (max-width: 40rem) and (prefers-reduced-motion: reduce) {
+  .sustainability-principles__group {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
@@ -4708,10 +4778,49 @@ body.assembly-hero-active .home-social-dock {
   color: var(--forest);
 }
 
+.calculator-addon-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1rem;
+}
+
+@media (min-width: 48rem) {
+  .calculator-addon-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Head, variants and quantity share rows with the card beside them, so a
+   description that wraps to two lines — or a "select one or both" note — can no
+   longer push its own variant list out of step with its neighbour. */
 .calculator-addon-card {
+  display: grid;
+  grid-row: span 3;
+  grid-template-rows: subgrid;
   border-color: rgb(36 50 40 / 0.22) !important;
   background: #fff !important;
   box-shadow: 0 2px 6px rgb(25 36 29 / 0.1);
+}
+
+.calculator-addon-card__variants {
+  align-self: start;
+}
+
+.calculator-addon-card__foot {
+  align-self: end;
+}
+
+/* The row gap already separates it from the variants. */
+.calculator-addon-card__foot .calculator-addon-qty {
+  margin-top: 0;
+}
+
+@supports not (grid-template-rows: subgrid) {
+  .calculator-addon-card {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
 }
 
 .calculator-addon-card[data-has-selection="true"] {
@@ -4762,6 +4871,314 @@ body.assembly-hero-active .home-social-dock {
   transform: scale(1.04);
 }
 
+/* --- Step 1: dimensions, floors and additional areas --- */
+.calculator-field-divider {
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--line);
+}
+
+.calculator-stepper {
+  display: flex;
+  align-items: stretch;
+  overflow: hidden;
+  min-width: 16rem;
+  background: #fff;
+  border: 1px solid rgb(36 50 40 / 0.42);
+  border-radius: 4px;
+  box-shadow: 0 1px 4px rgb(25 36 29 / 0.09);
+}
+
+.calculator-stepper__prefix {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  padding-inline: 0.9rem;
+  background: var(--mineral);
+  border-right: 1px solid rgb(36 50 40 / 0.28);
+  color: var(--carbon);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.calculator-stepper__input {
+  width: 100%;
+  padding: 0.65rem 0.85rem;
+  background: transparent;
+  border: 0;
+  color: #111712;
+  font-size: 1rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.calculator-stepper__input:focus {
+  outline: none;
+}
+
+.calculator-checkbox {
+  width: 1rem;
+  height: 1rem;
+  accent-color: var(--forest);
+  cursor: pointer;
+}
+
+.calculator-checkbox:disabled {
+  cursor: not-allowed;
+}
+
+.calculator-floor-row {
+  display: grid;
+  grid-template-columns: 7.5rem 1fr 6rem auto;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.7rem 0.9rem;
+  background: #fff;
+  border: 1px solid rgb(36 50 40 / 0.22);
+  border-radius: 4px;
+  box-shadow: 0 2px 6px rgb(25 36 29 / 0.08);
+}
+
+.calculator-floor-row__label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--carbon);
+}
+
+.calculator-floor-row__input {
+  padding: 0.45rem 0.6rem;
+  font-weight: 700;
+  text-align: right;
+}
+
+.calculator-floor-row__unit {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--muted-ink);
+}
+
+.calculator-range {
+  width: 100%;
+  height: 0.35rem;
+  margin: 0;
+  padding: 0;
+  appearance: none;
+  background: var(--line);
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.calculator-range::-webkit-slider-thumb {
+  width: 1.1rem;
+  height: 1.1rem;
+  appearance: none;
+  background: var(--forest);
+  border: 2px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 1px 4px rgb(25 36 29 / 0.35);
+  cursor: grab;
+}
+
+.calculator-range::-moz-range-thumb {
+  width: 1.1rem;
+  height: 1.1rem;
+  background: var(--forest);
+  border: 2px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 1px 4px rgb(25 36 29 / 0.35);
+  cursor: grab;
+}
+
+.calculator-range:focus-visible {
+  outline: 2px solid var(--forest);
+  outline-offset: 3px;
+}
+
+.calculator-total-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 0.75rem;
+  padding: 0.7rem 0.9rem;
+  background: var(--mineral);
+  border: 1px solid rgb(36 50 40 / 0.22);
+  border-radius: 4px;
+  font-size: 0.8rem;
+  color: var(--muted-ink);
+}
+
+.calculator-total-row strong {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--carbon);
+}
+
+/* --- Step 2: package cards --- */
+.calculator-package-slot {
+  position: relative;
+  display: flex;
+  /* Head-room for the ribbon that straddles the card's top edge. Applied to
+     every slot so all four cards still start on the same line. */
+  padding-top: 0.7rem;
+}
+
+.calculator-package-slot > * {
+  width: 100%;
+}
+
+/* Badge left, selection tick right. Reserved on every card, popular or not,
+   so the package names and rates stay on one line across the grid. */
+.calculator-package-head {
+  display: flex;
+  min-height: 1.35rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.65rem;
+}
+
+/* Sits on the card's top edge, half in and half out. Notion's pill geometry
+   (fully rounded, ~12px, weight 600+); the oxide fill is the Squarespace rule —
+   an accent used nowhere else in the row, so the eye lands on it first. */
+.calculator-package-ribbon {
+  position: absolute;
+  z-index: 3;
+  top: 0;
+  left: 50%;
+  display: inline-flex;
+  gap: 0.32rem;
+  align-items: center;
+  padding: 0.28rem 0.7rem;
+  transform: translate(-50%, -50%);
+  background: var(--oxide);
+  border-radius: 999px;
+  box-shadow: 0 3px 10px rgb(25 36 29 / 0.28);
+  color: #fff;
+  font-size: 0.57rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+/* The recommended tier stays marked even before it is chosen — the elevation
+   + accent-border treatment Squarespace uses on its Best Value column. */
+.calculator-choice--package:has(.calculator-package-ribbon):not([data-selected="true"]) {
+  border-color: var(--oxide) !important;
+  box-shadow: 0 6px 18px rgb(25 36 29 / 0.16);
+}
+
+/* One selection mark for the whole wizard: packages, brand options, add-on
+   variants. Empty ring when off, white stroke when the choice is selected. */
+.calculator-tick {
+  display: grid;
+  width: 1.25rem;
+  height: 1.25rem;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid rgb(36 50 40 / 0.3);
+  border-radius: 999px;
+  color: transparent;
+  transition:
+    border-color 200ms var(--ease-state),
+    color 200ms var(--ease-state);
+}
+
+.calculator-tick--sm {
+  width: 1rem;
+  height: 1rem;
+}
+
+/* Selected: the same white stroke the card, the rate box and the tick all share. */
+.calculator-choice[data-selected="true"] .calculator-tick {
+  border-color: #fff;
+  color: #fff;
+}
+
+.calculator-choice--package[data-selected="true"] {
+  border-color: #fff !important;
+  box-shadow:
+    0 0 0 1px #fff,
+    0 16px 34px rgb(25 36 29 / 0.34);
+  transform: scale(1.05);
+}
+
+.calculator-choice--package[data-selected="true"] .calculator-choice__inset {
+  border-color: rgb(255 255 255 / 0.55) !important;
+}
+
+.calculator-volume-note {
+  margin-top: 0.3rem;
+  color: var(--success);
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.calculator-choice[data-selected="true"] .calculator-volume-note {
+  color: #b7e4c7;
+}
+
+/* --- Step 4: add-on catalog --- */
+.calculator-unit-badge {
+  flex: 0 0 auto;
+  padding: 0.2rem 0.5rem;
+  background: var(--mineral);
+  border-radius: 999px;
+  color: var(--muted-ink);
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  white-space: nowrap;
+}
+
+
+.calculator-addon-qty {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 0.85rem;
+  padding-top: 0.7rem;
+  border-top: 1px solid var(--line);
+  font-size: 0.75rem;
+}
+
+.calculator-addon-qty__input {
+  width: 7.5rem;
+  padding: 0.4rem 0.6rem;
+  font-weight: 700;
+  text-align: right;
+}
+
+.calculator-addon-qty__linked {
+  display: inline-flex;
+  gap: 0.4rem;
+  align-items: baseline;
+  font-weight: 700;
+  color: var(--carbon);
+}
+
+.calculator-addon-qty__linked em {
+  color: var(--muted-ink);
+  font-size: 0.68rem;
+  font-style: normal;
+  font-weight: 500;
+}
+
+@media (max-width: 40rem) {
+  .calculator-floor-row {
+    grid-template-columns: 1fr 5.5rem auto;
+  }
+
+  .calculator-floor-row__label {
+    grid-column: 1 / -1;
+  }
+
+  .calculator-stepper {
+    min-width: 0;
+  }
+}
+
 @media (max-width: 40rem) {
   .calculator-choice[data-selected="true"],
   .calculator-choice[aria-pressed="true"],
@@ -4806,4 +5223,23 @@ body.assembly-hero-active .home-social-dock {
     background: white;
     color: black;
   }
+}
+
+.calculator-field-note {
+  margin-top: 0.75rem;
+  padding: 0.65rem 0.8rem;
+  background: var(--mineral);
+  border-left: 3px solid var(--oxide);
+  border-radius: 4px;
+  color: var(--muted-ink);
+  font-size: 0.72rem;
+  line-height: 1.55;
+}
+
+.calculator-field-note strong {
+  color: var(--carbon);
+}
+
+.calculator-choice--compact {
+  padding: 0.3rem 0.6rem;
 }

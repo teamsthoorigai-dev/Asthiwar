@@ -1,0 +1,1461 @@
+/* =========================================================================
+   /home-1 — "Datum"
+   A redesign of the Split Plate variant. Content is unchanged; the design
+   argument is new:
+
+   1. HARD GROUND ALTERNATION. Seven sections, four grounds, no gradients
+      between them. Measured off era-residence.com, which runs 14 sections
+      on only three grounds. The oxide ground appears exactly once — on the
+      cost band — so the conversion moment is the single loudest block.
+   2. EXTREME TYPE-SCALE CONTRAST. 112px display against 11px labels (10:1).
+      ERA runs 153.6px against 8.8px (17:1); Olson Kundig, a practice rather
+      than a developer, runs 67px/500. This sits deliberately between them.
+   3. MOTION WITHOUT A LIBRARY. Reveals, image scale and the progress bar are
+      CSS scroll-driven animations (animation-timeline), which run off the
+      main thread. Everything degrades to a static, fully visible page under
+      @supports and prefers-reduced-motion.
+
+   All styling is scoped to this module. Zero lines added to globals.css.
+   ========================================================================= */
+
+.page {
+  --ink: var(--paper);
+  --ink-muted: rgb(239 234 227 / 0.66);
+  --ink-faint: rgb(239 234 227 / 0.16);
+  --dark-rule: rgb(36 50 40 / 0.16);
+  --oxide-light: #d8ad7c;
+
+  --display: clamp(2.9rem, 8.4vw, 7rem);
+  --heading: clamp(2.1rem, 4.6vw, 3.9rem);
+  --verb: clamp(2.35rem, 5.6vw, 4.75rem);
+  --lede: clamp(1.0625rem, 1.35vw, 1.3125rem);
+
+  overflow: clip;
+  background: var(--paper);
+  color: var(--carbon);
+}
+
+.page img {
+  border-radius: 0;
+}
+
+.page a:focus-visible,
+.page summary:focus-visible {
+  outline: 3px solid var(--oxide);
+  outline-offset: 4px;
+}
+
+.shell {
+  width: min(calc(100% - (var(--gutter) * 2)), var(--shell));
+  margin-inline: auto;
+}
+
+/* --- Shared type ------------------------------------------------------- */
+
+.sectionLabel {
+  margin: 0;
+  color: var(--oxide-deep);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  line-height: 1.4;
+  text-transform: uppercase;
+}
+
+.sectionLabelLight {
+  color: var(--oxide-light);
+}
+
+.sectionTitle {
+  max-width: 22ch;
+  margin: 0;
+  font-size: var(--heading);
+  font-weight: 400;
+  letter-spacing: -0.028em;
+  line-height: 1.02;
+  text-wrap: balance;
+}
+
+.sectionLede {
+  max-width: 46ch;
+  margin: 0;
+  color: var(--muted-ink);
+  font-size: var(--lede);
+  line-height: 1.6;
+}
+
+.textAction,
+.textActionLight {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  /* Top padding only — it lifts the hit area to 44px without pushing the
+     underline away from the text the way a min-height would. */
+  padding-top: 0.85rem;
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid currentColor;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  transition: gap 0.3s var(--ease-state), color 0.3s var(--ease-state);
+}
+
+.textAction {
+  color: var(--oxide-deep);
+}
+
+.textActionLight {
+  color: var(--oxide-light);
+}
+
+.textAction:hover,
+.textActionLight:hover {
+  gap: 0.9rem;
+}
+
+/* --- Scroll progress --------------------------------------------------- */
+
+.scrollProgress {
+  position: fixed;
+  z-index: 101;
+  top: calc(var(--header-height) - 1px);
+  right: 0;
+  left: 0;
+  height: 2px;
+  transform: scaleX(0);
+  transform-origin: left;
+  background: var(--oxide);
+  pointer-events: none;
+}
+
+/* =========================================================================
+   1 — HERO / forest-deep + photograph
+   ========================================================================= */
+
+.hero {
+  position: relative;
+  display: flex;
+  min-height: max(42rem, 100svh);
+  flex-direction: column;
+  justify-content: flex-end;
+  padding-top: calc(var(--header-height) + 2rem);
+  padding-bottom: clamp(4.5rem, 7vw, 6.5rem);
+  overflow: hidden;
+  background: var(--forest-deep);
+  color: var(--ink);
+  isolation: isolate;
+}
+
+.heroMedia {
+  position: absolute;
+  z-index: -2;
+  inset: 0;
+}
+
+.heroMedia img {
+  height: 100%;
+  object-fit: cover;
+  object-position: 58% center;
+  transform: scale(1.06);
+}
+
+/* Two-stop scrim: dense at the foot where the type sits, clear at the top
+   so the photograph still reads as a photograph. */
+.heroScrim {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  background:
+    linear-gradient(
+      to top,
+      rgb(15 22 17 / 0.92) 0%,
+      rgb(15 22 17 / 0.76) 34%,
+      rgb(15 22 17 / 0.34) 60%,
+      rgb(15 22 17 / 0.5) 82%,
+      rgb(15 22 17 / 0.58) 100%
+    ),
+    linear-gradient(to right, rgb(15 22 17 / 0.62) 0%, rgb(15 22 17 / 0) 68%);
+}
+
+.heroInner {
+  position: relative;
+  display: grid;
+  gap: clamp(1.75rem, 3vw, 2.75rem);
+}
+
+.heroLabel {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 0;
+  /* Denser than --ink-muted: 11px over a photograph needs the extra weight. */
+  color: rgb(239 234 227 / 0.86);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.heroLabel::before {
+  width: clamp(1.75rem, 4vw, 3.5rem);
+  height: 1px;
+  background: var(--oxide);
+  content: '';
+}
+
+.heroTitle {
+  max-width: 15ch;
+  margin: 0;
+  font-size: var(--display);
+  font-weight: 400;
+  letter-spacing: -0.032em;
+  line-height: 0.94;
+  text-wrap: balance;
+}
+
+.heroFoot {
+  display: grid;
+  gap: clamp(1.5rem, 3vw, 2.5rem);
+  align-items: end;
+  padding-top: clamp(1.25rem, 2.5vw, 2rem);
+  border-top: 1px solid var(--ink-faint);
+}
+
+.heroLede {
+  max-width: 52ch;
+  margin: 0;
+  color: var(--ink-muted);
+  font-size: var(--lede);
+  line-height: 1.6;
+}
+
+.heroActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+/* Buttons are local. globals.css defines .button--solid / .button--outline
+   only under .calculator-actions, so they resolve to nothing out here. */
+.btnPrimary,
+.btnGhost {
+  display: inline-flex;
+  min-height: 3.25rem;
+  align-items: center;
+  gap: 0.6rem;
+  padding-inline: 1.6rem;
+  border: 1px solid transparent;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  letter-spacing: 0.005em;
+  transition:
+    background 0.3s var(--ease-state),
+    border-color 0.3s var(--ease-state),
+    color 0.3s var(--ease-state),
+    transform 0.3s var(--ease-state);
+}
+
+.btnPrimary {
+  background: var(--oxide);
+  color: var(--forest-deep);
+}
+
+.btnPrimary:hover {
+  background: var(--oxide-light);
+  transform: translateY(-2px);
+}
+
+.btnGhost {
+  border-color: rgb(239 234 227 / 0.42);
+  color: var(--ink);
+}
+
+.btnGhost:hover {
+  border-color: var(--paper);
+  background: rgb(239 234 227 / 0.1);
+  transform: translateY(-2px);
+}
+
+/* Survey rail — the one measured device kept from the field-guide idea. */
+/* Pinned to the right edge at mid-height, clear of the content column. */
+.heroRail {
+  position: absolute;
+  z-index: 1;
+  top: 50%;
+  right: calc(var(--gutter) * 0.5);
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.9rem;
+  transform: translateY(-50%);
+  writing-mode: vertical-rl;
+  color: var(--ink-muted);
+  font-size: 0.625rem;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.heroRail i {
+  width: 1px;
+  height: 4rem;
+  background: linear-gradient(to bottom, transparent, var(--oxide), transparent);
+}
+
+.scrollCue {
+  position: absolute;
+  bottom: clamp(1.5rem, 2.6vw, 2.25rem);
+  left: 50%;
+  display: none;
+  align-items: center;
+  gap: 0.55rem;
+  color: var(--ink-muted);
+  font-size: 0.625rem;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  transform: translateX(-50%);
+  transition: color 0.3s var(--ease-state);
+}
+
+.scrollCue:hover {
+  color: var(--paper);
+}
+
+.scrollCue svg {
+  animation: cueBob 2.4s var(--ease-state) infinite;
+}
+
+@keyframes cueBob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(4px);
+  }
+}
+
+/* =========================================================================
+   Sticky calculator dock
+   Zero-height sticky anchor pinned near the viewport foot. It rides the
+   whole post-hero column, so it slides up as the hero leaves and retires at
+   the footer — no scroll listener, no timeline, supported everywhere.
+   ========================================================================= */
+
+.afterHero {
+  position: relative;
+}
+
+.dockAnchor {
+  position: sticky;
+  z-index: 60;
+  top: calc(100svh - 5.5rem);
+  height: 0;
+  pointer-events: none;
+}
+
+.dock {
+  display: flex;
+  width: min(calc(100% - (var(--gutter) * 2)), var(--shell));
+  align-items: center;
+  justify-content: flex-end;
+  margin-inline: auto;
+}
+
+.dockInner {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.55rem 0.55rem 0.55rem 1.4rem;
+  border: 1px solid rgb(239 234 227 / 0.12);
+  /* Opaque on purpose. A backdrop-filter here repaints the whole scrolling
+     backdrop every frame — the exact cost this page is trying to avoid. */
+  background: var(--forest-deep);
+  box-shadow: var(--menu-shadow);
+  color: var(--paper);
+  pointer-events: auto;
+}
+
+.dockLabel {
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.dockCta {
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  gap: 0.5rem;
+  padding-inline: 1.15rem;
+  background: var(--oxide);
+  color: var(--forest-deep);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  white-space: nowrap;
+  transition: background 0.3s var(--ease-state);
+}
+
+.dockCta:hover {
+  background: var(--oxide-light);
+}
+
+/* =========================================================================
+   2 — PROCESS / paper. The signature scroll moment.
+   Sticky intro on the left, seven verbs running past it on the right.
+   ========================================================================= */
+
+.process {
+  padding-block: clamp(4.5rem, 9vw, 8.5rem);
+  background: var(--paper);
+}
+
+.processGrid {
+  display: grid;
+  gap: clamp(2.5rem, 5vw, 4.5rem);
+}
+
+.processAside {
+  display: grid;
+  gap: 1.25rem;
+  align-content: start;
+}
+
+.processCount {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin: 0;
+  color: var(--concrete);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.processList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.step {
+  display: grid;
+  padding-block: clamp(1.5rem, 2.6vw, 2.4rem);
+  border-top: 1px solid var(--line);
+  gap: 0.75rem 1.75rem;
+}
+
+.step:last-child {
+  border-bottom: 1px solid var(--line);
+}
+
+.stepIndex {
+  color: var(--oxide-deep);
+  font-size: 0.75rem;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.1em;
+}
+
+.stepVerb {
+  margin: 0;
+  font-size: var(--verb);
+  font-weight: 400;
+  letter-spacing: -0.03em;
+  line-height: 0.98;
+}
+
+/* LPAS's device, applied to ASTHIWAR's own verbs: the initial splits off. */
+.stepInitial {
+  color: var(--oxide);
+}
+
+.stepBody {
+  max-width: 34ch;
+  margin: 0;
+  color: var(--muted-ink);
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+/* =========================================================================
+   3 — SUSTAINABILITY / forest-deep + photograph
+   ========================================================================= */
+
+.sustain {
+  padding-block: clamp(4.5rem, 9vw, 8.5rem);
+  background: var(--forest-deep);
+  color: var(--ink);
+}
+
+.sustainGrid {
+  display: grid;
+  gap: clamp(2.5rem, 5vw, 4.5rem);
+  align-items: start;
+}
+
+.sustainMedia {
+  position: relative;
+  margin: 0;
+  overflow: hidden;
+  aspect-ratio: 4 / 5;
+  background: var(--carbon-raised);
+}
+
+.sustainMedia img {
+  object-fit: cover;
+}
+
+.sustainMedia figcaption {
+  position: absolute;
+  right: 1.25rem;
+  bottom: 1.25rem;
+  left: 1.25rem;
+  color: var(--paper);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-shadow: 0 1px 12px rgb(15 22 17 / 0.7);
+  text-transform: uppercase;
+}
+
+.sustainContent {
+  display: grid;
+  gap: clamp(1.5rem, 3vw, 2.25rem);
+  align-content: start;
+}
+
+.sustainContent .sectionTitle {
+  color: var(--ink);
+}
+
+.sustainLede {
+  max-width: 46ch;
+  margin: 0;
+  color: var(--ink-muted);
+  font-size: var(--lede);
+  line-height: 1.6;
+}
+
+.principles {
+  display: grid;
+  gap: 0;
+  margin-top: 0.5rem;
+}
+
+.principle {
+  display: grid;
+  padding-block: clamp(1.25rem, 2.2vw, 1.75rem);
+  border-top: 1px solid var(--ink-faint);
+  gap: 0.35rem 1.25rem;
+}
+
+.principle:last-child {
+  border-bottom: 1px solid var(--ink-faint);
+}
+
+.principleIcon {
+  width: 2.25rem;
+  height: 2.25rem;
+  background: var(--oxide-light);
+  -webkit-mask-position: center;
+  mask-position: center;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+}
+
+.principle h3 {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+
+.principle p {
+  max-width: 44ch;
+  margin: 0.35rem 0 0;
+  color: var(--ink-muted);
+  font-size: 0.9375rem;
+  line-height: 1.6;
+}
+
+/* Track and stage are inert by default — they only take on height and sticky
+   behaviour inside the gated cycle block far below. */
+.sustainTrack,
+.sustainStage {
+  position: relative;
+}
+
+/* The rail describes cycle progress, so it must not appear when the four
+   principles are simply stacked. */
+.principleRail {
+  display: none;
+  gap: 1.25rem;
+  align-items: center;
+}
+
+.railSegment {
+  display: grid;
+  gap: 0.55rem;
+  flex: 1;
+  color: var(--ink-muted);
+  font-size: 0.625rem;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.16em;
+}
+
+/* The <i> is the unfilled track; its pseudo-element is the oxide fill that
+   scales across as that principle's slice of the scroll is consumed. */
+.railSegment i {
+  display: block;
+  height: 2px;
+  background: var(--ink-faint);
+}
+
+.railSegment i::before {
+  display: block;
+  height: 100%;
+  background: var(--oxide-light);
+  content: '';
+  transform: scaleX(0);
+  transform-origin: left;
+}
+
+/* =========================================================================
+   4 — PROJECTS / paper. First project takes the full measure.
+   ========================================================================= */
+
+.projects {
+  padding-block: clamp(4.5rem, 9vw, 8.5rem);
+  background: var(--paper);
+}
+
+.projectsHead {
+  display: grid;
+  gap: 1.25rem;
+  padding-bottom: clamp(2.25rem, 4vw, 3.5rem);
+}
+
+.projectGrid {
+  display: grid;
+  gap: clamp(1.75rem, 3vw, 3rem);
+}
+
+.project {
+  display: grid;
+  gap: 1.15rem;
+}
+
+.projectFigure {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 4 / 3;
+  background: var(--clay);
+}
+
+.projectFigure img {
+  object-fit: cover;
+  transition: transform 0.9s var(--ease-cinematic);
+}
+
+.project:hover .projectFigure img {
+  transform: scale(1.045);
+}
+
+.projectArrow {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  display: grid;
+  width: 2.75rem;
+  height: 2.75rem;
+  place-items: center;
+  background: var(--paper);
+  color: var(--carbon);
+  opacity: 0;
+  transform: translate(6px, -6px);
+  transition:
+    opacity 0.4s var(--ease-state),
+    transform 0.4s var(--ease-state);
+}
+
+.project:hover .projectArrow {
+  opacity: 1;
+  transform: translate(0, 0);
+}
+
+.projectMeta {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.projectIndex {
+  color: var(--concrete);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.16em;
+}
+
+.projectTitle {
+  margin: 0;
+  font-size: clamp(1.35rem, 2.2vw, 1.85rem);
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+}
+
+.projectTags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1rem;
+  color: var(--muted-ink);
+  font-size: 0.875rem;
+}
+
+.projectTags span + span::before {
+  margin-right: 1rem;
+  color: var(--line);
+  content: '/';
+}
+
+/* =========================================================================
+   5 — SERVICES / carbon. Five full-bleed rows that fill on hover.
+   ========================================================================= */
+
+.services {
+  padding-block: clamp(4.5rem, 9vw, 8.5rem);
+  background: var(--carbon);
+  color: var(--ink);
+}
+
+.servicesHead {
+  display: grid;
+  gap: 1.25rem;
+  padding-bottom: clamp(2.25rem, 4vw, 3.5rem);
+}
+
+.servicesHead .sectionTitle {
+  color: var(--ink);
+}
+
+.servicesHead .sectionLede {
+  color: var(--ink-muted);
+}
+
+.serviceList {
+  border-top: 1px solid var(--ink-faint);
+}
+
+.serviceRow {
+  position: relative;
+  display: grid;
+  padding-block: clamp(1.5rem, 2.6vw, 2.25rem);
+  border-bottom: 1px solid var(--ink-faint);
+  gap: 0.5rem 1.75rem;
+  align-items: baseline;
+  transition: color 0.4s var(--ease-state);
+}
+
+/* Fill wipes in from the left rather than fading — reads as a plan line
+   being drawn, and keeps the row edge crisp. */
+.serviceRow::before {
+  position: absolute;
+  z-index: -1;
+  inset: 0 calc(var(--gutter) * -0.5);
+  background: var(--oxide);
+  content: '';
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.55s var(--ease-cinematic);
+}
+
+.serviceRow:hover {
+  color: var(--forest-deep);
+}
+
+.serviceRow:hover::before {
+  transform: scaleX(1);
+}
+
+.serviceIndex {
+  color: var(--oxide-light);
+  font-size: 0.75rem;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.14em;
+  transition: color 0.4s var(--ease-state);
+}
+
+.serviceRow:hover .serviceIndex {
+  color: var(--forest-deep);
+}
+
+.serviceTitle {
+  margin: 0;
+  font-size: clamp(1.6rem, 3.2vw, 2.5rem);
+  font-weight: 400;
+  letter-spacing: -0.025em;
+  line-height: 1.05;
+}
+
+.serviceShort {
+  max-width: 40ch;
+  margin: 0;
+  color: var(--ink-muted);
+  font-size: 0.9375rem;
+  line-height: 1.55;
+  transition: color 0.4s var(--ease-state);
+}
+
+.serviceRow:hover .serviceShort {
+  color: var(--forest-deep);
+}
+
+.serviceArrow {
+  justify-self: end;
+  transform: translateX(-6px);
+  transition: transform 0.45s var(--ease-state);
+}
+
+.serviceRow:hover .serviceArrow {
+  transform: translateX(0);
+}
+
+/* =========================================================================
+   6 — COST / oxide. The conversion peak: the only accent ground on the page
+   and the largest numeral anywhere in the document.
+   ========================================================================= */
+
+.cost {
+  position: relative;
+  padding-block: clamp(4.5rem, 9vw, 8rem);
+  overflow: hidden;
+  background: var(--oxide);
+  color: var(--forest-deep);
+}
+
+/* Faint jaali behind the figure — texture, not imagery. */
+.costTexture {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  /* Flat opacity rather than mix-blend-mode: a blend mode on an image this
+     large forces offscreen compositing for no visible gain over flat ochre. */
+  opacity: 0.11;
+  pointer-events: none;
+}
+
+.costTexture img {
+  height: 100%;
+  object-fit: cover;
+}
+
+.costInner {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: clamp(2rem, 4vw, 3.5rem);
+}
+
+.costHead {
+  display: grid;
+  gap: 1rem;
+}
+
+.costHead .sectionLabel {
+  color: var(--forest-deep);
+}
+
+.costHead .sectionTitle {
+  max-width: 20ch;
+  color: var(--forest-deep);
+}
+
+.costPanel {
+  display: grid;
+  gap: clamp(2rem, 4vw, 3.5rem);
+  align-items: end;
+  padding-top: clamp(1.75rem, 3vw, 2.75rem);
+  border-top: 1px solid rgb(25 36 29 / 0.28);
+}
+
+.costFigure {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.35rem;
+  line-height: 0.82;
+}
+
+.costCurrency {
+  padding-top: 0.6em;
+  font-size: clamp(1.75rem, 3.4vw, 2.75rem);
+  font-weight: 400;
+  opacity: 0.62;
+}
+
+.costNumber {
+  display: block;
+  font-size: clamp(3.75rem, 11vw, 9rem);
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.045em;
+}
+
+.costUnit {
+  margin: 0.9rem 0 0;
+  color: var(--forest-deep);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.costCopy {
+  display: grid;
+  gap: 1.5rem;
+  align-content: end;
+}
+
+.costNote {
+  max-width: 48ch;
+  margin: 0;
+  color: var(--forest-deep);
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+
+.costCta {
+  display: inline-flex;
+  min-height: 3.5rem;
+  align-items: center;
+  justify-self: start;
+  gap: 0.65rem;
+  padding-inline: 2rem;
+  background: var(--forest-deep);
+  color: var(--paper);
+  font-size: 1rem;
+  font-weight: 500;
+  transition:
+    background 0.3s var(--ease-state),
+    transform 0.3s var(--ease-state);
+}
+
+.costCta:hover {
+  background: var(--carbon-raised);
+  transform: translateY(-2px);
+}
+
+/* =========================================================================
+   7 — FAQ / paper
+   ========================================================================= */
+
+.faq {
+  padding-block: clamp(4.5rem, 9vw, 8.5rem);
+  background: var(--paper);
+}
+
+.faqGrid {
+  display: grid;
+  gap: clamp(2rem, 4vw, 4.5rem);
+  align-items: start;
+}
+
+.faqHead {
+  display: grid;
+  gap: 1rem;
+  align-content: start;
+}
+
+.faqList {
+  border-top: 1px solid var(--line);
+}
+
+.faqList details {
+  border-bottom: 1px solid var(--line);
+}
+
+.faqList summary {
+  display: grid;
+  padding-block: clamp(1.15rem, 2vw, 1.6rem);
+  cursor: pointer;
+  gap: 0.35rem 1.25rem;
+  align-items: center;
+  list-style: none;
+  transition: color 0.3s var(--ease-state);
+}
+
+.faqList summary::-webkit-details-marker {
+  display: none;
+}
+
+.faqList summary:hover {
+  color: var(--oxide-deep);
+}
+
+.faqIndex {
+  color: var(--concrete);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.16em;
+}
+
+.faqQuestion {
+  font-size: clamp(1.0625rem, 1.6vw, 1.3rem);
+  font-weight: 400;
+  letter-spacing: -0.015em;
+  line-height: 1.35;
+}
+
+.faqToggle {
+  position: relative;
+  justify-self: end;
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
+}
+
+.faqToggle::before,
+.faqToggle::after {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 100%;
+  height: 1px;
+  background: currentColor;
+  content: '';
+  transition: transform 0.35s var(--ease-state);
+}
+
+.faqToggle::after {
+  transform: rotate(90deg);
+}
+
+.faqList details[open] .faqToggle::after {
+  transform: rotate(0deg);
+}
+
+.faqAnswer {
+  max-width: 62ch;
+  margin: 0;
+  padding-bottom: clamp(1.15rem, 2vw, 1.6rem);
+  color: var(--muted-ink);
+  font-size: 1rem;
+  line-height: 1.65;
+}
+
+/* =========================================================================
+   Breakpoints
+   ========================================================================= */
+
+/* On narrow screens the type spans the full width, so the horizontal half of
+   the scrim buys nothing — the vertical one has to carry the whole contrast. */
+@media (max-width: 47.99rem) {
+  .heroScrim {
+    background: linear-gradient(
+      to top,
+      rgb(15 22 17 / 0.94) 0%,
+      rgb(15 22 17 / 0.86) 44%,
+      rgb(15 22 17 / 0.64) 72%,
+      rgb(15 22 17 / 0.62) 100%
+    );
+  }
+}
+
+@media (min-width: 48rem) {
+  .heroFoot {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .heroActions {
+    justify-content: flex-end;
+  }
+
+  .step {
+    grid-template-columns: 3rem minmax(0, 1fr);
+  }
+
+  .stepIndex {
+    padding-top: 0.9rem;
+  }
+
+  .principle {
+    grid-template-columns: 2.25rem minmax(0, 1fr);
+  }
+
+  .projectGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  /* First project takes the full measure and a wider crop. */
+  .projectFeature {
+    grid-column: 1 / -1;
+  }
+
+  .projectFeature .projectFigure {
+    aspect-ratio: 21 / 9;
+  }
+
+  .projectFeature .projectTitle {
+    font-size: clamp(1.85rem, 3vw, 2.6rem);
+  }
+
+  .serviceRow {
+    grid-template-columns: 3.5rem minmax(0, 1.05fr) minmax(0, 1fr) 2rem;
+    align-items: center;
+  }
+
+  .costPanel {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .faqGrid {
+    grid-template-columns: minmax(0, 0.62fr) minmax(0, 1fr);
+  }
+
+  .faqList summary {
+    grid-template-columns: 2.5rem minmax(0, 1fr) 1rem;
+  }
+
+  .faqAnswer {
+    padding-left: 2.5rem;
+  }
+
+  .scrollCue {
+    display: inline-flex;
+  }
+}
+
+@media (min-width: 64rem) {
+  .heroRail {
+    display: flex;
+  }
+
+  .processGrid {
+    grid-template-columns: minmax(0, 0.55fr) minmax(0, 1fr);
+  }
+
+  /* The intro holds still while all seven verbs pass it. */
+  .processAside {
+    position: sticky;
+    top: calc(var(--header-height) + clamp(2rem, 5vw, 4rem));
+  }
+
+  .step {
+    grid-template-columns: 4rem minmax(0, 1fr) minmax(0, 0.85fr);
+    align-items: baseline;
+  }
+
+  .stepBody {
+    padding-top: 0.5rem;
+  }
+
+  .sustainGrid {
+    grid-template-columns: minmax(0, 0.85fr) minmax(0, 1fr);
+    gap: clamp(3rem, 6vw, 6rem);
+  }
+
+  .sustainMedia {
+    position: sticky;
+    top: calc(var(--header-height) + clamp(2rem, 5vw, 4rem));
+    aspect-ratio: 3 / 4;
+  }
+
+  .projectsHead,
+  .servicesHead {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: end;
+    gap: 2rem 3rem;
+  }
+
+  .projectsHead .sectionLabel,
+  .servicesHead .sectionLabel {
+    grid-column: 1 / -1;
+  }
+}
+
+/* =========================================================================
+   Motion — CSS scroll-driven animations only. No library, no scroll
+   listener; these run off the main thread. Every rule is behind both an
+   @supports gate and a reduced-motion gate, so the fallback is the finished
+   page with nothing hidden.
+   ========================================================================= */
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes settle {
+  from {
+    transform: scale(1.14);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+
+@keyframes drawProgress {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@keyframes heroDrift {
+  from {
+    transform: scale(1.06) translateY(0);
+  }
+  to {
+    transform: scale(1.16) translateY(3.5%);
+  }
+}
+
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .scrollProgress {
+      animation: drawProgress linear both;
+      animation-timeline: scroll(root block);
+    }
+
+    .reveal {
+      animation: rise linear both;
+      animation-timeline: view();
+      animation-range: entry 4% cover 22%;
+    }
+
+    /* Photographs settle from a slight over-scale as they cross the fold. */
+    .settleMedia img {
+      animation: settle linear both;
+      animation-timeline: view();
+      animation-range: entry 0% cover 55%;
+    }
+
+    .heroMedia img {
+      animation: heroDrift linear both;
+      animation-timeline: view();
+      animation-range: cover 0% cover 100%;
+    }
+  }
+}
+
+/* The progress bar is only meaningful while something drives it. With no
+   scroll timeline — unsupported, or motion suppressed — it would sit either
+   permanently empty or permanently full, so retire it instead. */
+/* -------------------------------------------------------------------------
+   Pinned sustainability cycle.
+
+   The photograph and heading hold still while the four principles replace one
+   another. The track supplies the scroll length; the stage pins; each
+   principle animates over its own quarter of the track's `contain` range —
+   which, for a subject taller than the viewport, runs exactly from "top edge
+   reaches the top of the screen" to "bottom edge reaches the bottom", i.e.
+   precisely the duration the stage is pinned.
+
+   Three gates, all of which must pass. Fail any one and the section stays the
+   plain stacked list defined above: no track height, no pinning, no rail.
+   ------------------------------------------------------------------------- */
+
+@media (min-width: 64rem) {
+  @supports (animation-timeline: view()) {
+    @media (prefers-reduced-motion: no-preference) {
+      .sustainTrack {
+        height: 420vh;
+        view-timeline-name: --sustainTrack;
+        view-timeline-axis: block;
+      }
+
+      .sustainStage {
+        position: sticky;
+        top: var(--header-height);
+        display: flex;
+        height: calc(100svh - var(--header-height));
+        align-items: center;
+        overflow: hidden;
+      }
+
+      .sustainStage > .shell {
+        width: min(calc(100% - (var(--gutter) * 2)), var(--shell));
+      }
+
+      .sustainGrid {
+        align-items: center;
+      }
+
+      /* Static and smaller — it is the fixed element the text moves against. */
+      .sustainMedia {
+        position: static;
+        max-height: 62svh;
+        aspect-ratio: 4 / 5;
+      }
+
+      /* One principle on screen at a time, so they stack in one box. The box
+         reserves the tallest principle's height to stop the rail shifting. */
+      .principles {
+        position: relative;
+        min-height: 11rem;
+        margin-top: 0;
+      }
+
+      .principle {
+        position: absolute;
+        inset: 0;
+        grid-template-columns: 3rem minmax(0, 1fr);
+        align-content: start;
+        padding-block: 0;
+        border: 0;
+        opacity: 0;
+        animation: cycleMid linear both;
+        animation-timeline: --sustainTrack;
+      }
+
+      .principle:last-child {
+        border-bottom: 0;
+      }
+
+      /* Only one is read at a time, so it can carry far more weight. */
+      .principleIcon {
+        width: 3rem;
+        height: 3rem;
+      }
+
+      .principle h3 {
+        font-size: clamp(1.5rem, 2.4vw, 2.15rem);
+        font-weight: 400;
+        letter-spacing: -0.022em;
+        line-height: 1.1;
+      }
+
+      .principle p {
+        max-width: 42ch;
+        margin-top: 0.75rem;
+        font-size: 1.0625rem;
+      }
+
+      .cycle0 {
+        animation-name: cycleFirst;
+        animation-range: contain 0% contain 25%;
+      }
+
+      .cycle1 {
+        animation-range: contain 25% contain 50%;
+      }
+
+      .cycle2 {
+        animation-range: contain 50% contain 75%;
+      }
+
+      .cycle3 {
+        animation-name: cycleLast;
+        animation-range: contain 75% contain 100%;
+      }
+
+      .principleRail {
+        display: flex;
+      }
+
+      .railSegment i::before {
+        animation: railFill linear both;
+        animation-timeline: --sustainTrack;
+      }
+
+      .fill0 {
+        animation-range: contain 0% contain 25%;
+      }
+
+      .fill1 {
+        animation-range: contain 25% contain 50%;
+      }
+
+      .fill2 {
+        animation-range: contain 50% contain 75%;
+      }
+
+      .fill3 {
+        animation-range: contain 75% contain 100%;
+      }
+    }
+  }
+}
+
+/* The first holds from the start rather than fading in — the stage is already
+   on screen when its slice begins, so an empty frame would read as a bug. */
+@keyframes cycleFirst {
+  0%,
+  84% {
+    opacity: 1;
+    transform: none;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-24px);
+  }
+}
+
+@keyframes cycleMid {
+  0% {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  16%,
+  84% {
+    opacity: 1;
+    transform: none;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-24px);
+  }
+}
+
+/* The last holds to the end, so the section never unpins on an empty stage. */
+@keyframes cycleLast {
+  0% {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  16%,
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes railFill {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scrollCue svg {
+    animation: none;
+  }
+
+  .scrollProgress {
+    display: none;
+  }
+}
+
+@supports not (animation-timeline: view()) {
+  .scrollProgress {
+    display: none;
+  }
+}

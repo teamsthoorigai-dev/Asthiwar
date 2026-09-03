@@ -117,16 +117,16 @@ export function StepEstimateReport({ result, onReset }: StepEstimateReportProps)
               <span className="inline-flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-muted/20 text-foreground">
                 <Sparkles size={12} aria-hidden="true" /> Authoritative Snapshot
               </span>
-              <span className="text-xs font-mono text-muted">
+              <span className="text-xs tabular-nums text-muted">
                 {result.estimateNumber || 'EST-SNAPSHOT'}
               </span>
             </div>
-            <h1 className="text-3xl sm:text-4xl font-extrabold font-mono tracking-tight">
+            <h1 className="text-3xl sm:text-4xl font-extrabold tabular-nums tracking-tight">
               {formatINR(totalCost)}
             </h1>
             <p className="text-xs sm:text-sm text-muted mt-1">
               Estimated Total Investment • Effective Rate:{' '}
-              <strong className="text-foreground font-mono">
+              <strong className="text-foreground tabular-nums">
                 {formatINR(effectiveRate)} / Sq.Ft
               </strong>
             </p>
@@ -214,7 +214,7 @@ export function StepEstimateReport({ result, onReset }: StepEstimateReportProps)
             <span className="text-muted">
               Base Civil & Structural Construction ({builtupArea} sq.ft @ ₹{pkg?.baseRatePerSqft}/sq.ft)
             </span>
-            <span className="font-mono font-medium">
+            <span className="tabular-nums font-medium">
               {formatINR(breakdown?.baseConstructionCost)}
             </span>
           </div>
@@ -222,7 +222,7 @@ export function StepEstimateReport({ result, onReset }: StepEstimateReportProps)
             <span className="text-muted">
               Material & Brand Customizations ({result.customizations?.length || 0} upgrades)
             </span>
-            <span className="font-mono font-medium">
+            <span className="tabular-nums font-medium">
               {formatINR(breakdown?.upgradesCost)}
             </span>
           </div>
@@ -230,21 +230,21 @@ export function StepEstimateReport({ result, onReset }: StepEstimateReportProps)
             <span className="text-muted">
               Specialized Add-Ons & Infrastructure ({result.addons?.length || 0} items)
             </span>
-            <span className="font-mono font-medium">
+            <span className="tabular-nums font-medium">
               {formatINR(breakdown?.addonsCost)}
             </span>
           </div>
           <div className="flex justify-between py-2 border-b border-border font-semibold">
             <span>Subtotal (Excl. Taxes)</span>
-            <span className="font-mono">{formatINR(breakdown?.subtotalCost)}</span>
+            <span className="tabular-nums">{formatINR(breakdown?.subtotalCost)}</span>
           </div>
           <div className="flex justify-between py-2 border-b border-border text-muted">
             <span>GST ({breakdown?.gstPercentage || 18}%)</span>
-            <span className="font-mono">{formatINR(breakdown?.gstAmount)}</span>
+            <span className="tabular-nums">{formatINR(breakdown?.gstAmount)}</span>
           </div>
           <div className="flex justify-between py-3 text-base sm:text-lg font-bold border-t-2 border-foreground">
             <span>Total Authoritative Project Cost</span>
-            <span className="font-mono">{formatINR(breakdown?.totalProjectCost)}</span>
+            <span className="tabular-nums">{formatINR(breakdown?.totalProjectCost)}</span>
           </div>
         </div>
       </div>
@@ -280,7 +280,7 @@ export function StepEstimateReport({ result, onReset }: StepEstimateReportProps)
                 className="p-3 rounded border border-border bg-surface flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs"
               >
                 <div className="flex items-start gap-2.5">
-                  <div className="w-6 h-6 rounded-full bg-surface-active font-mono font-bold flex items-center justify-center text-[11px] shrink-0">
+                  <div className="w-6 h-6 rounded-full bg-surface-active tabular-nums font-bold flex items-center justify-center text-[11px] shrink-0">
                     {m.stageNumber}
                   </div>
                   <div>
@@ -288,7 +288,7 @@ export function StepEstimateReport({ result, onReset }: StepEstimateReportProps)
                     <div className="text-muted text-[11px]">{m.keyDeliverables}</div>
                   </div>
                 </div>
-                <div className="sm:text-right font-mono shrink-0">
+                <div className="sm:text-right tabular-nums shrink-0">
                   <span className="text-muted text-[11px] mr-2">({m.percentage}%)</span>
                   <span className="font-bold text-foreground">{formatINR(m.amount)}</span>
                 </div>
@@ -355,7 +355,7 @@ export function StepEstimateReport({ result, onReset }: StepEstimateReportProps)
 
         <div className="p-3 rounded border border-border bg-surface flex items-center justify-between">
           <span className="text-xs font-semibold">Estimated Monthly EMI</span>
-          <span className="text-xl font-bold font-mono">
+          <span className="text-xl font-bold tabular-nums">
             {formatINR(emi)}{' '}
             <span className="text-xs font-normal text-muted">/ month</span>
           </span>

@@ -1,16 +1,16 @@
 'use client';
 
+import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { ArrowUpRight, Menu, X } from 'lucide-react';
-import { useEffect, useRef, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 
 const primaryNav = [
   { label: 'Projects', href: '/projects' },
   { label: 'Cost', href: '/cost-calculator' },
   { label: 'Services', href: '/services' },
   { label: 'Studio', href: '/about' },
-  { label: 'Journey', href: '/journey' },
 ] as const;
 
 function isCurrent(pathname: string, href: string) {
@@ -18,19 +18,37 @@ function isCurrent(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-export function BrandMark({ inverted = false }: { inverted?: boolean }) {
+export function BrandMark({
+  inverted = false,
+  priority = false,
+}: {
+  inverted?: boolean;
+  priority?: boolean;
+}) {
   return (
     <span className={`brand-mark${inverted ? ' brand-mark--inverted' : ''}`}>
-      <span className="brand-mark__monogram" aria-hidden="true">
-        <span>A</span>
-      </span>
-      <span className="brand-mark__word">ASTHIWAR</span>
+      <Image
+        src={
+          inverted
+            ? '/brand/asthiwar-logo-white.png'
+            : '/brand/asthiwar-logo-black.png'
+        }
+        alt=""
+        width={5698}
+        height={839}
+        sizes="(max-width: 767px) 160px, 320px"
+        className="brand-mark__logo"
+        priority={priority}
+      />
     </span>
   );
 }
 
-export function SiteHeader() {
+export function SiteHeader({ transparentAtTop }: { transparentAtTop?: boolean } = {}) {
   const pathname = usePathname() || '/';
+  const isHome = pathname === '/';
+  const usesHeroOverlay = transparentAtTop ?? isHome;
+  const [isScrolled, setIsScrolled] = useState(false);
   const dialogRef = useRef<HTMLDialogElement>(null);
 
   const closeMenu = () => dialogRef.current?.close();
@@ -43,16 +61,29 @@ export function SiteHeader() {
     return () => dialog.removeEventListener('close', onClose);
   }, []);
 
+  useEffect(() => {
+    if (!usesHeroOverlay) return;
+
+    const updateHeaderSurface = () => setIsScrolled(window.scrollY > 60);
+
+    updateHeaderSurface();
+    window.addEventListener('scroll', updateHeaderSurface, { passive: true });
+    return () => window.removeEventListener('scroll', updateHeaderSurface);
+  }, [usesHeroOverlay]);
+
   const openMenu = () => {
     document.documentElement.classList.add('menu-open');
     dialogRef.current?.showModal();
   };
 
   return (
-    <header className="site-header">
+    <header
+      className={`site-header${usesHeroOverlay ? ' site-header--home' : ''}`}
+      data-scrolled={usesHeroOverlay && isScrolled ? 'true' : undefined}
+    >
       <div className="site-header__inner">
         <Link href="/" className="site-header__brand" aria-label="ASTHIWAR home">
-          <BrandMark inverted />
+          <BrandMark inverted={!usesHeroOverlay || !isScrolled} priority />
         </Link>
 
         <nav className="site-header__nav" aria-label="Primary navigation">
@@ -63,7 +94,7 @@ export function SiteHeader() {
               className="site-header__link"
               data-current={isCurrent(pathname, item.href) || undefined}
             >
-              {item.label}
+              <span className="site-header__link-label">{item.label}</span>
             </Link>
           ))}
         </nav>
@@ -148,10 +179,17 @@ export function SiteFooter({ cta = 'design' }: { cta?: 'design' | 'land' | 'none
                   ? 'Share your location, approximate area, and what you want the building to make possible.'
                   : 'Bring architecture, engineering and execution into one coordinated process.'}
               </p>
-              <Link href="/contact" className="text-link text-link--light">
-                {isLandInvitation ? 'Start a project' : 'Plan your project'}{' '}
-                <ArrowUpRight size={18} aria-hidden="true" />
-              </Link>
+              {isLandInvitation ? (
+                <Link href="/contact" className="button site-footer__project-cta">
+                  Start a project
+                  <ArrowUpRight size={18} aria-hidden="true" />
+                </Link>
+              ) : (
+                <Link href="/contact" className="text-link text-link--light">
+                  Plan your project
+                  <ArrowUpRight size={18} aria-hidden="true" />
+                </Link>
+              )}
             </div>
           </div>
         </div>
@@ -159,7 +197,9 @@ export function SiteFooter({ cta = 'design' }: { cta?: 'design' | 'land' | 'none
 
       <div className="site-footer__base shell">
         <div className="site-footer__brand">
-          <BrandMark inverted />
+          <Link href="/" className="site-footer__brand-link" aria-label="ASTHIWAR home">
+            <BrandMark inverted />
+          </Link>
           <p>
             ASTHIWAR is a design &amp; build company committed to creating thoughtful, sustainable
             and timeless spaces.
@@ -170,7 +210,6 @@ export function SiteFooter({ cta = 'design' }: { cta?: 'design' | 'land' | 'none
           <Link href="/cost-calculator">Cost</Link>
           <Link href="/services">Services</Link>
           <Link href="/about">Studio</Link>
-          <Link href="/journey">Journey</Link>
         </nav>
         <nav className="site-footer__links site-footer__services" aria-label="Services">
           <p className="eyebrow eyebrow--light">Services</p>
@@ -188,7 +227,6 @@ export function SiteFooter({ cta = 'design' }: { cta?: 'design' | 'land' | 'none
 
       <div className="site-footer__legal shell">
         <span>© {new Date().getFullYear()} ASTHIWAR</span>
-        <span>Sample project content for UI demonstration</span>
       </div>
     </footer>
   );

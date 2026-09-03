@@ -15,6 +15,8 @@ export type Project = {
   status: 'Completed' | 'In progress' | 'To be confirmed';
   image: string;
   imageAlt: string;
+  /** Hover gallery on the archive grid. Placeholder frames until real shoots land. */
+  gallery?: string[];
   summary: string;
   overview: string;
   challenge: string;
@@ -34,6 +36,12 @@ export const projects: Project[] = [
     year: 'Year to be confirmed',
     status: 'To be confirmed',
     image: '/images/courtyard.jpg',
+    gallery: [
+      '/images/courtyard.jpg',
+      '/images/asthivar-residence.jpg',
+      '/images/lime-plaster.jpg',
+      '/images/jaali.jpg',
+    ],
     imageAlt: 'Contemporary residence arranged around a planted courtyard',
     summary:
       'Project name, location, type, area and status will be published after ASTHIWAR confirms the approved information.',
@@ -60,6 +68,12 @@ export const projects: Project[] = [
     year: 'Year to be confirmed',
     status: 'To be confirmed',
     image: '/images/jaali.jpg',
+    gallery: [
+      '/images/jaali.jpg',
+      '/images/asthivar-villa.jpg',
+      '/images/materials.jpg',
+      '/images/courtyard.jpg',
+    ],
     imageAlt: 'Contemporary building with a warm brick screen',
     summary:
       'Project name, location, type, area and status will be published after ASTHIWAR confirms the approved information.',
@@ -86,6 +100,12 @@ export const projects: Project[] = [
     year: 'Year to be confirmed',
     status: 'To be confirmed',
     image: '/images/lime-plaster.jpg',
+    gallery: [
+      '/images/lime-plaster.jpg',
+      '/images/workshop.jpg',
+      '/images/sustainable.jpg',
+      '/images/asthivar-residence.jpg',
+    ],
     imageAlt: 'Interior with soft mineral plaster and timber joinery',
     summary:
       'Project name, location, type, area and status will be published after ASTHIWAR confirms the approved information.',
@@ -112,6 +132,12 @@ export const projects: Project[] = [
     year: 'Year to be confirmed',
     status: 'To be confirmed',
     image: '/images/workshop.jpg',
+    gallery: [
+      '/images/workshop.jpg',
+      '/images/materials.jpg',
+      '/images/asthivar-villa.jpg',
+      '/images/hero.jpg',
+    ],
     imageAlt: 'Contemporary building with a deep shaded facade',
     summary:
       'Project name, location, type, area and status will be published after ASTHIWAR confirms the approved information.',

@@ -34,12 +34,7 @@ export default function ServicesPage() {
         eyebrow="Our services"
         title="Five disciplines. One continuous process."
         intro="ASTHIWAR brings architecture, engineering and execution together through one coordinated process."
-        meta={
-          <>
-            <span>05 disciplines</span>
-            <span>One continuous process</span>
-          </>
-        }
+       
       />
 
       <section className="services-page section section--paper">

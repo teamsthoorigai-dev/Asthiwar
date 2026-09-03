@@ -2,7 +2,7 @@
 
 // Rule #5: no money is computed here. All figures come from the backend.
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   getLocations,
   getPackages,
@@ -21,10 +21,26 @@ import type {
 import { INITIAL_FORM_STATE } from './index';
 import {
   dimensionsStepSchema,
-  floorsStepSchema,
   packageStepSchema,
   leadCaptureStepSchema,
 } from './schema';
+
+/** Step 0 dimensions → 1 package → 2 customise → 3 add-ons → 4 contact details. */
+export const LAST_FORM_STEP = 4;
+
+/** Builds the API payload from the wizard state. */
+function buildPayload(formData: EstimateFormState): CalculatorInput {
+  return {
+    ...formData,
+    builtupAreaUnit: formData.builtupAreaUnit || 'sqft',
+    carParkingAreaSqft: formData.carParkingAreaSqft ?? 0,
+    carCount: formData.carCount ?? 1,
+    floorCount: formData.floorCount ?? 0,
+    headRoomAreaSqft: formData.headRoomAreaSqft ?? 0,
+    customizations: formData.customizations || [],
+    addons: formData.addons || [],
+  };
+}
 
 export function useCalculatorWizard() {
   const [currentStep, setCurrentStep] = useState<number>(0);
@@ -76,29 +92,31 @@ export function useCalculatorWizard() {
 
   // 2. Load package configurations (specs & addons) when package selection changes
   useEffect(() => {
-    if (!formData.packageSlug) return;
+    const packageSlug = formData.packageSlug;
+    if (!packageSlug) return;
     let mounted = true;
-    setConfigLoading(true);
-    getPackageConfig(formData.packageSlug)
-      .then((cfg) => {
-        if (!mounted) return;
-        setPackageConfig(cfg);
-        setConfigLoading(false);
-      })
-      .catch((err) => {
-        if (!mounted) return;
+
+    const loadConfig = async () => {
+      setConfigLoading(true);
+      try {
+        const cfg = await getPackageConfig(packageSlug);
+        if (mounted) setPackageConfig(cfg);
+      } catch (err) {
         console.error('Failed to fetch package configuration:', err);
-        setConfigLoading(false);
-      });
+      } finally {
+        if (mounted) setConfigLoading(false);
+      }
+    };
+
+    void loadConfig();
 
     return () => {
       mounted = false;
     };
   }, [formData.packageSlug]);
 
-  // 3. Debounced running preview from backend (/preview)
-  useEffect(() => {
-    // Only query live preview if minimum dimensions and package are available
+  // The running preview only needs the priced fields — contact details are placeholders.
+  const previewPayload = useMemo<CalculatorInput | null>(() => {
     if (
       !formData.plotLocation ||
       !formData.plotArea ||
@@ -107,33 +125,25 @@ export function useCalculatorWizard() {
       formData.builtupAreaPerFloor <= 0 ||
       !formData.packageSlug
     ) {
-      return;
+      return null;
     }
+
+    return {
+      ...buildPayload(formData),
+      customerName: formData.customerName?.trim() || 'Preview User',
+      customerPhone: formData.customerPhone?.trim() || '9999999999',
+      customerEmail: formData.customerEmail?.trim() || 'preview@example.com',
+    };
+  }, [formData]);
+
+  // 3. Debounced running preview from backend (/preview)
+  useEffect(() => {
+    if (!previewPayload) return;
 
     const controller = new AbortController();
     const timer = setTimeout(async () => {
       setPreviewLoading(true);
       try {
-        const previewPayload: CalculatorInput = {
-          customerName: formData.customerName?.trim() || 'Preview User',
-          customerPhone: formData.customerPhone?.trim() || '9999999999',
-          customerEmail: formData.customerEmail?.trim() || 'preview@example.com',
-          plotLocation: formData.plotLocation,
-          locationId: formData.locationId,
-          plotArea: formData.plotArea,
-          plotAreaUnit: formData.plotAreaUnit,
-          builtupAreaPerFloor: formData.builtupAreaPerFloor,
-          builtupAreaUnit: formData.builtupAreaUnit || 'sqft',
-          carParkingAreaSqft: formData.carParkingAreaSqft ?? 0,
-          carCount: formData.carCount ?? 1,
-          floorCount: formData.floorCount ?? 0,
-          floorBreakdown: formData.floorBreakdown,
-          headRoomAreaSqft: formData.headRoomAreaSqft ?? 0,
-          packageSlug: formData.packageSlug,
-          customizations: formData.customizations || [],
-          addons: formData.addons || [],
-        };
-
         const result = await previewEstimate(previewPayload, { signal: controller.signal });
         setPreviewResult(result);
         setPreviewError(null);
@@ -152,25 +162,7 @@ export function useCalculatorWizard() {
       clearTimeout(timer);
       controller.abort();
     };
-  }, [
-    formData.plotLocation,
-    formData.locationId,
-    formData.plotArea,
-    formData.plotAreaUnit,
-    formData.builtupAreaPerFloor,
-    formData.builtupAreaUnit,
-    formData.carParkingAreaSqft,
-    formData.carCount,
-    formData.floorCount,
-    formData.floorBreakdown,
-    formData.headRoomAreaSqft,
-    formData.packageSlug,
-    formData.customizations,
-    formData.addons,
-    formData.customerName,
-    formData.customerPhone,
-    formData.customerEmail,
-  ]);
+  }, [previewPayload]);
 
   const updateForm = useCallback((fields: Partial<EstimateFormState>) => {
     setFormData((prev) => ({ ...prev, ...fields }));
@@ -182,30 +174,25 @@ export function useCalculatorWizard() {
     let result;
     if (currentStep === 0) {
       result = dimensionsStepSchema.safeParse({
-        plotLocation: formData.plotLocation,
-        locationId: formData.locationId,
         plotArea: formData.plotArea,
         plotAreaUnit: formData.plotAreaUnit,
+        floorCount: formData.floorCount,
         builtupAreaPerFloor: formData.builtupAreaPerFloor,
         builtupAreaUnit: formData.builtupAreaUnit || 'sqft',
+        floorBreakdown: formData.isVariableArea ? formData.floorBreakdown : undefined,
         carParkingAreaSqft: formData.carParkingAreaSqft,
-        carCount: formData.carCount,
-      });
-    } else if (currentStep === 1) {
-      result = floorsStepSchema.safeParse({
-        floorCount: formData.floorCount,
-        floorBreakdown: formData.floorBreakdown,
         headRoomAreaSqft: formData.headRoomAreaSqft,
       });
-    } else if (currentStep === 2) {
+    } else if (currentStep === 1) {
       result = packageStepSchema.safeParse({
         packageSlug: formData.packageSlug,
       });
-    } else if (currentStep === 4) {
+    } else if (currentStep === LAST_FORM_STEP) {
       result = leadCaptureStepSchema.safeParse({
         customerName: formData.customerName,
         customerPhone: formData.customerPhone,
         customerEmail: formData.customerEmail,
+        plotLocation: formData.plotLocation,
       });
     }
 
@@ -224,7 +211,7 @@ export function useCalculatorWizard() {
 
   const nextStep = useCallback(() => {
     if (validateCurrentStep()) {
-      setCurrentStep((prev) => Math.min(5, prev + 1));
+      setCurrentStep((prev) => Math.min(LAST_FORM_STEP, prev + 1));
       setError(null);
     }
   }, [validateCurrentStep]);
@@ -236,7 +223,7 @@ export function useCalculatorWizard() {
   }, []);
 
   const goToStep = useCallback((step: number) => {
-    if (step >= 0 && step <= 5) {
+    if (step >= 0 && step <= LAST_FORM_STEP) {
       setCurrentStep(step);
       setError(null);
       setStepErrors({});
@@ -249,9 +236,8 @@ export function useCalculatorWizard() {
     setError(null);
 
     try {
-      const result = await createEstimate(formData);
+      const result = await createEstimate(buildPayload(formData));
       setEstimateResult(result);
-      setCurrentStep(5);
       setCalculating(false);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Calculation error occurred.';
@@ -261,7 +247,11 @@ export function useCalculatorWizard() {
   }, [formData, validateCurrentStep]);
 
   const reset = useCallback(() => {
-    setFormData(INITIAL_FORM_STATE);
+    setFormData((prev) => ({
+      ...INITIAL_FORM_STATE,
+      plotLocation: prev.plotLocation,
+      locationId: prev.locationId,
+    }));
     setEstimateResult(null);
     setPreviewResult(null);
     setCurrentStep(0);

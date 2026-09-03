@@ -1,0 +1,286 @@
+.hero {
+  position: relative;
+  min-height: max(44rem, 100svh);
+  overflow: hidden;
+  isolation: isolate;
+  background: var(--forest-deep);
+  color: var(--paper);
+}
+
+.image {
+  z-index: -3;
+  border-radius: 0;
+  object-fit: cover;
+  object-position: 52% center;
+  transform: scale(1.025);
+  animation: image-settle 2.4s var(--ease-cinematic) both;
+}
+
+.scrim {
+  position: absolute;
+  z-index: -2;
+  inset: 0;
+  background:
+    linear-gradient(90deg, rgb(9 15 12 / 0.93) 0%, rgb(13 21 17 / 0.7) 42%, rgb(8 13 10 / 0.16) 76%),
+    linear-gradient(0deg, rgb(8 13 11 / 0.52) 0%, transparent 48%),
+    linear-gradient(180deg, rgb(8 13 11 / 0.28) 0%, transparent 32%);
+}
+
+.structure {
+  position: absolute;
+  z-index: -1;
+  top: 7svh;
+  right: 1vw;
+  width: min(56vw, 53rem);
+  height: 82svh;
+  overflow: visible;
+  opacity: 0.72;
+}
+
+.structure path,
+.structure line,
+.structure polyline {
+  fill: none;
+  stroke: var(--paper);
+  stroke-width: 1.15;
+  vector-effect: non-scaling-stroke;
+}
+
+.structure .bronze {
+  stroke: var(--oxide);
+}
+
+.ghost {
+  opacity: 0.24;
+}
+
+.drawn path {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: draw-line 1.9s var(--ease-cinematic) forwards;
+}
+
+.drawn path:nth-child(2) {
+  animation-delay: 100ms;
+}
+
+.drawn path:nth-child(3) {
+  animation-delay: 200ms;
+}
+
+.drawn path:nth-child(4) {
+  animation-delay: 300ms;
+}
+
+.dimensions {
+  opacity: 0;
+  animation: reveal-dimensions 700ms var(--ease-state) 1.45s forwards;
+}
+
+.inner {
+  position: relative;
+  display: flex;
+  min-height: max(44rem, 100svh);
+  align-items: flex-end;
+  padding-block: calc(var(--header-height) + 3rem) clamp(5.5rem, 10svh, 7.5rem);
+}
+
+.copy {
+  position: relative;
+  z-index: 1;
+  width: min(100%, 47rem);
+  animation: copy-enter 900ms var(--ease-cinematic) 120ms both;
+}
+
+.eyebrow {
+  margin-bottom: clamp(1rem, 2.5vw, 1.5rem);
+  color: #d8ad7c;
+}
+
+.copy h1 {
+  max-width: 10.5ch;
+  font-size: clamp(3rem, 7vw, 6rem);
+  font-weight: 500;
+  letter-spacing: -0.04em;
+  line-height: 0.92;
+  text-wrap: balance;
+}
+
+.intro {
+  max-width: 31rem;
+  margin-top: clamp(1.4rem, 3vw, 2rem);
+  color: rgb(239 234 227 / 0.84);
+  font-size: clamp(1rem, 1.4vw, 1.16rem);
+  line-height: 1.6;
+  text-wrap: pretty;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1.75rem;
+}
+
+.note {
+  position: absolute;
+  right: 0;
+  bottom: clamp(5.5rem, 10svh, 7.5rem);
+  margin: 0;
+  writing-mode: vertical-rl;
+  color: rgb(239 234 227 / 0.62);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.17em;
+  text-transform: uppercase;
+}
+
+.scrollCue {
+  position: absolute;
+  bottom: 1.75rem;
+  left: 50%;
+  display: flex;
+  gap: 0.55rem;
+  align-items: center;
+  transform: translateX(-50%);
+  color: rgb(239 234 227 / 0.72);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  animation: quiet-pulse 2.6s ease-in-out infinite;
+}
+
+@keyframes image-settle {
+  from {
+    transform: scale(1.065);
+  }
+
+  to {
+    transform: scale(1.025);
+  }
+}
+
+@keyframes draw-line {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes reveal-dimensions {
+  to {
+    opacity: 0.78;
+  }
+}
+
+@keyframes copy-enter {
+  from {
+    opacity: 0;
+    transform: translateY(1.25rem);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes quiet-pulse {
+  50% {
+    opacity: 0.4;
+  }
+}
+
+@media (max-width: 48rem) {
+  .hero,
+  .inner {
+    min-height: max(42rem, 100svh);
+  }
+
+  .image {
+    object-position: 58% center;
+  }
+
+  .scrim {
+    background:
+      linear-gradient(180deg, rgb(9 15 12 / 0.38) 0%, rgb(9 15 12 / 0.18) 32%, rgb(9 15 12 / 0.9) 78%, rgb(9 15 12 / 0.98) 100%),
+      linear-gradient(90deg, rgb(9 15 12 / 0.58), transparent 82%);
+  }
+
+  .structure {
+    top: 3svh;
+    right: -44vw;
+    width: 126vw;
+    height: 64svh;
+    opacity: 0.48;
+  }
+
+  .inner {
+    padding-bottom: 5.75rem;
+  }
+
+  .copy {
+    width: min(100%, 38rem);
+  }
+
+  .copy h1 {
+    font-size: clamp(2.7rem, 13vw, 4.75rem);
+    line-height: 0.94;
+  }
+
+  .intro {
+    max-width: 27rem;
+    font-size: 0.98rem;
+  }
+
+  .note {
+    display: none;
+  }
+
+  .scrollCue {
+    display: none;
+  }
+}
+
+@media (max-width: 30rem) {
+  .actions {
+    align-items: stretch;
+  }
+
+  .actions :global(.button) {
+    flex: 1 1 100%;
+  }
+
+  .scrollCue {
+    width: max-content;
+  }
+}
+
+@media (max-width: 48rem) and (max-height: 42rem) {
+  .hero,
+  .inner {
+    min-height: 100svh;
+  }
+
+  .inner {
+    padding-bottom: 1.5rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .image,
+  .copy,
+  .drawn path,
+  .dimensions,
+  .scrollCue {
+    animation: none;
+  }
+
+  .drawn path {
+    stroke-dashoffset: 0;
+  }
+
+  .dimensions {
+    opacity: 0.78;
+  }
+}
