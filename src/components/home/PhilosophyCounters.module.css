@@ -1,0 +1,19 @@
+/* --s-8 here plus --s-5 above the rule put 144px between the CTA and the
+   counters, which read as a hole rather than a break. */
+.cta {
+  margin-bottom: var(--s-6);
+}
+
+.counters {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--s-5) var(--s-4);
+  border-top: 1px solid var(--hairline);
+  padding-top: var(--s-4);
+}
+
+@media (min-width: 768px) {
+  .counters {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}

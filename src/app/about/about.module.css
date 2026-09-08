@@ -1,0 +1,336 @@
+.page {
+  background: var(--bg);
+  width: 100%;
+}
+
+/* Common section styles */
+.section {
+  padding-block: var(--section-y);
+  border-block-start: 1px solid var(--hairline);
+}
+
+.surfaceSection {
+  background: var(--surface);
+}
+
+.inner {
+  width: 100%;
+  max-width: var(--container);
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+}
+
+/* Duality Section */
+.dualityHeader {
+  margin-block-end: var(--s-6);
+}
+
+.eyebrow {
+  color: var(--accent);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-block-end: var(--s-2);
+}
+
+.sectionTitle {
+  font-size: var(--fs-h2);
+  color: var(--ink);
+  line-height: var(--lh-head);
+  letter-spacing: -0.015em;
+  max-width: 28ch;
+}
+
+.dualityGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--s-5);
+  margin-block-end: var(--s-6);
+}
+
+@media (min-width: 1024px) {
+  .dualityGrid {
+    grid-template-columns: 1fr 1fr;
+    gap: var(--s-7);
+  }
+}
+
+.dualityCard {
+  border: 1px solid var(--hairline);
+  padding: var(--s-5);
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+
+.cardIndex {
+  font-size: var(--fs-xs);
+  font-family: monospace;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.cardHeading {
+  font-size: var(--fs-h3);
+  color: var(--ink);
+  line-height: var(--lh-head);
+}
+
+.cardAspects {
+  font-size: var(--fs-md);
+  color: var(--body);
+  line-height: var(--lh-body);
+}
+
+.cardPerspective {
+  font-size: var(--fs-sm);
+  color: var(--muted);
+  font-style: italic;
+}
+
+.dualityResolution {
+  border-block-start: 1px solid var(--hairline);
+  padding-block-start: var(--s-5);
+}
+
+.resolutionText {
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-medium);
+  color: var(--ink);
+  line-height: var(--lh-head);
+  max-width: 58ch;
+}
+
+/* Principles Section */
+.principlesHeader {
+  margin-block-end: var(--s-6);
+}
+
+.leadText {
+  font-size: var(--fs-lg);
+  color: var(--body);
+  line-height: var(--lh-body);
+  max-width: 56ch;
+  margin-block-start: var(--s-2);
+}
+
+.principlesGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  border-block-start: 1px solid var(--hairline);
+}
+
+@media (min-width: 768px) {
+  .principlesGrid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.principleItem {
+  padding: var(--s-5);
+  border-block-end: 1px solid var(--hairline);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+
+@media (min-width: 768px) {
+  .principleItem:nth-child(odd) {
+    border-inline-end: 1px solid var(--hairline);
+  }
+}
+
+.principleIndex {
+  font-size: var(--fs-h3);
+  font-weight: var(--fw-bold);
+  color: var(--accent);
+  font-family: monospace;
+}
+
+.principleTitle {
+  font-size: var(--fs-h4);
+  font-weight: var(--fw-bold);
+  color: var(--ink);
+}
+
+.principleDescription {
+  font-size: var(--fs-md);
+  color: var(--body);
+  line-height: var(--lh-body);
+}
+
+/* Process / Seven Stages Section */
+.processHeader {
+  margin-block-end: var(--s-6);
+}
+
+.processNote {
+  display: inline-block;
+  font-size: var(--fs-sm);
+  color: var(--muted);
+  padding: var(--s-2) var(--s-3);
+  background: var(--surface);
+  border-inline-start: 2px solid var(--accent);
+  margin-block-start: var(--s-3);
+  max-width: 60ch;
+}
+
+.stagesList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  border-block-start: 1px solid var(--hairline);
+}
+
+.stageRow {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--s-2);
+  padding-block: var(--s-4);
+  border-block-end: 1px solid var(--hairline);
+}
+
+@media (min-width: 1024px) {
+  .stageRow {
+    grid-template-columns: 4rem 14rem 1fr;
+    gap: var(--s-5);
+    align-items: baseline;
+  }
+}
+
+.stageIndex {
+  font-size: var(--fs-h4);
+  font-weight: var(--fw-bold);
+  color: var(--accent);
+  font-family: monospace;
+}
+
+.stageTitle {
+  font-size: var(--fs-h4);
+  font-weight: var(--fw-bold);
+  color: var(--ink);
+}
+
+.stageContent {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+}
+
+.stageQuestion {
+  font-size: var(--fs-md);
+  font-weight: var(--fw-medium);
+  color: var(--ink);
+}
+
+.stageDescription {
+  font-size: var(--fs-sm);
+  color: var(--body);
+  line-height: var(--lh-body);
+}
+
+/* Studio Section */
+.studioGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--s-6);
+}
+
+@media (min-width: 1024px) {
+  .studioGrid {
+    grid-template-columns: 1fr 1fr;
+    gap: var(--s-7);
+    align-items: start;
+  }
+}
+
+.studioMedia {
+  position: relative;
+  width: 100%;
+}
+
+.studioImageFrame {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  border-radius: 4px;
+  background: var(--surface);
+}
+
+.studioImage {
+  object-fit: cover;
+  border-radius: 4px;
+}
+
+.studioCaption {
+  display: flex;
+  justify-content: space-between;
+  margin-block-start: var(--s-2);
+  font-size: var(--fs-xs);
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.studioContent {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+}
+
+.studioParagraph {
+  font-size: var(--fs-md);
+  color: var(--body);
+  line-height: var(--lh-body);
+}
+
+.studioMetaTable {
+  margin-block-start: var(--s-3);
+  border-block-start: 1px solid var(--hairline);
+  display: flex;
+  flex-direction: column;
+}
+
+.metaRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding-block: var(--s-2);
+  border-block-end: 1px solid var(--hairline);
+  font-size: var(--fs-sm);
+}
+
+.metaLabel {
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: var(--fs-xs);
+}
+
+.metaValue {
+  color: var(--ink);
+  font-weight: var(--fw-medium);
+}
+
+.metaPlaceholder {
+  color: var(--muted);
+  font-style: italic;
+}
+
+@media (max-width: 767px) {
+  .section {
+    padding-block: var(--section-y-sm);
+  }
+
+  .resolutionText {
+    font-size: var(--fs-md);
+  }
+
+  .leadText {
+    font-size: var(--fs-md);
+  }
+}

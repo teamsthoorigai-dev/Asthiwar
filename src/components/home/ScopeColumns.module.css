@@ -1,0 +1,98 @@
+.section {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.bgWrapper {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+
+.bgImage {
+  object-fit: cover;
+  opacity: 0.12;
+}
+
+.scrim {
+  position: absolute;
+  inset: 0;
+  background: var(--surface);
+  opacity: 0.88;
+}
+
+.mobileAccordion {
+  display: block;
+  margin-top: var(--s-6);
+}
+
+.desktopGrid {
+  display: none;
+  margin-top: var(--s-6);
+}
+
+.column {
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--hairline);
+  padding-top: var(--s-4);
+}
+
+.columnTitle {
+  font-size: var(--fs-h4);
+  font-weight: var(--fw-medium);
+  color: var(--ink);
+  margin-bottom: var(--s-3);
+  line-height: var(--lh-head);
+}
+
+.capabilityList,
+.accordionList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+
+.capabilityItem {
+  font-size: var(--fs-md);
+  color: var(--body);
+  line-height: var(--lh-body);
+  position: relative;
+  padding-left: var(--s-3);
+}
+
+.capabilityItem::before {
+  content: '—';
+  position: absolute;
+  left: 0;
+  color: var(--muted);
+}
+
+.cta {
+  margin-top: var(--s-8);
+  display: flex;
+}
+
+@media (min-width: 768px) {
+  .mobileAccordion {
+    display: none;
+  }
+
+  .desktopGrid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--s-6) var(--s-5);
+  }
+}
+
+@media (min-width: 1280px) {
+  .desktopGrid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--s-6);
+  }
+}

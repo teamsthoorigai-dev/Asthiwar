@@ -1,0 +1,39 @@
+.previewPortal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 320px;
+  height: 210px;
+  border-radius: 4px;
+  overflow: hidden;
+  box-shadow: 0 24px 60px -12px rgba(0, 0, 0, 0.45);
+  border: 1px solid var(--hairline);
+  pointer-events: none;
+  z-index: 1000;
+  transition: opacity 0.2s ease, transform 0.08s linear;
+  will-change: transform;
+}
+
+.previewImage {
+  object-fit: cover;
+  border-radius: 4px;
+}
+
+.previewMeta {
+  position: absolute;
+  bottom: 0;
+  inset-inline: 0;
+  padding: 0.6rem 0.85rem;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.85), transparent);
+  color: var(--on-accent);
+  font-family: var(--font-mono, monospace);
+  font-size: 0.68rem;
+  display: flex;
+  justify-content: space-between;
+}
+
+@media (pointer: coarse) {
+  .previewPortal {
+    display: none !important;
+  }
+}

@@ -1,0 +1,14 @@
+.heading {
+  /* Words must not break mid-letter when SplitText makes each char inline-block */
+  text-wrap: balance;
+}
+
+.word {
+  display: inline-block;
+  white-space: nowrap;
+}
+
+.char {
+  display: inline-block;
+  will-change: transform, opacity;
+}

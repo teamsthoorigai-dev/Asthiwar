@@ -1,0 +1,427 @@
+/* ------------------------------------------------------------------
+   ASTHIWAR Admin Console — component styles.
+
+   The admin views were authored against `calculator-card`, `form-input`,
+   `button--solid` and friends, but `calculator.css` is only imported by
+   CalculatorWizard, so none of those rules ever reached the /admin route.
+   Every input, button and card in the console rendered unstyled. This file
+   is the console's own design system; it is imported once from
+   `src/app/admin/page.tsx` and scoped to `.admin-console` so it can never
+   leak into the public site.
+
+   Everything lives in Tailwind's `components` layer, which sits below
+   `utilities` — so per-element Tailwind overrides in the JSX (`text-xs`,
+   `py-1.5`, `w-full`) still win, exactly as the markup assumes.
+   ------------------------------------------------------------------ */
+
+@layer components {
+  .admin-console {
+    --admin-field-bg: #ffffff;
+    --admin-field-border: rgb(26 26 24 / 0.22);
+    --admin-field-border-strong: rgb(26 26 24 / 0.38);
+    --admin-focus-ring: rgb(182 75 25 / 0.18);
+    --admin-danger: #b02a2a;
+    --admin-shadow-sm: 0 1px 2px rgb(26 26 24 / 0.06);
+    --admin-shadow-md: 0 4px 16px rgb(26 26 24 / 0.1);
+    --admin-shadow-lg: 0 18px 48px rgb(26 26 24 / 0.22);
+
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-sans);
+  }
+
+  /* ---------------------------------------------------------------
+     Surfaces
+     --------------------------------------------------------------- */
+
+  .admin-console .calculator-card {
+    background: var(--surface);
+    border: 1px solid var(--hairline);
+    border-radius: var(--radius);
+  }
+
+  /* ---------------------------------------------------------------
+     Form controls
+     --------------------------------------------------------------- */
+
+  .admin-console .form-input,
+  .admin-console .form-select,
+  .admin-console textarea.form-input {
+    display: block;
+    width: 100%;
+    padding: 0.5rem 0.65rem;
+    font-family: inherit;
+    font-size: 0.8125rem;
+    line-height: 1.4;
+    color: var(--ink);
+    background: var(--admin-field-bg);
+    border: 1px solid var(--admin-field-border);
+    border-radius: var(--radius);
+    box-shadow: var(--admin-shadow-sm);
+    transition:
+      border-color 150ms var(--ease-out),
+      box-shadow 150ms var(--ease-out);
+  }
+
+  .admin-console .form-input::placeholder,
+  .admin-console textarea.form-input::placeholder {
+    color: var(--muted);
+    opacity: 0.7;
+  }
+
+  .admin-console .form-input:hover:not(:disabled),
+  .admin-console .form-select:hover:not(:disabled) {
+    border-color: var(--admin-field-border-strong);
+  }
+
+  .admin-console .form-input:focus,
+  .admin-console .form-select:focus,
+  .admin-console textarea.form-input:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--admin-focus-ring);
+  }
+
+  .admin-console .form-input:disabled,
+  .admin-console .form-select:disabled {
+    background: var(--surface);
+    color: var(--muted);
+    cursor: not-allowed;
+  }
+
+  .admin-console textarea.form-input {
+    resize: vertical;
+    min-height: 4.5rem;
+  }
+
+  .admin-console .form-select {
+    appearance: none;
+    padding-right: 2.25rem;
+    cursor: pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%231A1A18' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.7rem center;
+    background-size: 0.9rem;
+  }
+
+  /* Precise decimal entry is the norm here and the rupee fields are narrow —
+     native spinners steal width and invite accidental scroll-wheel edits. */
+  .admin-console .form-input[type="number"] {
+    -moz-appearance: textfield;
+    appearance: textfield;
+  }
+
+  .admin-console .form-input[type="number"]::-webkit-outer-spin-button,
+  .admin-console .form-input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
+  .admin-console .calculator-checkbox {
+    width: 0.95rem;
+    height: 0.95rem;
+    flex-shrink: 0;
+    accent-color: var(--accent);
+    cursor: pointer;
+  }
+
+  .admin-console .calculator-checkbox:disabled {
+    cursor: not-allowed;
+  }
+
+  /* ---------------------------------------------------------------
+     Buttons
+     --------------------------------------------------------------- */
+
+  .admin-console .button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    padding: 0.5rem 0.85rem;
+    font-family: inherit;
+    font-size: 0.75rem;
+    font-weight: var(--fw-bold);
+    line-height: 1.2;
+    white-space: nowrap;
+    border: 1px solid transparent;
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition:
+      background-color 150ms var(--ease-out),
+      border-color 150ms var(--ease-out),
+      color 150ms var(--ease-out),
+      box-shadow 150ms var(--ease-out);
+  }
+
+  .admin-console .button:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px var(--admin-focus-ring);
+  }
+
+  .admin-console .button:disabled {
+    cursor: not-allowed;
+  }
+
+  .admin-console .button--solid {
+    background: var(--ink);
+    border-color: var(--ink);
+    color: var(--bg);
+    box-shadow: var(--admin-shadow-sm);
+  }
+
+  .admin-console .button--solid:hover:not(:disabled) {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--on-accent);
+  }
+
+  .admin-console .button--ghost {
+    background: var(--admin-field-bg);
+    border-color: var(--admin-field-border);
+    color: var(--ink);
+  }
+
+  .admin-console .button--ghost:hover:not(:disabled) {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .admin-console .button--danger {
+    background: transparent;
+    border-color: rgb(176 42 42 / 0.35);
+    color: var(--admin-danger);
+  }
+
+  .admin-console .button--danger:hover:not(:disabled) {
+    background: rgb(176 42 42 / 0.08);
+    border-color: var(--admin-danger);
+  }
+
+  /* ---------------------------------------------------------------
+     Filter pills — the shared control across every matrix tab
+     --------------------------------------------------------------- */
+
+  .admin-console .admin-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.4rem 0.7rem;
+    font-size: 0.75rem;
+    font-weight: var(--fw-bold);
+    line-height: 1.2;
+    white-space: nowrap;
+    color: var(--muted);
+    background: var(--admin-field-bg);
+    border: 1px solid var(--hairline);
+    border-radius: 999px;
+    cursor: pointer;
+    transition:
+      background-color 150ms var(--ease-out),
+      border-color 150ms var(--ease-out),
+      color 150ms var(--ease-out);
+  }
+
+  .admin-console .admin-pill:hover:not(.admin-pill--active) {
+    color: var(--ink);
+    border-color: var(--admin-field-border-strong);
+  }
+
+  .admin-console .admin-pill:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px var(--admin-focus-ring);
+  }
+
+  .admin-console .admin-pill--active {
+    background: var(--ink);
+    border-color: var(--ink);
+    color: var(--bg);
+  }
+
+  .admin-console .admin-pill__count {
+    font-family: var(--font-mono, ui-monospace, monospace);
+    font-size: 0.6875rem;
+    font-weight: var(--fw-medium);
+    opacity: 0.65;
+  }
+
+  /* ---------------------------------------------------------------
+     Search field with a leading icon slot
+     --------------------------------------------------------------- */
+
+  .admin-console .admin-search {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+
+  .admin-console .admin-search__icon {
+    position: absolute;
+    left: 0.6rem;
+    display: flex;
+    color: var(--muted);
+    pointer-events: none;
+  }
+
+  .admin-console .admin-search .form-input {
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+
+  .admin-console .admin-search__clear {
+    position: absolute;
+    right: 0.4rem;
+    display: flex;
+    padding: 0.2rem;
+    color: var(--muted);
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: color 150ms var(--ease-out);
+  }
+
+  .admin-console .admin-search__clear:hover {
+    color: var(--ink);
+  }
+
+  /* ---------------------------------------------------------------
+     Toasts — anchored to the viewport, not the top of the document.
+     Saves happen at the bottom of very long matrices; a banner in the
+     page header is feedback the operator never sees.
+     --------------------------------------------------------------- */
+
+  .admin-console .admin-toast-stack {
+    position: fixed;
+    right: 1.25rem;
+    bottom: 1.25rem;
+    z-index: 60;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    width: min(24rem, calc(100vw - 2.5rem));
+    pointer-events: none;
+  }
+
+  .admin-console .admin-toast {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.6rem;
+    padding: 0.7rem 0.8rem;
+    font-size: 0.75rem;
+    line-height: 1.45;
+    color: var(--ink);
+    background: var(--bg);
+    border: 1px solid var(--hairline);
+    border-left-width: 3px;
+    border-radius: var(--radius);
+    box-shadow: var(--admin-shadow-md);
+    pointer-events: auto;
+    animation: adminToastIn 0.22s var(--ease-out) both;
+  }
+
+  .admin-console .admin-toast--success {
+    border-left-color: var(--status-good);
+  }
+
+  .admin-console .admin-toast--error {
+    border-left-color: var(--admin-danger);
+  }
+
+  .admin-console .admin-toast__icon {
+    flex-shrink: 0;
+    margin-top: 0.05rem;
+  }
+
+  .admin-console .admin-toast--success .admin-toast__icon {
+    color: var(--status-good);
+  }
+
+  .admin-console .admin-toast--error .admin-toast__icon {
+    color: var(--admin-danger);
+  }
+
+  .admin-console .admin-toast__close {
+    flex-shrink: 0;
+    padding: 0.1rem;
+    color: var(--muted);
+    cursor: pointer;
+    transition: color 150ms var(--ease-out);
+  }
+
+  .admin-console .admin-toast__close:hover {
+    color: var(--ink);
+  }
+
+  @keyframes adminToastIn {
+    from {
+      opacity: 0;
+      transform: translateY(0.5rem);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* ---------------------------------------------------------------
+     Dialogs
+     --------------------------------------------------------------- */
+
+  .admin-console .admin-dialog {
+    background: var(--bg);
+    border: 1px solid var(--hairline);
+    border-radius: var(--radius);
+    box-shadow: var(--admin-shadow-lg);
+  }
+
+  /* ---------------------------------------------------------------
+     Sticky section toolbar — filters stay reachable while scrolling a
+     10-category, 100-row matrix.
+     --------------------------------------------------------------- */
+
+  .admin-console .admin-toolbar {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    padding-block: 0.65rem;
+    background: color-mix(in srgb, var(--bg) 92%, transparent);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--hairline);
+  }
+
+  /* ---------------------------------------------------------------
+     Motion
+     --------------------------------------------------------------- */
+
+  /* Opacity only, deliberately. `animate-fade-in` sits on the pricing matrix
+     root, which contains the modals and the toast stack — and any non-`none`
+     transform on an ancestor makes it the containing block for `position:
+     fixed` descendants, collapsing a full-screen overlay to the wrapper's box.
+     A translate here would silently break every dialog in the console. */
+  @keyframes adminFadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  .admin-console .animate-fade-in {
+    animation: adminFadeIn 0.25s var(--ease-out);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .admin-console .animate-fade-in,
+    .admin-console .admin-toast {
+      animation: none;
+    }
+  }
+
+  /* ---------------------------------------------------------------
+     Responsive Data Tables
+     --------------------------------------------------------------- */
+
+  .admin-console .overflow-x-auto > table {
+    min-width: 640px;
+  }
+}

@@ -1,0 +1,15 @@
+.reveal {
+  /* Lines are measured after the split, so balancing must not re-wrap them */
+  text-wrap: pretty;
+}
+
+.line {
+  display: block;
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .line {
+    will-change: auto;
+  }
+}

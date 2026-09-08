@@ -1,0 +1,23 @@
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--s-6);
+}
+
+.intro,
+.accordion {
+  min-width: 0;
+}
+
+@media (min-width: 960px) {
+  .layout {
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    gap: var(--s-8);
+  }
+
+  .intro {
+    position: sticky;
+    top: var(--s-7);
+    align-self: start;
+  }
+}

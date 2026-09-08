@@ -1,0 +1,9 @@
+.float > * {
+  will-change: transform, opacity;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .float > * {
+    will-change: auto;
+  }
+}

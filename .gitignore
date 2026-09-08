@@ -1,7 +1,9 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 # dependencies
-/node_modules
+# No leading slash: this repo is an npm workspace, so backend/ and database/
+# each carry their own node_modules that a root-only rule would miss.
+node_modules/
 /.pnp
 .pnp.*
 .yarn/*
@@ -19,6 +21,9 @@
 
 # production
 /build
+# Compiled workspace output — rebuilt on the host at deploy time. Committing it
+# risks shipping a stale build that shadows the real source.
+dist/
 
 # misc
 .DS_Store
@@ -32,6 +37,10 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+# ...but the templates are documentation, not secrets, and deploying from a
+# fresh clone is much harder without them.
+!.env.example
+!.env.local.example
 
 # vercel
 .vercel
@@ -39,3 +48,10 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# lead + estimate records written by the API routes
+/.data/
+
+# Working notes — build plans, audits and handoffs kept on disk for reference
+# but deliberately out of the repo. docs/ itself (the specs) is still tracked.
+/docs/notes/

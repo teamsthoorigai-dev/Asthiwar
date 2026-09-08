@@ -1,0 +1,221 @@
+/* ---- blueprint datum strip ---- */
+
+.blueprintDatumStrip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 140px), 1fr));
+  gap: var(--s-3);
+  padding: var(--s-3) var(--s-4);
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: 0.75rem;
+  margin-block-end: var(--s-5);
+}
+
+.datumItem {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.datumLabel {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.65rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.datumVal {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+/* ---- fact strip ---- */
+
+.facts {
+  display: flex;
+  flex-wrap: wrap;
+  margin: 0;
+  border-top: 1px solid var(--hairline);
+  border-bottom: 1px solid var(--hairline);
+}
+
+.fact {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: var(--s-2) var(--s-4) var(--s-2) 0;
+}
+
+.factLabel {
+  color: var(--muted);
+  font-size: var(--fs-xs);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin: 0;
+}
+
+.factValue {
+  color: var(--ink);
+  font-size: var(--fs-sm);
+  margin: 0;
+}
+
+.pending {
+  color: var(--muted);
+  font-style: italic;
+}
+
+/* ---- prose blocks ---- */
+
+.block {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--s-2);
+  padding-block: var(--s-5);
+  border-bottom: 1px solid var(--hairline);
+}
+
+.blockLabel {
+  color: var(--accent);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin: 0;
+}
+
+.prose {
+  color: var(--body);
+  font-size: var(--fs-lg);
+  line-height: var(--lh-body);
+  max-width: 62ch;
+  margin: 0;
+}
+
+/* ---- materials ---- */
+
+.materials {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--hairline);
+}
+
+.material {
+  padding-block: var(--s-2);
+  border-bottom: 1px solid var(--hairline);
+  color: var(--ink);
+  font-size: var(--fs-md);
+}
+
+/* ---- timeline ---- */
+
+.timeline {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--hairline);
+}
+
+.phase {
+  display: grid;
+  grid-template-columns: 2.5rem 1fr;
+  gap: var(--s-1) var(--s-3);
+  padding-block: var(--s-3);
+  border-bottom: 1px solid var(--hairline);
+}
+
+.phaseNumber {
+  grid-row: span 3;
+  color: var(--accent);
+  font-size: var(--fs-h3);
+  font-weight: var(--fw-bold);
+  font-variant-numeric: tabular-nums;
+  line-height: var(--lh-head);
+}
+
+.phaseName {
+  color: var(--ink);
+  font-size: var(--fs-h4);
+  font-weight: var(--fw-medium);
+  line-height: var(--lh-head);
+  margin: 0;
+}
+
+.phaseDuration {
+  color: var(--body);
+  font-size: var(--fs-sm);
+  margin: 0;
+}
+
+.phaseNote {
+  color: var(--muted);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-body);
+  max-width: 52ch;
+  margin: 0;
+}
+
+/* ---- next project ---- */
+
+.next {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-2) var(--s-4);
+  padding-block: var(--s-5);
+  border-top: 1px solid var(--hairline);
+}
+
+.nextLabel {
+  color: var(--muted);
+  font-size: var(--fs-xs);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin: 0;
+}
+
+.nextTitle {
+  color: var(--ink);
+  font-size: var(--fs-h3);
+  font-weight: var(--fw-bold);
+  letter-spacing: -0.015em;
+  line-height: var(--lh-head);
+  margin: 0.25rem 0 0;
+  transition: color var(--dur-fast) var(--ease-out);
+}
+
+.nextLink:hover .nextTitle,
+.nextLink:focus-visible .nextTitle {
+  color: var(--accent);
+}
+
+.sectionTitle {
+  color: var(--ink);
+  font-size: var(--fs-h3);
+  font-weight: var(--fw-bold);
+  letter-spacing: -0.015em;
+  margin: 0 0 var(--s-3);
+}
+
+@media (min-width: 1024px) {
+  .block {
+    grid-template-columns: 12rem 1fr;
+    gap: var(--s-4);
+  }
+}
+
+@media (max-width: 640px) {
+  .blueprintDatumStrip {
+    padding: var(--s-2) var(--s-3);
+    gap: var(--s-2);
+  }
+
+  .phase {
+    grid-template-columns: 2.2rem 1fr;
+    gap: var(--s-1) var(--s-2);
+  }
+}

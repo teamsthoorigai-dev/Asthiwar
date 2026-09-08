@@ -1,0 +1,490 @@
+/* ------------------------------------------------------------------
+   /services — Architectural Horizontal Filmstrip Language.
+
+   Designed for:
+   - Desktop (>= 1024px): Pinned right-to-left horizontal scrub track with GSAP.
+   - Mobile (< 1024px): Zero scroll hijacking; native CSS scroll-snap swipe.
+   - Rules: No cards, no shadows, radius 0, hairline dividers, 3 type registers.
+   ------------------------------------------------------------------ */
+
+.page {
+  background: var(--bg);
+  position: relative;
+  min-height: 100vh;
+}
+
+/* ==================================================================
+   PINNED STAGE & HUD (DESKTOP)
+   ================================================================== */
+
+.stageWrapper {
+  position: relative;
+  background: var(--bg);
+  width: 100%;
+}
+
+/* Persistent HUD atop the pinned track */
+.hud {
+  position: sticky;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--s-3) var(--gutter);
+  background: rgba(250, 248, 245, 0.94);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-block-end: 1px solid var(--hairline);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.hudLeft {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+}
+
+.hudLabel {
+  color: var(--muted);
+}
+
+.hudSeparator {
+  display: block;
+  width: 1.5rem;
+  height: 1px;
+  background: var(--hairline);
+}
+
+.hudActiveIndex {
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--fw-medium);
+  color: var(--ink);
+}
+
+/* Interactive discipline jump tabs */
+.hudTabs {
+  display: none;
+  align-items: center;
+  gap: var(--s-1);
+}
+
+@media (min-width: 1200px) {
+  .hudTabs {
+    display: flex;
+  }
+}
+
+.hudTabBtn {
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  padding: 0.35rem 0.75rem;
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted);
+  cursor: pointer;
+  transition:
+    color var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out),
+    background var(--dur-fast) var(--ease-out);
+}
+
+.hudTabBtn:hover {
+  color: var(--ink);
+  border-color: var(--hairline);
+}
+
+.hudTabBtnActive {
+  color: var(--ink);
+  border-color: var(--ink);
+  background: rgba(26, 26, 24, 0.04);
+  font-weight: var(--fw-medium);
+}
+
+.hudRight {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+}
+
+.hudCounter {
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.hudCounterTotal {
+  color: var(--muted);
+}
+
+/* Hairline scroll progress bar */
+.hudProgressTrack {
+  width: 80px;
+  height: 2px;
+  background: var(--hairline);
+  position: relative;
+  overflow: hidden;
+}
+
+.hudProgressBar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  background: var(--ink);
+  transform-origin: left center;
+  will-change: transform;
+}
+
+/* ==================================================================
+   HORIZONTAL TRACK & PANELS
+   ================================================================== */
+
+.pinContainer {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+}
+
+.track {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  width: max-content;
+  will-change: transform;
+}
+
+.panel {
+  position: relative;
+  width: 100vw;
+  height: calc(100vh - 53px);
+  min-height: 680px;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: 1.15fr 0.85fr;
+  align-items: center;
+  padding-inline-start: max(var(--gutter), calc((100vw - var(--container-large)) / 2 + var(--gutter)));
+  padding-inline-end: max(var(--gutter), calc((100vw - var(--container-large)) / 2));
+  padding-block: var(--s-4);
+  gap: clamp(2rem, 5vw, 6rem);
+  border-inline-end: 1px solid var(--hairline);
+  background: var(--bg);
+}
+
+/* Panel Content / Copy */
+.panelContent {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--s-3);
+  max-width: 620px;
+  z-index: 2;
+}
+
+.eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}
+
+.indexNumber {
+  color: var(--ink);
+  font-weight: var(--fw-medium);
+}
+
+.rule {
+  display: block;
+  width: 2.5rem;
+  height: 1px;
+  background: var(--hairline);
+}
+
+.title {
+  font-size: clamp(2.25rem, 1.5rem + 2.5vw, 4rem);
+  line-height: var(--lh-tight);
+  letter-spacing: -0.025em;
+  color: var(--ink);
+  font-weight: var(--fw-medium);
+  margin: 0;
+}
+
+.lead {
+  font-size: var(--fs-lg);
+  line-height: var(--lh-body);
+  color: var(--body);
+  max-width: 48ch;
+  margin: 0;
+}
+
+/* Architectural Spec Matrix (Capabilities & Process) */
+.specMatrix {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--s-4);
+  width: 100%;
+  padding-block: var(--s-3);
+  border-block: 1px solid var(--hairline);
+  margin-block: var(--s-2);
+}
+
+.specCol {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+
+.specColTitle {
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 0;
+  font-weight: var(--fw-medium);
+}
+
+.specList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.specItem {
+  font-size: var(--fs-xs);
+  line-height: 1.45;
+  color: var(--ink);
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.specBullet {
+  color: var(--muted);
+  font-size: 9px;
+  flex-shrink: 0;
+}
+
+.stepNumber {
+  font-variant-numeric: tabular-nums;
+  font-size: 10px;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+
+.link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding-block-end: 0.35rem;
+  border-block-end: 1px solid var(--hairline);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink);
+  margin-block-start: var(--s-1);
+  transition:
+    gap var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out);
+}
+
+.link:hover {
+  gap: 1rem;
+  border-block-end-color: var(--ink);
+}
+
+/* Panel Media */
+.panelMedia {
+  position: relative;
+  height: min(74svh, 680px);
+  width: 100%;
+  overflow: hidden;
+  border-radius: 4px;
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+}
+
+.image {
+  object-fit: cover;
+  border-radius: 4px;
+  transition: transform 1.2s var(--ease-out);
+}
+
+.panel:hover .image {
+  transform: scale(1.03);
+}
+
+.mediaCaption {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: var(--s-2) var(--s-3);
+  background: linear-gradient(to top, rgba(26, 26, 24, 0.75), transparent);
+  color: var(--on-accent);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.mediaCaptionTag {
+  opacity: 0.8;
+}
+
+/* ==================================================================
+   MOBILE / TABLET ADAPTATIONS (< 1024px)
+   Zero scroll hijacking; native swipe snap
+   ================================================================== */
+
+@media (max-width: 1023px) {
+  .hud {
+    position: relative;
+    top: auto;
+    padding-inline: var(--gutter);
+  }
+
+  .hudTabs {
+    display: none;
+  }
+
+  .pinContainer {
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .pinContainer::-webkit-scrollbar {
+    display: none;
+  }
+
+  .track {
+    display: flex;
+    flex-direction: row;
+    padding: var(--s-4) var(--gutter) var(--s-6);
+    gap: var(--s-4);
+    width: auto;
+    transform: none !important;
+  }
+
+  .panel {
+    width: 88vw;
+    max-width: 480px;
+    height: auto;
+    min-height: 0;
+    scroll-snap-align: center;
+    display: flex;
+    flex-direction: column;
+    padding: var(--s-4);
+    border: 1px solid var(--hairline);
+    gap: var(--s-3);
+  }
+
+  .panelMedia {
+    order: 1;
+    height: 240px;
+    width: 100%;
+    border: none;
+  }
+
+  .panelContent {
+    order: 2;
+    max-width: 100%;
+    gap: var(--s-2);
+  }
+
+  .title {
+    font-size: clamp(1.75rem, 1.2rem + 2vw, 2.5rem);
+  }
+
+  .lead {
+    font-size: var(--fs-md);
+  }
+
+  .specMatrix {
+    grid-template-columns: 1fr;
+    gap: var(--s-3);
+    padding-block: var(--s-2);
+    margin-block: var(--s-1);
+  }
+
+  .mobileHint {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding-block: var(--s-2) var(--s-6);
+    font-size: 11px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+}
+
+@media (max-width: 640px) {
+  .hud {
+    padding-block: var(--s-2);
+  }
+
+  .hudLabel,
+  .hudSeparator {
+    display: none;
+  }
+
+  .hudActiveIndex {
+    font-size: 10px;
+    max-width: 58vw;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .track {
+    padding: var(--s-3) var(--gutter) var(--s-5);
+    gap: var(--s-3);
+  }
+
+  .panel {
+    width: 85vw;
+    max-width: 360px;
+    padding: var(--s-3);
+  }
+
+  .panelMedia {
+    height: 180px;
+  }
+
+  .title {
+    font-size: clamp(1.4rem, 1rem + 2vw, 1.85rem);
+  }
+
+  .lead {
+    font-size: var(--fs-sm);
+  }
+}
+
+@media (min-width: 1024px) {
+  .mobileHint {
+    display: none;
+  }
+}

@@ -1,0 +1,1 @@
+ALTER TABLE "enquiries" ADD COLUMN IF NOT EXISTS "priority" text DEFAULT 'MEDIUM' NOT NULL;

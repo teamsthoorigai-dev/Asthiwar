@@ -1,0 +1,38 @@
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  margin-bottom: var(--s-6);
+}
+
+.center {
+  align-items: center;
+  text-align: center;
+}
+
+.eyebrow {
+  color: var(--accent);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  line-height: var(--lh-head);
+  margin: 0;
+}
+
+.title {
+  max-width: 22ch;
+  margin: 0;
+}
+
+.center .title {
+  max-width: 26ch;
+}
+
+.body {
+  color: var(--body);
+  font-size: var(--fs-lg);
+  line-height: var(--lh-body);
+  max-width: 56ch;
+  margin: 0;
+}

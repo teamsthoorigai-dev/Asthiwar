@@ -1,0 +1,251 @@
+.curtainSection {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  background: var(--bg);
+}
+
+.container {
+  width: 100%;
+  max-width: var(--container);
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+}
+
+.header {
+  margin-bottom: var(--s-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+
+.eyebrow {
+  color: var(--accent);
+  font-family: var(--font-mono, monospace);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin: 0;
+}
+
+.titleRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-3);
+}
+
+.title {
+  color: var(--ink);
+  font-size: var(--fs-h2);
+  font-weight: var(--fw-bold);
+  line-height: var(--lh-head);
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+.presets {
+  display: flex;
+  gap: var(--s-2);
+}
+
+.presetBtn {
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: 4px;
+  padding: 0.35rem 0.85rem;
+  font-size: 0.75rem;
+  font-family: var(--font-mono, monospace);
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.2s var(--ease-out);
+}
+
+.presetBtn:hover,
+.presetActive {
+  background: var(--ink);
+  color: var(--on-accent);
+  border-color: var(--ink);
+}
+
+/* ---- Stage & Comparison Viewport ---- */
+
+.stage {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid var(--hairline);
+  box-shadow: 0 16px 36px -10px rgba(26, 26, 24, 0.08);
+  user-select: none;
+  cursor: ew-resize;
+  background: var(--surface);
+}
+
+/* Background Layer: Completed Villa Photo */
+.realityLayer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.realityImage {
+  object-fit: cover;
+  border-radius: 4px;
+}
+
+/* Foreground Layer: CAD Blueprint (clipped via clip-path) */
+.blueprintLayer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background: var(--drafting-surface);
+  overflow: hidden;
+}
+
+.blueprintSvg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Floating Badges */
+.badgeLeft,
+.badgeRight {
+  position: absolute;
+  top: var(--s-4);
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.85rem;
+  border-radius: var(--radius);
+  font-family: var(--font-mono, monospace);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  pointer-events: none;
+}
+
+.badgeLeft {
+  left: var(--s-4);
+  background: var(--surface);
+  color: var(--accent);
+  border: 1px solid var(--hairline);
+}
+
+.badgeRight {
+  right: var(--s-4);
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--hairline);
+}
+
+.statusDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 0;
+  background: currentColor;
+}
+
+/* Draggable Divider Line & Handle */
+.divider {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--accent);
+  z-index: 20;
+  pointer-events: none;
+  box-shadow: 0 0 8px rgba(182, 75, 25, 0.25);
+}
+
+.handle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius);
+  background: var(--bg);
+  border: 1px solid var(--hairline);
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 16px rgba(26, 26, 24, 0.15);
+  cursor: ew-resize;
+  pointer-events: auto;
+  transition: transform 0.15s ease;
+}
+
+.handle:hover,
+.handleActive {
+  transform: translate(-50%, -50%) scale(1.08);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.handleIcon {
+  width: 18px;
+  height: 18px;
+  stroke: currentColor;
+  stroke-width: 2;
+  fill: none;
+}
+
+.captionRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: var(--s-3);
+  font-size: var(--fs-sm);
+  color: var(--muted);
+}
+
+.captionDetails {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+}
+
+@media (max-width: 767px) {
+  .stage {
+    aspect-ratio: 4 / 3;
+    border-radius: var(--radius);
+  }
+
+  .titleRow {
+    flex-direction: column;
+    gap: var(--s-2);
+  }
+
+  .presets {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .badgeLeft,
+  .badgeRight {
+    top: var(--s-2);
+    font-size: 0.62rem;
+    padding: 0.3rem 0.6rem;
+  }
+
+  .badgeLeft {
+    left: var(--s-2);
+  }
+
+  .badgeRight {
+    right: var(--s-2);
+  }
+}

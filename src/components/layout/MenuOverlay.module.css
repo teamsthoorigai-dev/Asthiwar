@@ -1,0 +1,152 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.overlay[hidden] {
+  display: none !important;
+}
+
+.top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+  max-width: var(--container-large);
+  width: 100%;
+  margin-inline: auto;
+  padding: var(--s-2) var(--gutter);
+}
+
+.logo {
+  height: 28px;
+  width: auto;
+}
+
+.close {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-1);
+  background: none;
+  border: 0;
+  border-radius: 4px;
+  padding: 0;
+  cursor: pointer;
+  color: var(--ink);
+  font-family: inherit;
+  font-size: var(--fs-md);
+  font-weight: var(--fw-medium);
+  line-height: 1;
+}
+
+.closeIcon {
+  position: relative;
+  width: 18px;
+  height: 18px;
+  flex: none;
+}
+
+.closeIcon::before,
+.closeIcon::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 100%;
+  height: 2px;
+  background: currentColor;
+}
+
+.closeIcon::before {
+  transform: rotate(45deg);
+}
+
+.closeIcon::after {
+  transform: rotate(-45deg);
+}
+
+.body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: safe center;
+  margin-block: auto;
+  gap: var(--s-6);
+  max-width: var(--container-large);
+  width: 100%;
+  margin-inline: auto;
+  padding: var(--s-6) var(--gutter);
+}
+
+.nav {
+  display: flex;
+  flex-direction: column;
+}
+
+.item {
+  border-bottom: 1px solid var(--hairline);
+}
+
+.link {
+  display: block;
+  padding-block: var(--s-3);
+  color: var(--ink);
+  font-size: var(--fs-h2);
+  font-weight: var(--fw-bold);
+  letter-spacing: -0.015em;
+  line-height: var(--lh-head);
+  transition: color var(--dur-fast) var(--ease-out);
+}
+
+.link:hover,
+.link:focus-visible {
+  color: var(--accent);
+}
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2) var(--s-6);
+}
+
+.metaBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.metaLabel {
+  color: var(--muted);
+  font-size: var(--fs-xs);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin: 0;
+}
+
+.metaValue {
+  color: var(--ink);
+  font-size: var(--fs-md);
+  margin: 0;
+}
+
+@media (max-width: 640px), (max-height: 720px) {
+  .body {
+    padding: var(--s-3) var(--gutter);
+    gap: var(--s-4);
+  }
+
+  .link {
+    padding-block: var(--s-2);
+    font-size: clamp(1.35rem, 5.5vw, 1.85rem);
+  }
+
+  .meta {
+    gap: var(--s-2) var(--s-4);
+  }
+}

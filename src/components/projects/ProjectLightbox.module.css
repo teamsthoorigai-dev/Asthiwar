@@ -1,0 +1,130 @@
+.lightboxBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  background: rgba(26, 26, 24, 0.92);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: clamp(1rem, 2vw, 2rem);
+  animation: fadeIn 0.25s var(--ease-out);
+}
+
+.topBar {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--on-accent);
+}
+
+.metaInfo {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  font-family: var(--font-mono, monospace);
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.counter {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.closeBtn {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--hairline);
+  color: var(--on-accent);
+  width: 40px;
+  height: 40px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  transition: all 0.2s ease;
+}
+
+.closeBtn:hover {
+  background: var(--surface);
+  color: var(--ink);
+  transform: scale(1.05);
+}
+
+.stageArea {
+  position: relative;
+  width: min(88vw, 1200px);
+  height: min(75vh, 760px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.activeImage {
+  object-fit: contain;
+  border-radius: 4px;
+}
+
+.navBtn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(26, 26, 24, 0.8);
+  border: 1px solid var(--hairline);
+  color: var(--on-accent);
+  width: 48px;
+  height: 48px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  z-index: 10;
+}
+
+.navBtn:hover {
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.navBtnLeft {
+  left: -24px;
+}
+
+.navBtnRight {
+  right: -24px;
+}
+
+.captionBar {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.75rem;
+  color: var(--drafting-muted);
+  text-align: center;
+  max-width: 60ch;
+  margin-top: 0.5rem;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (max-width: 767px) {
+  .navBtnLeft {
+    left: 8px;
+  }
+  .navBtnRight {
+    right: 8px;
+  }
+}

@@ -1,0 +1,182 @@
+================================================================================
+ASTHIWAR REQUIREMENTS INTERVIEW: QUESTIONS, OPTIONS & DECISIONS
+================================================================================
+
+This document records all architectural questions, multiple-choice options,
+recommended solutions, and confirmed user decisions established during the
+/grill-me alignment session and requirements reviews.
+
+--------------------------------------------------------------------------------
+QUESTION 1: CONDITIONAL & COMPLIMENTARY ITEMS (ROOF WEATHERING)
+--------------------------------------------------------------------------------
+
+[Question]
+How should conditional items (like Roof Weathering: complimentary above 2,000
+sq.ft terrace) and optional in-package additions (Fans, Lofts, False Ceiling
+for Basic/Standard tiers) be processed in the Calculator Wizard?
+
+[Options Presented]
+  * Option 1 (Recommended):
+    Dynamically auto-calculate conditional rules (e.g., Roof Weathering is
+    complimentary when terrace area > 2,000 sq.ft, otherwise priced at
+    Rs.80 or Rs.70/sq.ft) and render in-package extras (Fans, Lofts, False
+    Ceiling) as optional toggles for Basic/Standard tiers in Step 4.
+  * Option 2:
+    Treat all optional/conditional items as separate line-items in the Add-Ons
+    Step (Step 4), where users explicitly opt-in with custom quantities.
+  * Option 3:
+    Include all conditional items as standard 100% complimentary inclusions
+    across all package tiers without charging any extra rate.
+
+[Confirmed User Decision]
+  * Selected: Option 1
+  * User Clarification Note: "and complimentary for other two packages. check packages clearly"
+  * Business Rule Implemented:
+    - Basic Package:
+      If terrace area > 2,000 sq.ft => Rs.0 (Complimentary)
+      Otherwise => Terrace Area * Rs.80/sq.ft
+    - Standard Package:
+      If terrace area > 2,000 sq.ft => Rs.0 (Complimentary)
+      Otherwise => Terrace Area * Rs.70/sq.ft
+    - Premium & Luxury Packages:
+      100% Complimentary / Included (Checked) regardless of terrace area.
+
+--------------------------------------------------------------------------------
+QUESTION 2: TIER-BASED IN-PACKAGE INCLUSIONS VS. ADD-ONS
+--------------------------------------------------------------------------------
+
+[Question]
+For items with tier-based inclusions (e.g. Fans, Lofts, False Ceiling,
+Soil Testing, Architect Visits), how should the Calculator Wizard display
+them across packages?
+
+[Options Presented]
+  * Option 1 (Recommended):
+    Show them as optional toggles for Basic & Standard with clear per-sq.ft
+    pricing, while automatically displaying them as "Included (Complimentary)"
+    for Premium & Luxury tiers.
+  * Option 2:
+    Always include them as optional selectable add-ons for all tiers, but
+    apply a Rs.0 rate for Premium/Luxury tiers.
+  * Option 3:
+    Include them in the Base package cost directly and remove the optional
+    per-sq.ft additions for Basic & Standard tiers.
+
+[Confirmed User Decision]
+  * Selected: Option 1
+  * Business Rule Implemented:
+    - Basic & Standard Tiers:
+      Display checkboxes/toggles in Step 4:
+        * Ceiling Fans: +Rs.50/sq.ft
+        * Lofts (1 loft/room): +Rs.12/sq.ft
+        * False Ceiling: +Rs.12/sq.ft
+        * Soil Testing: +Rs.40/sq.ft
+        * Architect Concrete Visits: +Rs.40/sq.ft
+    - Premium & Luxury Tiers:
+      Automatically marked as "Included in Tier (Complimentary)" at Rs.0 extra cost.
+
+--------------------------------------------------------------------------------
+QUESTION 3: STANDARD EXCLUSIONS & CONTRACT TRANSPARENCY
+--------------------------------------------------------------------------------
+
+[Question]
+How should the 11 Standard Exclusions (DTCP approval, EB charges, Interior
+carpentry, Borewell, Electrical appliances, etc.) be presented to the customer?
+
+[Options Presented]
+  * Option 1 (Recommended):
+    Render an explicit "Standard Exclusions & Client Scope" section on both
+    the Step 5 Review screen and the generated PDF Quotation for complete
+    contract transparency.
+  * Option 2:
+    Display exclusions only as small terms & conditions fine print at the
+    bottom of the PDF Quotation.
+  * Option 3:
+    Provide an optional "Enquire about Excluded Services" button in the summary
+    to capture leads for Interior/EB/Borewell work.
+
+[Confirmed User Decision]
+  * Selected: Option 1
+  * Business Rule Implemented:
+    Render an explicit "Standard Exclusions & Scope of Work" 2-column checklist on:
+      1. Step 5 Review Screen in the calculator wizard.
+      2. Official PDF Quotation document.
+    The 11 standard exclusions:
+      1. Elevation Work (Custom architectural facade beyond standard elevation)
+      2. Outer Area Development (Setbacks, compound paving & landscaping)
+      3. Interior Works & Custom Carpentry (Wardrobes, kitchen cabinets, modular woodwork)
+      4. DTCP & Local Body Building Approval / Plan Sanction Charges
+      5. Electricity Board (EB) Connection & Meter Deposit Charges
+      6. Gas Line Connection & Charges
+      7. Municipal Water & Drainage Connection Charges
+      8. Borewell Drilling, Casing & Submersible Piping
+      9. Water Pumps & Motors (unless chosen as Add-On)
+      10. Electrical Appliances (TV, Refrigerator, ACs, Chimney, Dishwasher)
+      11. Vacant Land Tax (VLT) & Local Property Tax
+
+--------------------------------------------------------------------------------
+QUESTION 4: PROJECT TYPES & COMMERCIAL / CONSULTANCY SCOPE
+--------------------------------------------------------------------------------
+
+[Question]
+How should the Commercial Packages (Basic, Standard, Premium with >4,500 sq.ft
+volume discount) and Structural Design Consultancy rates be organized in the
+Calculator UI?
+
+[Options Presented]
+  * Option 1 (Recommended):
+    Keep the primary Calculator Wizard dedicated to Residential Construction
+    now, with Commercial and Structural Consultancy tabs ready to be enabled
+    as dedicated calculator modes.
+  * Option 2:
+    Add a Project Type selector in Step 1 immediately supporting Residential,
+    Commercial (3 tiers w/ 4500 sq.ft threshold), and Structural Consultancy modes.
+  * Option 3:
+    Include Commercial packages directly alongside Residential tiers in the
+    package selection step.
+
+[Confirmed User Decision]
+  * Selected: Option 1
+  * Business Rule Implemented:
+    - Primary Calculator focuses on Residential Construction (Basic Rs.2099/Rs.1999,
+      Standard Rs.2468/Rs.2357, Premium Rs.2899/Rs.2799, Luxury Rs.3250/Rs.3200).
+    - Backend and database schema are architected to support future Commercial
+      Construction (>4500 sq.ft threshold) and Structural Design Consultancy modules.
+
+================================================================================
+ADDITIONAL KEY CLARIFICATIONS & CONFIRMED DIRECTIVES
+================================================================================
+
+1. Brand Customization Items:
+   Consolidated from 48 legacy rows into 24 standardized customizable items,
+   each with 4 tier options and calculated rate deltas.
+
+2. Rooftop Solar 3kW Price:
+   Updated from Rs.1,85,000 to Rs.1,90,000 (5kW retained at Rs.2,95,000).
+
+3. Motor Automation Options:
+   Both options retained: Bore Water OHT (Rs.12,000) and Corporation Water OHT
+   (Rs.12,000), plus combined option (Rs.24,000).
+
+4. Engineering Notes (Add-Ons):
+   Displayed prominently in amber callout boxes on UI add-on cards for OHT
+   (2500L), Septic Tank (6000L), Sump (6000L), Main Gate (60/120/24 sq.ft),
+   Solar, and Heat Pump.
+
+5. Volume Discount Threshold:
+   - Volume Discount Threshold: Fully dynamic and editable via Admin Pricing Config Manager.
+- Milestone Payment Schedule: 10 distinct phases totaling exactly 100%, populated in milestone_stages table.
+
+================================================================================
+QUESTION 5: UNIFIED MASTER BRAND CATALOG WITH TOP PACKAGE SELECTORS (SESSION 2 & 3)
+================================================================================
+How should Brand Pricing, Package Inclusions, and Save Operations be handled in the Admin Portal for maximum simplicity and zero math errors?
+
+Confirmed Decision: Unified Master Catalog with Top Package Selectors & Atomic Save
+1. Top Package Selectors: 4 dropdown selectors at the top of each item card for Basic, Standard, Premium, and Luxury included defaults.
+2. Master Brand Table: Enter Brand Name and a single Benchmark Rate (Rs./sqft).
+3. Live Computed Badges: Real-time badges for all 4 packages (Green 'Included', Amber '+Rs. X Upgrade', Teal '-Rs. X Credit').
+4. Atomic Item Save: A single 'Save Item Configuration' button per item card saves defaults and rates in one atomic API transaction.
+5. Modal Add Option: Clean modal dialog to add new brand options.
+6. Customer Calculator & PDF: Downgrade credits reduce total cost with clear credit badges and itemized line deductions.
+

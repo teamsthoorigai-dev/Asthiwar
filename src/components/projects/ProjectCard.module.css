@@ -1,0 +1,85 @@
+.card {
+  display: block;
+}
+
+.link {
+  display: block;
+}
+
+.media {
+  position: relative;
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+  border-radius: 4px;
+  background: var(--surface);
+}
+
+.frame {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 0.5s var(--ease-out);
+}
+
+.frameActive {
+  opacity: 1;
+}
+
+.image {
+  object-fit: cover;
+  border-radius: 4px;
+  transition: transform 0.6s var(--ease-out);
+}
+
+.link:hover .image,
+.link:focus-visible .image {
+  transform: scale(1.03);
+}
+
+.title {
+  color: var(--ink);
+  font-size: var(--fs-h4);
+  font-weight: var(--fw-medium);
+  line-height: var(--lh-head);
+  margin: var(--s-2) 0 var(--s-1);
+}
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--hairline);
+}
+
+.metaItem {
+  display: flex;
+  gap: 0.4rem;
+  padding: 0.5rem var(--s-2) 0.5rem 0;
+  font-size: var(--fs-xs);
+  line-height: var(--lh-head);
+}
+
+.metaLabel {
+  color: var(--muted);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.metaValue {
+  color: var(--body);
+}
+
+/* Unconfirmed values stay visible but read as pending, never hidden. */
+.pending {
+  color: var(--muted);
+  font-style: italic;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .frame,
+  .image {
+    transition: none;
+  }
+}

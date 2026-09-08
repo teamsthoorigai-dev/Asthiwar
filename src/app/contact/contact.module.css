@@ -1,0 +1,129 @@
+.page {
+  width: 100%;
+  background: var(--bg);
+}
+
+.contactSection {
+  padding-block: calc(var(--section-y) + 5rem) var(--section-y);
+}
+
+.inner {
+  width: 100%;
+  max-width: var(--container);
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--s-7);
+}
+
+.intro {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.eyebrow {
+  margin: 0 0 var(--s-2);
+  color: var(--accent);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.title {
+  max-width: 12ch;
+  margin: 0;
+}
+
+.body {
+  max-width: 42ch;
+  margin: var(--s-4) 0 0;
+  color: var(--body);
+  font-size: var(--fs-lg);
+  line-height: var(--lh-body);
+}
+
+.details {
+  width: 100%;
+  max-width: 36rem;
+  margin: var(--s-6) 0 0;
+  border-block-start: 1px solid var(--hairline);
+}
+
+.detail {
+  display: grid;
+  grid-template-columns: minmax(7rem, 0.7fr) minmax(0, 1.3fr);
+  gap: var(--s-3);
+  padding-block: var(--s-2);
+  border-block-end: 1px solid var(--hairline);
+}
+
+.detailLabel {
+  color: var(--muted);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-medium);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.placeholder {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--fs-sm);
+  font-style: italic;
+  line-height: var(--lh-body);
+}
+
+.form {
+  min-width: 0;
+}
+
+.mapSection {
+  padding-block: var(--section-y-sm);
+  border-block-start: 1px solid var(--hairline);
+  background: var(--surface);
+}
+
+@media (min-width: 1024px) {
+  .grid {
+    grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+    gap: var(--s-8);
+    align-items: start;
+  }
+
+  .intro {
+    position: sticky;
+    top: 20vh;
+  }
+}
+
+@media (max-width: 767px) {
+  .contactSection {
+    padding-block: calc(var(--section-y-sm) + 4rem) var(--section-y-sm);
+  }
+
+  .body {
+    font-size: var(--fs-md);
+  }
+
+  .details {
+    margin-top: var(--s-5);
+  }
+
+  .detail {
+    grid-template-columns: minmax(6rem, 0.7fr) minmax(0, 1.3fr);
+    gap: var(--s-2);
+  }
+}
+
+@media (max-width: 480px) {
+  .detail {
+    grid-template-columns: 1fr;
+    gap: 0.25rem;
+  }
+}

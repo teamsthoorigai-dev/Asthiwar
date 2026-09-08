@@ -1,0 +1,53 @@
+.section {
+  padding-block: var(--section-y);
+}
+
+.tight {
+  padding-block: var(--section-y-sm);
+}
+
+.container {
+  width: 100%;
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+}
+
+.regular {
+  max-width: var(--container);
+}
+
+.large {
+  max-width: var(--container-large);
+}
+
+.small {
+  max-width: var(--container-small);
+}
+
+/* ---- ground colours. Section 06 and 11 are the accent interludes. ---- */
+
+.bg {
+  background: var(--bg);
+}
+
+.surface {
+  background: var(--surface);
+}
+
+.accent {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.accent :is(h1, h2, h3, h4) {
+  color: var(--on-accent);
+}
+
+.ink {
+  background: var(--ink);
+  color: var(--on-accent);
+}
+
+.ink :is(h1, h2, h3, h4) {
+  color: var(--on-accent);
+}

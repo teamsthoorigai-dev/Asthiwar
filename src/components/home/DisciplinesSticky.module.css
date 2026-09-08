@@ -1,0 +1,183 @@
+/* ---- shared ---- */
+
+.list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.row {
+  border-bottom: 1px solid var(--hairline);
+}
+
+.link {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--s-2) var(--s-3);
+  align-items: baseline;
+  padding: var(--s-3) 0 var(--s-3) var(--s-3);
+  border-left: 2px solid transparent;
+  transition:
+    border-color var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out);
+}
+
+.index {
+  color: var(--muted);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  font-variant-numeric: tabular-nums;
+  transition: color var(--dur-fast) var(--ease-out);
+}
+
+.title {
+  color: var(--muted);
+  font-size: var(--fs-h3);
+  font-weight: var(--fw-bold);
+  letter-spacing: -0.015em;
+  line-height: var(--lh-head);
+  margin: 0;
+  transition: color var(--dur-fast) var(--ease-out);
+}
+
+.short {
+  grid-column: 2;
+  color: var(--muted);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-body);
+  margin: 0;
+  max-width: 42ch;
+  transition: color var(--dur-fast) var(--ease-out);
+}
+
+/* active state */
+.active .link {
+  border-left-color: var(--accent);
+}
+
+.active .index {
+  color: var(--accent);
+}
+
+.active .title {
+  color: var(--ink);
+}
+
+.active .short {
+  color: var(--body);
+}
+
+/* ---- mobile: plain list, image inline under each row ---- */
+
+.inlineMedia {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  margin: 0 0 var(--s-3);
+  overflow: hidden;
+  border-radius: 4px;
+  background: var(--surface);
+}
+
+.image {
+  object-fit: cover;
+  border-radius: 4px;
+}
+
+/* ---- desktop: sticky list + cross-fading image stack ---- */
+
+.track {
+  display: block;
+}
+
+.sticky {
+  display: block;
+}
+
+.grid {
+  display: block;
+}
+
+.media {
+  display: none;
+}
+
+@media (min-width: 1024px) {
+  /* Scroll distance for the section. 400vh spent 80vh per discipline against
+     the reference's ~67vh, which made the image swaps feel sluggish and cost
+     ~500px of page. 350vh lands on 70vh each. */
+  .track {
+    height: 350vh;
+    position: relative;
+  }
+
+  .sticky {
+    position: sticky;
+    top: 22vh;
+  }
+
+  /* Image-led: the media column carries the section, the list reads beside it.
+     minmax(0, …) so a long discipline title cannot push the image narrower.
+     Held to a gentler split here — below 1440 the text column still needs room. */
+  .grid {
+    display: grid;
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+    gap: var(--s-7);
+    align-items: start;
+  }
+
+  /* The frame stills are 16:9. A portrait box cropped away most of each frame;
+     5:4 keeps ~70% of the width and stays close to the reference's 1.56 image,
+     while giving the media enough height to balance the list beside it. */
+  .media {
+    display: block;
+    position: relative;
+    aspect-ratio: 5 / 4;
+    overflow: hidden;
+    border-radius: 4px;
+    background: var(--surface);
+  }
+
+  .layer {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    transition: opacity 0.6s var(--ease-out);
+  }
+
+  .layerActive {
+    opacity: 1;
+  }
+
+  .inlineMedia {
+    display: none;
+  }
+
+  /* Kept tight so the whole sticky list fits a short laptop viewport. At
+     --s-4 the five rows ran past the fold once the list stuck at top: 22vh. */
+  .link {
+    padding-block: var(--s-3);
+  }
+}
+
+/* Wide screens have the room to let the media column dominate outright. */
+@media (min-width: 1440px) {
+  .grid {
+    grid-template-columns: minmax(0, 0.72fr) minmax(0, 1.28fr);
+  }
+}
+
+/* Short laptop viewports: 22vh of offset pushes the last row past the fold
+   while the list is stuck. Pull the offset in rather than shrink the type. */
+@media (min-width: 1024px) and (max-height: 820px) {
+  .sticky {
+    top: 12vh;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .layer {
+    transition: none;
+  }
+}

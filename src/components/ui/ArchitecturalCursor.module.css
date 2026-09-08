@@ -1,0 +1,81 @@
+.cursorDot {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  pointer-events: none;
+  z-index: 99999;
+  transform: translate(-50%, -50%);
+  transition: opacity 0.2s ease, transform 0.1s ease;
+  will-change: transform;
+}
+
+.cursorRing {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid rgba(217, 119, 87, 0.5);
+  background: rgba(217, 119, 87, 0.04);
+  pointer-events: none;
+  z-index: 99998;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: width 0.25s var(--ease-out),
+              height 0.25s var(--ease-out),
+              background 0.25s var(--ease-out),
+              border-color 0.25s var(--ease-out),
+              opacity 0.2s ease;
+  will-change: transform, width, height;
+}
+
+.cursorLabel {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--on-accent);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  white-space: nowrap;
+}
+
+/* Hover States */
+.cursorHoverRing {
+  width: 52px;
+  height: 52px;
+  border-color: rgba(217, 119, 87, 0.9);
+  background: rgba(217, 119, 87, 0.18);
+  backdrop-filter: blur(2px);
+}
+
+.cursorExpandedRing {
+  width: 76px;
+  height: 76px;
+  background: rgba(20, 20, 22, 0.88);
+  border-color: rgba(217, 119, 87, 0.7);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+.cursorExpandedRing .cursorLabel {
+  opacity: 1;
+}
+
+.hidden {
+  opacity: 0 !important;
+}
+
+@media (pointer: coarse), (prefers-reduced-motion: reduce) {
+  .cursorDot,
+  .cursorRing {
+    display: none !important;
+  }
+}

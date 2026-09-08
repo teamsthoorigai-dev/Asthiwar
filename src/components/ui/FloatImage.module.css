@@ -1,0 +1,31 @@
+.frame {
+  position: relative;
+  overflow: hidden;
+  border-radius: 4px;
+  background: var(--surface);
+}
+
+.settle {
+  position: absolute;
+  inset: 0;
+  transform-origin: center;
+  will-change: transform;
+}
+
+/* Inset vertically so the drift layer never exposes an edge as it scrubs */
+.drift {
+  position: absolute;
+  inset-block: -10%;
+  inset-inline: 0;
+}
+
+.image {
+  object-fit: cover;
+  border-radius: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .settle {
+    will-change: auto;
+  }
+}

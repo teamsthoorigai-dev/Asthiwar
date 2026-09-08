@@ -1,0 +1,211 @@
+.header {
+  position: fixed;
+  inset-block-start: 0;
+  inset-inline: 0;
+  z-index: 100;
+  border-bottom: 1px solid transparent;
+  transition:
+    background-color var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out),
+    transform 0.4s var(--ease-out);
+}
+
+/* Past 80px of scroll the bar gains a ground and a hairline. */
+.solid {
+  background: var(--bg);
+  border-bottom-color: var(--hairline);
+}
+
+/* Hidden while scrolling down, restored on scroll up. */
+.hidden {
+  transform: translateY(-100%);
+}
+
+/* While over a dark hero sequence at the top of the page */
+.darkHero:not(.solid) {
+  background: linear-gradient(to bottom, rgba(22, 25, 23, 0.75), transparent);
+  border-bottom-color: rgba(250, 248, 245, 0.12);
+}
+
+.darkHero:not(.solid) .logo,
+.darkHero:not(.solid) .menuButton {
+  color: var(--film-text);
+}
+
+.darkHero:not(.solid) .navLink {
+  color: var(--film-text-muted);
+}
+
+.darkHero:not(.solid) .navLink:hover,
+.darkHero:not(.solid) .navLink:focus-visible,
+.darkHero:not(.solid) .active {
+  color: var(--film-text);
+}
+
+.darkHero:not(.solid) .active::after {
+  background: var(--film-text);
+}
+
+.inner {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: var(--s-3);
+  max-width: var(--container-large);
+  margin-inline: auto;
+  padding: var(--s-2) var(--gutter);
+}
+
+.left,
+.right {
+  display: flex;
+  align-items: center;
+  gap: var(--s-4);
+}
+
+.right {
+  justify-content: flex-end;
+}
+
+/* ---- hamburger ---- */
+
+.menuButton {
+  display: inline-flex;
+  align-items: center;
+  /* Minimum target size (WCAG 2.5.8) — the icon alone left this at 20px. */
+  min-height: 24px;
+  gap: var(--s-1);
+  background: none;
+  border: 0;
+  border-radius: 4px;
+  padding: 0;
+  cursor: pointer;
+  color: var(--ink);
+  font-family: inherit;
+  font-size: var(--fs-md);
+  font-weight: var(--fw-medium);
+  line-height: 1;
+}
+
+.bars {
+  display: block;
+  width: 20px;
+  height: 20px;
+  flex: none;
+}
+
+.bars svg {
+  width: 100%;
+  height: 100%;
+}
+
+/* ---- inline links, desktop only ---- */
+
+.inlineNav {
+  display: none;
+  gap: var(--s-4);
+}
+
+.navLink {
+  position: relative;
+  color: var(--ink);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  padding-block: var(--s-1);
+}
+
+.navLink::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  height: 1px;
+  background: var(--accent);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+
+.navLink:hover::after,
+.navLink:focus-visible::after,
+.active::after {
+  transform: scaleX(1);
+}
+
+.active {
+  color: var(--accent);
+}
+
+/* ---- brand ---- */
+
+.brand {
+  display: block;
+  justify-self: center;
+  line-height: 0;
+  transition:
+    opacity var(--dur-base) var(--ease-out),
+    visibility var(--dur-base) var(--ease-out);
+}
+
+/* Homepage only: the hero owns the wordmark until its reveal completes. */
+.brandLocked {
+  opacity: 0;
+  visibility: hidden;
+}
+
+:global(body[data-hero-brand="shown"]) .brandLocked {
+  opacity: 1;
+  visibility: visible;
+}
+
+.logo {
+  display: block;
+  height: 22px;
+  width: auto;
+  color: var(--ink);
+}
+
+.ctaShort {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  .inner {
+    padding-inline: max(0.85rem, var(--gutter));
+    gap: var(--s-2);
+  }
+
+  .ctaFull {
+    display: none;
+  }
+
+  .ctaShort {
+    display: inline;
+  }
+
+  .ctaButton {
+    padding: 0.55rem 0.85rem !important;
+    font-size: var(--fs-xs) !important;
+  }
+
+  .logo {
+    height: 18px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .inlineNav {
+    display: flex;
+  }
+
+  .menuButton {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .header {
+    transition: none;
+  }
+}

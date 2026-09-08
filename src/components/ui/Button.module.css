@@ -1,0 +1,89 @@
+.button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s-1);
+  padding: 0.875rem 1.75rem;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  line-height: 1;
+  cursor: pointer;
+  overflow: hidden;
+  isolation: isolate;
+  transition: border-color var(--dur-fast) var(--ease-out);
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* The colour block that slides up on hover — Novascape's .hover-color-block-2 */
+.block {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  transform: translateY(101%);
+  transition: transform 0.4s var(--ease-out);
+}
+
+.label {
+  position: relative;
+  z-index: 1;
+  transition: color 0.4s var(--ease-out);
+}
+
+.button:hover .block,
+.button:focus-visible .block {
+  transform: translateY(0);
+}
+
+/* ---- variants ---- */
+
+.primary {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.primary .block {
+  background: var(--ink);
+}
+
+.ghost {
+  background: transparent;
+  color: var(--ink);
+  border-color: var(--hairline);
+}
+
+.ghost .block {
+  background: var(--ink);
+}
+
+.ghost:hover .label,
+.ghost:focus-visible .label {
+  color: var(--on-accent);
+}
+
+.ghost:hover,
+.ghost:focus-visible {
+  border-color: var(--ink);
+}
+
+.white {
+  background: var(--bg);
+  color: var(--accent);
+}
+
+.white .block {
+  background: var(--ink);
+}
+
+.white:hover .label,
+.white:focus-visible .label {
+  color: var(--on-accent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .block {
+    transition: none;
+  }
+}

@@ -1,0 +1,193 @@
+.drawerSection {
+  margin-block: var(--s-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.eyebrow {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin: 0;
+}
+
+.title {
+  font-size: var(--fs-h2);
+  color: var(--ink);
+  margin: 0;
+  letter-spacing: -0.015em;
+}
+
+.swatchesGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--s-4);
+}
+
+.swatchCard {
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: 4px;
+  padding: 1.25rem;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  text-align: left;
+  transition: all 0.25s var(--ease-out);
+  position: relative;
+  overflow: hidden;
+}
+
+.swatchCard:hover {
+  border-color: var(--accent);
+  transform: translateY(-3px);
+  box-shadow: 0 12px 30px -10px rgba(0, 0, 0, 0.12);
+}
+
+.swatchCardActive {
+  border-color: var(--accent);
+  background: var(--bg);
+  box-shadow: 0 0 0 2px var(--accent);
+}
+
+.imageWrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  border-radius: 4px;
+  overflow: hidden;
+  background: var(--surface);
+}
+
+.swatchImage {
+  object-fit: cover;
+  border-radius: 4px;
+  transition: transform 0.5s var(--ease-out);
+}
+
+.swatchCard:hover .swatchImage {
+  transform: scale(1.05);
+}
+
+.swatchInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.swatchOrigin {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.68rem;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.swatchName {
+  font-size: var(--fs-h4);
+  font-weight: 700;
+  color: var(--ink);
+  margin: 0;
+}
+
+.swatchHighlight {
+  font-size: var(--fs-xs);
+  color: var(--muted);
+  line-height: 1.4;
+  margin: 0;
+}
+
+/* Expanded Detail Drawer */
+.detailDrawer {
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: 0;
+  padding: 1.5rem;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+  animation: fadeIn 0.25s var(--ease-out);
+}
+
+@media (min-width: 768px) {
+  .detailDrawer {
+    grid-template-columns: 1.2fr 1fr;
+    align-items: center;
+  }
+}
+
+.detailLeft {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.detailTitle {
+  font-size: var(--fs-h3);
+  font-weight: 700;
+  color: var(--ink);
+  margin: 0;
+}
+
+.detailDesc {
+  font-size: var(--fs-md);
+  color: var(--body);
+  line-height: 1.6;
+  margin: 0;
+}
+
+.metricsGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--hairline);
+}
+
+.metricItem {
+  display: flex;
+  flex-direction: column;
+}
+
+.metricLabel {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.68rem;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+
+.metricVal {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--accent);
+  font-family: var(--font-mono, monospace);
+}
+
+.detailRight {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

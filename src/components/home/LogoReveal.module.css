@@ -1,0 +1,204 @@
+/* The reveal's start state is declared here, not in JS, so a cold load paints
+   the mark rather than the finished wordmark and then jumps. The percentages
+   come from WORDMARK_GEOMETRY in the generated brand component:
+   mark centre 53.2943%, left edge 51.25%, right edge 55.3385%. */
+
+.section {
+  position: relative;
+  background: var(--bg);
+}
+
+.stage {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100vh;
+  height: 100svh;
+  /* Contains the scaled lockup: at rest it is several times wider than the
+     viewport, and only the mark should be on screen. */
+  overflow: hidden;
+}
+
+/* One in-flow child, so the stage's centring stays a single decision and the
+   wordmark and its descriptor read as one lockup. */
+.center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.lockup {
+  width: min(86vw, 26rem);
+  margin: 0;
+  /* The heading carries the accessible name only; nothing here is set in type. */
+  font-size: 0;
+  line-height: 0;
+}
+
+.name {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+.wordmark {
+  display: block;
+  width: 100%;
+  height: auto;
+  color: var(--ink);
+  transform-origin: 53.2943% 50%;
+  transform: translateX(-3.2943%) scale(var(--reveal-start-scale));
+  clip-path: inset(0% 44.6615% 0% 51.25%);
+  --reveal-start-scale: 7.2;
+}
+
+/* Eyebrow register — the third of the three registers the design system allows.
+   Hidden at rest: the reveal brings it in once the wordmark is whole. */
+.descriptor {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  column-gap: 0.75em;
+  row-gap: 0.4rem;
+  max-width: min(90vw, 44rem);
+  margin: clamp(0.9rem, 2.2vh, 1.75rem) 0 0;
+  color: var(--muted);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-medium);
+  letter-spacing: 0.18em;
+  line-height: 1.6;
+  text-align: center;
+  text-transform: uppercase;
+  opacity: 0;
+}
+
+/* The separator belongs to the word before it, so a wrapped line can never
+   open with an orphaned middot. */
+.descriptor > span:not(:last-child)::after {
+  content: "·";
+  margin-inline-start: 0.75em;
+}
+
+/* Closes the opening viewport with an edge instead of leaving the lower half
+   empty. Centred with left/right + auto margins rather than a transform, because
+   the reveal animates `y` on this element and would overwrite it. */
+.foot {
+  position: absolute;
+  inset-inline: var(--gutter);
+  bottom: clamp(var(--s-3), 4vh, var(--s-5));
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--s-1) var(--s-4);
+  max-width: var(--container-large);
+  margin-inline: auto;
+  padding-block-start: var(--s-2);
+  border-block-start: 1px solid var(--hairline);
+  opacity: 0;
+}
+
+/* Links borrow the eyebrow register rather than adding a fourth. */
+.footLink {
+  position: relative;
+  color: var(--ink);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-medium);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.footLink::after {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  bottom: -0.35em;
+  height: 1px;
+  background: var(--accent);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+
+.footLink:hover::after,
+.footLink:focus-visible::after {
+  transform: scaleX(1);
+}
+
+/* The only affordance in the first viewport. A rule, not a label: the float
+   language allows a hairline at a viewport edge and no "scroll" copy. */
+.cue {
+  position: absolute;
+  bottom: clamp(var(--s-4), 6vh, var(--s-6));
+  left: 50%;
+  width: 1px;
+  height: clamp(2.5rem, 6vh, 4rem);
+  background: var(--hairline);
+  transform: translateX(-50%);
+}
+
+/* Too narrow for four terms and three separators. Whitespace does the work
+   instead, and the descriptor breaks into a tidy two-by-two. */
+@media (max-width: 560px) {
+  .descriptor {
+    column-gap: 1.6em;
+    letter-spacing: 0.14em;
+  }
+
+  .descriptor > span:not(:last-child)::after {
+    content: none;
+  }
+
+  .foot {
+    justify-content: center;
+    gap: var(--s-2);
+    text-align: center;
+  }
+
+  .footLink {
+    letter-spacing: 0.12em;
+  }
+}
+
+@media (min-width: 768px) {
+  .lockup {
+    width: min(80vw, 44rem);
+  }
+
+  .wordmark {
+    --reveal-start-scale: 5.1;
+  }
+}
+
+@media (min-width: 1024px) {
+  .lockup {
+    width: min(78vw, 60rem);
+  }
+
+  .wordmark {
+    --reveal-start-scale: 3;
+  }
+}
+
+/* Static final state: the whole wordmark, at rest, no scroll dependency. */
+@media (prefers-reduced-motion: reduce) {
+  .wordmark {
+    transform: none;
+    clip-path: none;
+  }
+
+  .descriptor,
+  .foot {
+    opacity: 1;
+  }
+
+  .cue {
+    display: none;
+  }
+}

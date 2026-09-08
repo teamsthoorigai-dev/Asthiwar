@@ -1,0 +1,163 @@
+.hero {
+  overflow: hidden;
+  background: var(--bg);
+  padding-block-start: clamp(var(--s-8), 10vw, var(--s-9));
+}
+
+.copy {
+  width: 100%;
+  max-width: var(--container);
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+  text-align: center;
+}
+
+.heading {
+  max-width: 18ch;
+  margin-inline: auto;
+}
+
+.body {
+  max-width: 56ch;
+  margin: var(--s-3) auto 0;
+  color: var(--body);
+  font-size: var(--fs-lg);
+  line-height: var(--lh-body);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--s-2);
+  margin-block-start: var(--s-4);
+}
+
+.media {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  margin-block-start: var(--s-6);
+  overflow: hidden;
+  border-radius: 4px;
+  background: var(--surface);
+}
+
+.scaleLayer {
+  position: absolute;
+  inset: 0;
+  transform-origin: center;
+  will-change: transform;
+}
+
+.parallaxLayer {
+  position: absolute;
+  inset-block: -10%;
+  inset-inline: 0;
+  will-change: transform;
+}
+
+.image {
+  object-fit: cover;
+  border-radius: 4px;
+}
+
+.floatingDatum {
+  position: absolute;
+  bottom: var(--s-5);
+  left: max(var(--gutter), calc((100vw - var(--container)) / 2));
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding: 0.6rem 1.1rem;
+  background: rgba(26, 26, 24, 0.85);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid var(--hairline);
+  border-radius: 0;
+  color: var(--on-accent);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.32);
+  animation: floatLevitate 5s ease-in-out infinite;
+}
+
+.compassIcon {
+  width: 26px;
+  height: 26px;
+  color: var(--accent);
+  flex-shrink: 0;
+  animation: slowRotate 30s linear infinite;
+}
+
+.datumText {
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+  line-height: 1.25;
+}
+
+.datumCoords {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--on-accent);
+  text-transform: uppercase;
+}
+
+.datumMeta {
+  font-size: 0.68rem;
+  color: rgba(255, 255, 255, 0.65);
+  letter-spacing: 0.02em;
+}
+
+@keyframes floatLevitate {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes slowRotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 767px) {
+  .hero {
+    padding-block-start: var(--s-8);
+  }
+
+  .body {
+    font-size: var(--fs-md);
+  }
+
+  .actions {
+    flex-direction: column;
+    align-items: stretch;
+    max-width: 22rem;
+    margin-inline: auto;
+  }
+
+  .actions > :is(a, button) {
+    width: 100%;
+  }
+
+  .media {
+    aspect-ratio: 4 / 5;
+    margin-block-start: var(--s-5);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scaleLayer,
+  .parallaxLayer {
+    will-change: auto;
+  }
+}

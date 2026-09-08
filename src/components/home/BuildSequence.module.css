@@ -1,0 +1,122 @@
+.section {
+  background: var(--ink);
+}
+
+/* Scroll distance for the sequence. */
+.track {
+  position: relative;
+  height: auto;
+}
+
+.stage {
+  position: relative;
+  height: 60vh;
+  overflow: hidden;
+}
+
+.canvas {
+  display: none;
+}
+
+.poster {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: var(--s-2);
+  padding: var(--gutter);
+  background: linear-gradient(to top, rgb(0 0 0 / 0.65), rgb(0 0 0 / 0) 55%);
+  pointer-events: none;
+}
+
+.title {
+  color: var(--on-accent);
+  font-size: var(--fs-h2);
+  font-weight: var(--fw-bold);
+  letter-spacing: -0.015em;
+  line-height: var(--lh-head);
+  margin: 0;
+  max-width: 18ch;
+}
+
+.captions {
+  position: relative;
+  min-height: 3.5rem;
+}
+
+.caption {
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  color: rgb(255 255 255 / 0.85);
+  font-size: var(--fs-lg);
+  line-height: var(--lh-body);
+  max-width: 44ch;
+  margin: 0;
+  opacity: 0;
+  transition: opacity 0.4s var(--ease-out);
+}
+
+/* Visible without JS and under reduced motion: the first caption stands in. */
+.captionStatic {
+  opacity: 1;
+}
+
+@media (min-width: 1024px) {
+  .track {
+    height: 300vh;
+  }
+
+  .stage {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+  }
+
+  .canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  /* The poster covers the canvas until the first frame is decoded. */
+  .canvasReady + .poster {
+    opacity: 0;
+  }
+
+  .poster {
+    transition: opacity 0.4s var(--ease-out);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .track {
+    height: auto;
+  }
+
+  .stage {
+    position: relative;
+    height: 60vh;
+  }
+
+  .canvas {
+    display: none;
+  }
+
+  .poster {
+    opacity: 1 !important;
+  }
+
+  .caption {
+    transition: none;
+  }
+}
