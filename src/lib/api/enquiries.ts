@@ -10,10 +10,20 @@ export interface EnquiryInput {
   requirementNotes?: string;
 }
 
+/**
+ * What the caller actually receives. `apiClient` unwraps the `{ success, data }`
+ * envelope, so this is the `data` object — the previous shape here
+ * (`{ success, message, enquiryId }`) described the envelope and never existed
+ * at runtime. Nothing read it, so the mismatch stayed hidden.
+ */
 export interface EnquiryResponse {
-  success: boolean;
-  message: string;
-  enquiryId?: number;
+  id: string;
+  fullName: string;
+  phone: string;
+  email: string | null;
+  estimateNumber: string | null;
+  status: string;
+  createdAt: string;
 }
 
 /**

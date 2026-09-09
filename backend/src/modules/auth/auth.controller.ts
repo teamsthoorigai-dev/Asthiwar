@@ -1,8 +1,22 @@
-import { Request, Response, NextFunction } from 'express';
+import { CookieOptions, Request, Response, NextFunction } from 'express';
 import { login, logout, changePassword, AuthError } from './auth.service.js';
 import { LoginDto, ChangePasswordDto } from './auth.schema.js';
 import { SESSION_COOKIE_NAME } from '../../middleware/auth.js';
 import { env } from '../../config/env.js';
+
+/**
+ * In production the admin UI is served from a different origin than this API,
+ * so the session cookie rides on cross-site requests. `sameSite: 'lax'` makes
+ * the browser drop it on those XHRs — login succeeds, then every authenticated
+ * call 401s. `none` is what lets it through, and it is only honoured alongside
+ * `secure`, which is why local dev (plain http://localhost) stays on `lax`.
+ */
+const sessionCookieOptions: CookieOptions = {
+  httpOnly: true,
+  secure: env.NODE_ENV === 'production',
+  sameSite: env.NODE_ENV === 'production' ? 'none' : 'lax',
+  path: '/',
+};
 
 export async function loginController(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
@@ -14,11 +28,8 @@ export async function loginController(req: Request, res: Response, next: NextFun
 
     // Set HttpOnly secure session cookie
     res.cookie(SESSION_COOKIE_NAME, session.token, {
-      httpOnly: true,
-      secure: env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      ...sessionCookieOptions,
       expires: session.expiresAt,
-      path: '/',
     });
 
     res.json({
@@ -53,12 +64,7 @@ export async function logoutController(req: Request, res: Response, next: NextFu
     }
 
     // Clear session cookie
-    res.clearCookie(SESSION_COOKIE_NAME, {
-      httpOnly: true,
-      secure: env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      path: '/',
-    });
+    res.clearCookie(SESSION_COOKIE_NAME, sessionCookieOptions);
 
     res.json({
       success: true,
@@ -92,12 +98,7 @@ export async function changePasswordController(req: Request, res: Response, next
     await changePassword(req.user.id, dto);
 
     // Clear cookie to enforce re-login with new password
-    res.clearCookie(SESSION_COOKIE_NAME, {
-      httpOnly: true,
-      secure: env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      path: '/',
-    });
+    res.clearCookie(SESSION_COOKIE_NAME, sessionCookieOptions);
 
     res.json({
       success: true,

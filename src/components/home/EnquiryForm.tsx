@@ -2,7 +2,8 @@
 
 import type { ChangeEvent, FocusEvent, FormEvent, ReactNode } from 'react';
 import { useId, useState } from 'react';
-import { SubmissionError, submitEnquiry } from '@/lib/api';
+import { ApiError } from '@/lib/api/client';
+import { submitEnquiry } from '@/lib/api/enquiries';
 import { LOCATIONS } from '@/data/pricing';
 import { Button } from '@/components/ui/Button';
 import { Section } from '@/components/ui/Section';
@@ -210,20 +211,27 @@ export function EnquiryForm({ content, variant = 'home' }: EnquiryFormProps) {
     setSubmissionError(null);
 
     try {
+      // Goes to the Express API, which persists to Postgres and drives the admin
+      // enquiries screen. This form previously posted to a Next route that
+      // appended to a local JSONL file — that cannot work on a read-only
+      // serverless filesystem, so every production submission would have failed.
+      const message = values.message.trim();
       const { id } = await submitEnquiry({
-        name: values.name.trim(),
+        fullName: values.name.trim(),
         phone: values.phone.trim(),
         email: values.email.trim(),
-        location: values.location,
-        projectType: values.projectType,
-        message: values.message.trim(),
-        source: 'contact-form',
+        plotLocation: values.location,
+        // The backend has no project-type column, so it is carried in the notes
+        // rather than dropped.
+        requirementNotes: [`Project type: ${values.projectType}`, message]
+          .filter(Boolean)
+          .join('\n\n'),
       });
       setReference(id);
       setSubmissionState('succeeded');
     } catch (error) {
       setSubmissionError(
-        error instanceof SubmissionError ? error.message : content.errors.submission,
+        error instanceof ApiError ? error.message : content.errors.submission,
       );
       setSubmissionState('failed');
     }

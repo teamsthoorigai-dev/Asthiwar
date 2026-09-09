@@ -5,10 +5,21 @@ import morgan from 'morgan';
 import cookieParser from 'cookie-parser';
 import { env } from './config/env.js';
 import routes from './routes/index.js';
-import { errorHandler } from './middleware/errorHandler.js';
+import { AppError, errorHandler } from './middleware/errorHandler.js';
 
 export function createApp(): Express {
   const app = express();
+
+  /**
+   * Render (and any other managed host) terminates TLS at a load balancer and
+   * forwards the request over plain HTTP with X-Forwarded-*. Without this,
+   * `req.ip` is the load balancer for every visitor, `req.protocol` is always
+   * 'http', and express-rate-limit warns that it cannot identify clients.
+   *
+   * One hop only — trusting more would let a caller forge X-Forwarded-For and
+   * choose their own rate-limit bucket.
+   */
+  app.set('trust proxy', 1);
 
   // Security Middleware
   app.use(helmet());
@@ -23,7 +34,12 @@ export function createApp(): Express {
         if (allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
           return callback(null, true);
         }
-        return callback(null, true); // Allow dev flexibility
+        // A disallowed origin is a client error, not a server fault. Tag it so the
+        // shared error handler answers 403 instead of recording a CRITICAL 500.
+        const rejection: AppError = new Error(`Origin ${origin} is not allowed by CORS`);
+        rejection.statusCode = 403;
+        rejection.code = 'CORS_FORBIDDEN';
+        return callback(rejection);
       },
       credentials: true,
     })
