@@ -471,25 +471,25 @@ function getIconForItem(slug: string) {
   }
 }
 
-function BadgeCheckIcon({ variant }: { variant: 'green' | 'gold' | 'purple' }) {
-  const bgColors: Record<'green' | 'gold' | 'purple', string> = {
-    green: '#16A34A',
-    gold: '#D97706',
-    purple: '#7E22CE',
+function BadgeCheckIcon({ variant }: { variant: 'forest' | 'oxide' | 'accent' }) {
+  const strokeColors: Record<'forest' | 'oxide' | 'accent', string> = {
+    forest: 'var(--accent-bright, #1F5C24)',
+    oxide: 'var(--oxide, #B8854F)',
+    accent: 'var(--accent, #243228)',
   };
   return (
     <svg
-      width="14"
-      height="14"
+      width="13"
+      height="13"
       viewBox="0 0 24 24"
       fill="none"
       className="shrink-0"
       aria-hidden="true"
     >
-      <circle cx="12" cy="12" r="11" fill={bgColors[variant]} />
+      <circle cx="12" cy="12" r="10" stroke={strokeColors[variant]} strokeWidth="2" fill={strokeColors[variant]} fillOpacity="0.12" />
       <path
-        d="M7 12.5l3.5 3.5 7-7"
-        stroke="#FFFFFF"
+        d="M7.5 12l3 3 6-6"
+        stroke={strokeColors[variant]}
         strokeWidth="2.5"
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -612,8 +612,8 @@ export function StepPackages({
       value.toLowerCase().includes('11 ft ceiling');
 
     if (isIncludedBadge) {
-      const variant =
-        tier === 'basic' ? 'green' : tier === 'luxury' ? 'purple' : 'gold';
+      const variant: 'forest' | 'oxide' | 'accent' =
+        tier === 'premium' ? 'oxide' : tier === 'luxury' ? 'accent' : 'forest';
       return (
         <span className={`pkg-matrix-badge pkg-matrix-badge--${variant}`}>
           <BadgeCheckIcon variant={variant} />
@@ -628,30 +628,22 @@ export function StepPackages({
   return (
     <div className="calculator-step animate-fade-in">
       {/* Header Section */}
-      <div className="text-center mb-6 pt-2">
-        <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight text-[#0B192C] uppercase font-sans">
-          CHOOSE THE PERFECT BUILD FOR YOU
-        </h2>
-        <p className="text-sm sm:text-base text-gray-600 mt-1.5 font-medium">
-          Quality materials. Expert craftsmanship. Complete peace of mind.
+      <div className="calculator-step__header text-center mb-6 pt-2">
+        <span className="calculator-step__badge">Step 2 of 5 • Package Selection</span>
+        <h2 className="calculator-step__title">Choose Your Construction Package</h2>
+        <p className="calculator-step__intro">
+          Transparent per sq.ft rates with zero hidden escalation clauses.
         </p>
 
-        {/* Decorative gold ornament divider */}
-        <div className="flex items-center justify-center gap-3 my-3">
-          <div className="h-[1px] w-20 bg-gray-300" />
-          <span className="text-amber-500 text-xs">◆</span>
-          <div className="h-[1px] w-20 bg-gray-300" />
-        </div>
-
         {/* View Toggle */}
-        <div className="inline-flex items-center gap-1 p-1 bg-white border border-gray-200 rounded-lg shadow-2xs mt-2">
+        <div className="inline-flex items-center gap-1 p-1 bg-surface border border-border rounded-lg mt-4">
           <button
             type="button"
             onClick={() => setViewMode('cards')}
-            className={`px-3 py-1.5 text-xs font-bold rounded-md flex items-center gap-1.5 transition-colors ${
+            className={`px-3.5 py-1.5 text-xs font-bold rounded-md flex items-center gap-1.5 transition-colors cursor-pointer ${
               viewMode === 'cards'
-                ? 'bg-[#0B192C] text-white shadow-xs'
-                : 'text-gray-600 hover:text-gray-900'
+                ? 'bg-accent text-on-accent shadow-xs'
+                : 'text-muted hover:text-ink'
             }`}
           >
             <LayoutGrid size={13} aria-hidden="true" />
@@ -660,10 +652,10 @@ export function StepPackages({
           <button
             type="button"
             onClick={() => setViewMode('matrix')}
-            className={`px-3 py-1.5 text-xs font-bold rounded-md flex items-center gap-1.5 transition-colors ${
+            className={`px-3.5 py-1.5 text-xs font-bold rounded-md flex items-center gap-1.5 transition-colors cursor-pointer ${
               viewMode === 'matrix'
-                ? 'bg-[#0B192C] text-white shadow-xs'
-                : 'text-gray-600 hover:text-gray-900'
+                ? 'bg-accent text-on-accent shadow-xs'
+                : 'text-muted hover:text-ink'
             }`}
           >
             <Columns size={13} aria-hidden="true" />
@@ -683,7 +675,7 @@ export function StepPackages({
                 <tr>
                   {/* Column 1: Features Header */}
                   <th className="pkg-matrix-th pkg-matrix-th--sticky pkg-matrix-th--feature" scope="col">
-                    <div className="pkg-matrix-header-card pkg-matrix-header-card--navy">
+                    <div className="pkg-matrix-header-card pkg-matrix-header-card--feature">
                       <span className="pkg-matrix-header-card__title text-center">FEATURES /</span>
                       <span className="pkg-matrix-header-card__subtitle text-center">SPECIFICATIONS</span>
                     </div>
@@ -801,8 +793,10 @@ export function StepPackages({
                           aria-pressed={isSelected}
                           data-selected={isSelected || undefined}
                         >
-                          {isSelected && (
+                          {isSelected ? (
                             <span className="pkg-matrix-header-card__active-pill">Selected</span>
+                          ) : (
+                            <span className="pkg-matrix-header-card__popular-ribbon">Most Popular</span>
                           )}
                           <div className="pkg-matrix-header-card__inner">
                             <div className="pkg-matrix-header-card__icon-box">
@@ -968,7 +962,7 @@ export function StepPackages({
             <button
               type="button"
               onClick={() => setViewMode('cards')}
-              className="inline-flex items-center gap-2 text-xs font-bold text-gray-700 hover:text-black bg-white border border-gray-300 hover:border-gray-500 px-4 py-2 rounded-lg shadow-2xs transition-all cursor-pointer"
+              className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-muted hover:text-ink bg-surface hover:bg-surface-active border border-border px-5 py-2.5 rounded transition-all cursor-pointer"
             >
               <LayoutGrid size={14} aria-hidden="true" />
               <span>Back to Package Cards</span>

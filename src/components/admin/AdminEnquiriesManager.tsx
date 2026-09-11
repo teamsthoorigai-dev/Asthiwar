@@ -7,6 +7,8 @@ import {
   MapPin,
   Clock,
   Loader2,
+  Trash2,
+  Download,
   FileText,
   ChevronLeft,
   ChevronRight,
@@ -22,12 +24,14 @@ import {
 import {
   getAdminEnquiries,
   updateAdminEnquiry,
+  deleteAdminEnquiry,
   sendLeadNotification,
   AdminEnquiry,
   EnquiryStatus,
   EnquiryPriority,
 } from '@/lib/api/admin';
-import { getEstimatePdfUrl } from '@/lib/api/calculator';
+import { getAdminEstimatePdfUrl } from '@/lib/api/calculator';
+import { CsvColumn, downloadCsv, timestampedFilename, toCsv } from '@/lib/csv';
 
 const STATUS_FILTERS = [
   { label: 'ALL STATUS', value: 'ALL' },
@@ -74,6 +78,10 @@ export function AdminEnquiriesManager() {
   const [savingNotes, setSavingNotes] = useState<boolean>(false);
   const [alertMsg, setAlertMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [sendingAlert, setSendingAlert] = useState<boolean>(false);
+  // Deleting a lead is irreversible, so it is confirmed in-app rather than
+  // through window.confirm(), which is unstyled and easy to dismiss blind.
+  const [confirmingDelete, setConfirmingDelete] = useState<boolean>(false);
+  const [deletingLead, setDeletingLead] = useState<boolean>(false);
 
   // Pagination State
   const [page, setPage] = useState<number>(1);
@@ -119,6 +127,7 @@ export function AdminEnquiriesManager() {
   }, [statusFilter, priorityFilter, limit]);
 
   useEffect(() => {
+    setConfirmingDelete(false);
     if (selectedEnquiry) {
       setAdminNotesDraft(selectedEnquiry.adminNotes || '');
     }
@@ -184,6 +193,53 @@ export function AdminEnquiriesManager() {
       showAlert('error', msg);
     } finally {
       setSavingNotes(false);
+    }
+  };
+
+  /**
+   * Export what is on screen.
+   *
+   * Built from the rows already fetched rather than a new endpoint, so the export
+   * matches the filters and sort the operator is actually looking at. Only the
+   * current page: the list is paginated and pulling every lead silently would be
+   * a different, much larger action than the button appears to offer.
+   */
+  const handleExportCsv = () => {
+    const columns: Array<CsvColumn<AdminEnquiry>> = [
+      { header: 'Received', value: (r) => new Date(r.createdAt).toISOString() },
+      { header: 'Name', value: (r) => r.fullName },
+      { header: 'Phone', value: (r) => r.phone },
+      { header: 'Email', value: (r) => r.email ?? '' },
+      { header: 'Location', value: (r) => r.plotLocation },
+      { header: 'Status', value: (r) => r.status },
+      { header: 'Priority', value: (r) => r.priority },
+      { header: 'Quotation', value: (r) => r.estimateNumber ?? '' },
+      { header: 'Quoted Total (INR)', value: (r) => r.estimateTotalCost ?? '' },
+      { header: 'Package', value: (r) => r.estimatePackageSlug ?? '' },
+      { header: 'Built-up Area (sq.ft)', value: (r) => r.estimateBuiltupArea ?? '' },
+      { header: 'Preferred Contact Time', value: (r) => r.preferredContactTime ?? '' },
+      { header: 'Requirement Notes', value: (r) => r.requirementNotes ?? '' },
+      { header: 'Admin Notes', value: (r) => r.adminNotes ?? '' },
+    ];
+
+    downloadCsv(timestampedFilename('asthiwar-leads'), toCsv(enquiries, columns));
+    showAlert('success', `Exported ${enquiries.length} lead${enquiries.length === 1 ? '' : 's'}.`);
+  };
+
+  const handleDeleteLead = async () => {
+    if (!selectedEnquiry) return;
+    setDeletingLead(true);
+    try {
+      await deleteAdminEnquiry(selectedEnquiry.id);
+      showAlert('success', `Lead '${selectedEnquiry.fullName}' deleted.`);
+      setSelectedEnquiry(null);
+      setConfirmingDelete(false);
+      fetchLeads(page, limit);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to delete the lead';
+      showAlert('error', msg);
+    } finally {
+      setDeletingLead(false);
     }
   };
 
@@ -260,6 +316,19 @@ export function AdminEnquiriesManager() {
               ))}
             </select>
           </div>
+
+          {/* Export what is listed. Placed beside the page-size control because
+              both act on the current view rather than on a single record. */}
+          <button
+            type="button"
+            onClick={handleExportCsv}
+            disabled={enquiries.length === 0}
+            className="button button--ghost text-xs py-1.5 px-3 shrink-0 inline-flex items-center gap-1.5 disabled:opacity-40"
+            title="Download the rows currently listed as a CSV file"
+          >
+            <Download size={13} />
+            <span>Export CSV</span>
+          </button>
         </div>
       </div>
 
@@ -541,7 +610,7 @@ export function AdminEnquiriesManager() {
                       <FileSpreadsheet size={12} /> Linked Estimate
                     </span>
                     <a
-                      href={getEstimatePdfUrl(selectedEnquiry.estimateNumber)}
+                      href={getAdminEstimatePdfUrl(selectedEnquiry.estimateNumber)}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-[11px] font-bold text-primary hover:underline flex items-center gap-0.5"
@@ -641,6 +710,49 @@ export function AdminEnquiriesManager() {
                       </>
                     )}
                   </button>
+                </div>
+
+                {/* Removing the lead entirely. Kept visually quiet and behind a
+                    confirmation: it is the only destructive action on this panel. */}
+                <div className="pt-3 border-t border-border">
+                  {confirmingDelete ? (
+                    <div className="space-y-2">
+                      <p className="text-[11px] text-muted leading-relaxed">
+                        Delete <strong className="text-foreground">{selectedEnquiry.fullName}</strong>{' '}
+                        from the pipeline? This cannot be undone.
+                        {selectedEnquiry.estimateNumber
+                          ? ' Their quotation and its PDF are kept.'
+                          : ''}
+                      </p>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setConfirmingDelete(false)}
+                          className="button button--ghost flex-1 text-xs py-1.5"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="button"
+                          disabled={deletingLead}
+                          onClick={handleDeleteLead}
+                          className="button button--solid flex-1 text-xs py-1.5 inline-flex items-center justify-center gap-1.5 disabled:opacity-60"
+                        >
+                          {deletingLead && <Loader2 size={12} className="animate-spin" />}
+                          <span>{deletingLead ? 'Deleting…' : 'Delete lead'}</span>
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setConfirmingDelete(true)}
+                      className="button button--ghost w-full text-xs py-1.5 text-red-600 dark:text-red-400 inline-flex items-center justify-center gap-1.5"
+                    >
+                      <Trash2 size={12} />
+                      <span>Delete Lead</span>
+                    </button>
+                  )}
                 </div>
               </div>
             </div>

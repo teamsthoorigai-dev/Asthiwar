@@ -48,20 +48,60 @@ export const studioPage = {
       'Working alongside on-site engineering leadership spearheaded by Site Execution Engineer Gowtham Chakravarthy, we ensure zero discrepancy between design intent and on-site reality. We are ASTHIWAR. Built for longevity, rooted in Tamil Nadu.',
     ],
     stats: [
-      { number: '2025', label: 'Aether Milestone' },
-      { number: '2026', label: 'Trivara Milestone' },
-      { number: '03', label: 'Studio & Regional Hubs' },
-      { number: '100%', label: 'Integrated Design-Build' },
+      { value: 2025, label: 'Aether Milestone' },
+      { value: 2026, label: 'Trivara Milestone' },
+      { value: 3, pad: 2, label: 'Studio & Regional Hubs' },
+      { value: 100, suffix: '%', label: 'Integrated Design-Build' },
     ] as const,
   },
 
   team: {
-    eyebrow: 'OUR TEAM',
+    eyebrow: 'OUR PEOPLE',
     heading: 'The Skill & Soul Behind Our Projects',
     lead: 'A multidisciplinary practice uniting structural rigor, urban sensitivity, and precision on-site execution.',
     principalsHeading: 'Owners & Principals',
     teamHeading: 'Site Execution & Coordination',
     
+    // Unified team members for 3-column layout matching reference
+    members: [
+      {
+        id: 'akileshwaran',
+        name: 'Akileshwaran V R R',
+        role: 'Structural Engineer and Owner',
+        designation: 'Structural Engineer and Owner',
+        isFounder: true,
+        image: {
+          src: '/images/studio/akileshwaran.jpg',
+          alt: 'Akileshwaran V R R — Structural Engineer and Owner',
+        },
+        bio: 'Leading structural engineering discipline, load-path integrity, and practice direction across all ASTHIWAR projects.',
+      },
+      {
+        id: 'arthiya',
+        name: 'Arthiya C N',
+        role: 'Urban Designer and Co-Owner',
+        designation: 'Urban Designer and Co-Owner',
+        isFounder: true,
+        image: {
+          src: '/images/studio/arthiya.jpg',
+          alt: 'Arthiya C N — Urban Designer and Co-Owner',
+        },
+        bio: 'Directing spatial philosophy, urban contextual integration, and climate-responsive architecture.',
+      },
+      {
+        id: 'gowtham',
+        name: 'Gowtham Chakravarthy',
+        role: 'Site Execution Engineer',
+        designation: 'Site Execution Engineer',
+        isFounder: false,
+        image: {
+          src: '/images/studio/gowtham.jpg',
+          alt: 'Gowtham Chakravarthy — Site Execution Engineer',
+        },
+        bio: 'Overseeing on-site construction execution, material quality control, and structural craftsmanship.',
+      },
+    ] satisfies readonly TeamMember[],
+
     // Top Row: Owners (like unknownarchitects.in/team)
     principals: [
       {
@@ -79,12 +119,12 @@ export const studioPage = {
       {
         id: 'arthiya',
         name: 'Arthiya C N',
-        role: 'Urban Designer and Co owner',
-        designation: 'Urban Designer and Co owner',
+        role: 'Urban Designer and Co-Owner',
+        designation: 'Urban Designer and Co-Owner',
         isFounder: true,
         image: {
           src: '/images/studio/arthiya.jpg',
-          alt: 'Arthiya C N — Urban Designer and Co owner',
+          alt: 'Arthiya C N — Urban Designer and Co-Owner',
         },
         bio: 'Directing spatial philosophy, urban contextual integration, and climate-responsive architecture.',
       },

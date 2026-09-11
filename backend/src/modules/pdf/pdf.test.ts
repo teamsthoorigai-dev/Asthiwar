@@ -83,6 +83,7 @@ async function runPdfTests() {
 
   let testEstimateId = '';
   let testEstimateNumber = '';
+  let testAccessToken = '';
   let sessionCookie = '';
 
   try {
@@ -120,7 +121,12 @@ async function runPdfTests() {
     assert(estRes.status === 201, 'Public estimate created with 201 Created');
     testEstimateId = parsedJson.data.estimateId;
     testEstimateNumber = parsedJson.data.estimateNumber;
+    testAccessToken = parsedJson.data.accessToken;
     assert(!!testEstimateNumber, `Created estimate: ${testEstimateNumber}`);
+    assert(
+      typeof testAccessToken === 'string' && testAccessToken.length === 64,
+      'Estimate is issued with a 64-character access token'
+    );
 
     // -----------------------------------------------------------------
     // [Test 2] Public PDF Download (GET /api/v1/calculator/estimate/:number/pdf)
@@ -129,10 +135,20 @@ async function runPdfTests() {
     const pdfRes = await makeRequest(server, {
       method: 'GET',
       // Quotation numbers contain slashes; links must use the URL-safe spelling.
-      path: `/api/v1/calculator/estimate/${urlSafeQuotationNumber(testEstimateNumber)}/pdf`,
+      // The access token is the other half: the number is a sequence, so without
+      // it this route handed the branded document to anyone counting upwards.
+      path:
+        `/api/v1/calculator/estimate/${urlSafeQuotationNumber(testEstimateNumber)}/pdf` +
+        `?t=${testAccessToken}`,
     });
 
     assert(pdfRes.status === 200, 'GET estimate PDF returns 200 OK');
+
+    const noTokenPdfRes = await makeRequest(server, {
+      method: 'GET',
+      path: `/api/v1/calculator/estimate/${urlSafeQuotationNumber(testEstimateNumber)}/pdf`,
+    });
+    assert(noTokenPdfRes.status === 404, 'PDF by quotation number alone is refused (404)');
     assert(pdfRes.headers['content-type'] === 'application/pdf', 'Content-Type is application/pdf');
     assert(
       (pdfRes.headers['content-disposition'] as string).includes(

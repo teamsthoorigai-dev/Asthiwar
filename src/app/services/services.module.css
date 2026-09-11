@@ -13,6 +13,11 @@
   min-height: 100vh;
 }
 
+/* Scoped hero bottom padding override for /services */
+.servicesHero {
+  padding-block-end: clamp(1rem, 2vh, 2rem);
+}
+
 /* ==================================================================
    PINNED STAGE & HUD (DESKTOP)
    ================================================================== */
@@ -172,7 +177,7 @@
   box-sizing: border-box;
   display: grid;
   grid-template-columns: 1.15fr 0.85fr;
-  align-items: center;
+  align-items: start;
   /* --scrollbar is subtracted so the panel copy lands on the same left edge as
      every container-bound section on every other page; without it the vw term
      is a scrollbar too wide and the copy sits 7px right of the site's margin. */
@@ -184,7 +189,7 @@
     var(--gutter),
     calc((100vw - var(--scrollbar) - var(--container-large)) / 2)
   );
-  padding-block: var(--s-4);
+  padding-block: clamp(1.25rem, 2.5vh, 2.25rem);
   gap: clamp(2rem, 5vw, 6rem);
   border-inline-end: 1px solid var(--hairline);
   background: var(--bg);
@@ -321,7 +326,7 @@
 /* Panel Media */
 .panelMedia {
   position: relative;
-  height: min(74svh, 680px);
+  height: min(76svh, calc(100vh - 53px - 4rem));
   width: 100%;
   overflow: hidden;
   border-radius: 4px;

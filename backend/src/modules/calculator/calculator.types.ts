@@ -77,6 +77,12 @@ export interface AddonDetail {
 export interface CalculationResult {
   estimateNumber: string;
   estimateId?: string;
+  /**
+   * The secret half of this quotation's link. Set only on a persisted estimate —
+   * a preview has nothing to link to. The number alone no longer authorises
+   * reading a quotation, so anything building a customer link needs this too.
+   */
+  accessToken?: string;
   customer: {
     name: string;
     phone: string;

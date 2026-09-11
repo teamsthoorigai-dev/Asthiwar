@@ -1,5 +1,7 @@
+'use client';
+
+import { useEffect, useState, type ComponentType } from 'react';
 import { Facebook, Instagram, Youtube } from 'lucide-react';
-import type { ComponentType } from 'react';
 import { socials } from '@/data/nav';
 import styles from './SocialDock.module.css';
 
@@ -22,14 +24,41 @@ const channels: ReadonlyArray<{ label: string; Icon: ComponentType<{ size?: numb
 /**
  * The four channel marks, docked bottom-right.
  *
+ * Automatically hides when the user scrolls down to the footer (which already
+ * presents full social channel links), and reappears when scrolling back up.
+ *
  * The URLs are still unconfirmed (`socials` in data/nav.ts is empty), so each
  * mark renders as an inert, non-focusable label rather than a link to nowhere.
  * The moment a URL lands in `socials` under a matching label, that mark becomes
  * a real anchor — no change needed here.
  */
 export function SocialDock() {
+  const [hidden, setHidden] = useState(false);
+
+  useEffect(() => {
+    const footer = document.querySelector('footer');
+    if (!footer) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setHidden(entry.isIntersecting);
+      },
+      {
+        root: null,
+        threshold: 0,
+      }
+    );
+
+    observer.observe(footer);
+    return () => observer.disconnect();
+  }, []);
+
   return (
-    <nav className={styles.dock} aria-label="Social media">
+    <nav
+      className={`${styles.dock} ${hidden ? styles.dockHidden : ''}`}
+      aria-label="Social media"
+      aria-hidden={hidden}
+    >
       <ul className={styles.list}>
         {channels.map(({ label, Icon }) => {
           const href = socials.find((s) => s.label === label)?.href;

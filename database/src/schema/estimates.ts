@@ -7,7 +7,17 @@ import { addons } from './addons';
 export const estimates = pgTable('estimates', {
   id: uuid('id').defaultRandom().primaryKey(),
   estimateNumber: text('estimate_number').notNull().unique(), // 'EST-2026-000001'
-  
+
+  // The capability that authorises reading this quotation without logging in.
+  //
+  // `estimate_number` is a sequence — AW/2026/O/0001, 0002, 0003 — so it
+  // identifies a quotation but cannot protect one: counting up the sequence read
+  // every customer's name, phone, email and project value, and fetched their PDF.
+  // A customer's link carries the number *and* this token; staff reach the same
+  // estimate through an authenticated admin route instead.
+  accessToken: text('access_token').notNull(),
+
+
   // Customer & Lead Info (Step 0)
   customerName: text('customer_name').notNull(),
   customerPhone: text('customer_phone').notNull(),

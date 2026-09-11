@@ -3,6 +3,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
+import { Button } from '@/components/ui/Button';
 import { Section } from '@/components/ui/Section';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { disciplines } from '@/data/home';
@@ -59,6 +60,11 @@ export function DisciplinesSticky() {
         eyebrow={disciplines.eyebrow}
         title={disciplines.title}
         body={disciplines.body}
+        action={
+          <Button href={disciplines.cta.href} variant="ghost">
+            {disciplines.cta.label}
+          </Button>
+        }
       />
 
       <div className={styles.track} ref={trackRef}>

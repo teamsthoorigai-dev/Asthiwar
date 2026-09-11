@@ -21,7 +21,7 @@ import {
 } from '@asthiwar/database';
 import { packageTierApplies, packageTierSpecificity } from '../../services/addon-tiers.js';
 import { isCurrentPrice } from '../../services/pricing-window.js';
-import { estimateRefCandidates } from './quotation.js';
+import { EstimateAccessError, resolveEstimateForPublicAccess } from './quotation.js';
 import { calculateEstimate } from './calculator.service.js';
 import { CalculatorInput } from './calculator.types.js';
 
@@ -484,35 +484,23 @@ export async function getEstimateByNumber(req: Request, res: Response, next: Nex
     const estimateNumber = String(req.params.estimateNumber);
 
     // Accepts both the printed number (AW/2026/O/0001, percent-encoded in the
-    // path) and its URL-safe spelling (AW-2026-O-0001).
-    let estRows: Array<typeof estimates.$inferSelect> = [];
-    for (const candidate of estimateRefCandidates(estimateNumber.toUpperCase())) {
-      estRows = await db
-        .select()
-        .from(estimates)
-        .where(eq(estimates.estimateNumber, candidate))
-        .limit(1);
-      if (estRows.length > 0) break;
-    }
-
-    if (estRows.length === 0) {
-      res.status(404).json({
-        success: false,
-        error: {
-          code: 'ESTIMATE_NOT_FOUND',
-          message: `Estimate with number '${estimateNumber}' was not found`,
-        },
-      });
-      return;
-    }
-
-    const est = estRows[0];
+    // path) and its URL-safe spelling (AW-2026-O-0001) — but the number alone is
+    // a sequence, so it no longer authorises anything on its own. The access
+    // token from the customer's own link has to come with it.
+    const est = await resolveEstimateForPublicAccess(estimateNumber, req.query.t);
 
     res.json({
       success: true,
       data: est.fullSnapshotJson,
     });
   } catch (error) {
+    if (error instanceof EstimateAccessError) {
+      res.status(error.statusCode).json({
+        success: false,
+        error: { code: error.code, message: error.message },
+      });
+      return;
+    }
     next(error);
   }
 }

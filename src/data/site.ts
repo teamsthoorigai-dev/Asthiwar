@@ -20,8 +20,30 @@ export type Service = {
 
 export const services: readonly Service[] = [
   {
-    slug: 'architecture',
+    slug: 'real-estate',
     index: '01',
+    title: 'Real Estate',
+    short: 'Strategic property advisory, land acquisition and development.',
+    capabilities: [
+      'Land acquisition & feasibility',
+      'Title & regulatory due diligence',
+      'Development advisory & valuation',
+      'Asset positioning & master planning',
+    ],
+    process: [
+      'Assess site potential',
+      'Verify legal & zoning titles',
+      'Structure project feasibility',
+      'Facilitate seamless handover',
+    ],
+    image: {
+      src: '/images/hero.jpg',
+      alt: 'ASTHIWAR real estate acquisition and prime residential property development.',
+    },
+  },
+  {
+    slug: 'architecture',
+    index: '02',
     title: 'Architecture',
     short: 'Designing spaces with clarity, context and purpose.',
     capabilities: [
@@ -43,7 +65,7 @@ export const services: readonly Service[] = [
   },
   {
     slug: 'interiors',
-    index: '02',
+    index: '03',
     title: 'Interior',
     short: 'Crafting interiors that elevate everyday experiences.',
     capabilities: [
@@ -65,7 +87,7 @@ export const services: readonly Service[] = [
   },
   {
     slug: 'construction',
-    index: '03',
+    index: '04',
     title: 'Construction',
     short: 'Precise execution with quality and transparency.',
     capabilities: [
@@ -87,7 +109,7 @@ export const services: readonly Service[] = [
   },
   {
     slug: 'structural',
-    index: '04',
+    index: '05',
     title: 'Structural',
     short: 'Engineering-led solutions built for lasting strength.',
     capabilities: [
@@ -109,7 +131,7 @@ export const services: readonly Service[] = [
   },
   {
     slug: 'green-building',
-    index: '05',
+    index: '06',
     title: 'Green Building',
     short: 'Sustainable methods for healthier spaces.',
     capabilities: [

@@ -9,7 +9,9 @@ interface AdminLoginFormProps {
 }
 
 export function AdminLoginForm({ onSuccess }: AdminLoginFormProps) {
-  const [email, setEmail] = useState<string>('admin@asthiwar.com');
+  // Not prefilled: an address on the form is a name an attacker does not have to
+  // guess, and it is the seeded one.
+  const [email, setEmail] = useState<string>('');
   const [password, setPassword] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -63,7 +65,7 @@ export function AdminLoginForm({ onSuccess }: AdminLoginFormProps) {
               className="form-input"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="admin@asthiwar.com"
+              placeholder="you@asthiwar.com"
             />
           </div>
 
@@ -102,12 +104,15 @@ export function AdminLoginForm({ onSuccess }: AdminLoginFormProps) {
           </button>
         </form>
 
-        <div className="mt-6 pt-4 border-t border-border text-center space-y-1.5">
-          <span className="text-[11px] text-muted block">
-            Default seed credentials: <code className="text-foreground font-mono">admin@asthiwar.com</code> / <code className="text-foreground font-mono">ChangeMe@2026!</code>
-          </span>
+        {/*
+          The seeded email and password used to be printed here, on a page
+          anyone can load, and the seed password is the one still in force until
+          somebody changes it — so the console was open to the public. Nothing
+          about an account belongs on the form that authenticates it.
+        */}
+        <div className="mt-6 pt-4 border-t border-border text-center">
           <span className="text-[10px] text-muted block">
-            Protected by bcrypt hashing & secure HttpOnly cookie sessions.
+            Protected by bcrypt hashing &amp; secure HttpOnly cookie sessions.
           </span>
         </div>
       </div>

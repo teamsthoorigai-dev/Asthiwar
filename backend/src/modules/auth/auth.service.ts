@@ -1,4 +1,4 @@
-import { db, adminUsers, adminSessions, eq, and, gt } from '@asthiwar/database';
+import { db, adminUsers, adminSessions, eq, and, gt, lt } from '@asthiwar/database';
 import bcrypt from 'bcrypt';
 import crypto from 'crypto';
 import { AdminUserDto, SessionResult } from './auth.types.js';
@@ -49,6 +49,21 @@ export async function login(
   // 3. Generate secure random session token
   const token = crypto.randomBytes(32).toString('hex');
   const expiresAt = new Date(Date.now() + SESSION_DURATION_DAYS * 24 * 60 * 60 * 1000);
+
+  // Sweep sessions that have already expired.
+  //
+  // `admin_sessions` only ever shrank on an explicit logout, so every login that
+  // ended by closing the tab left a row behind for good — dead credentials
+  // accumulating in a table indefinitely. Done here rather than on a schedule so
+  // there is nothing extra to deploy or keep running: a login is exactly when new
+  // rows appear, and verifySession already refuses an expired one, so this only
+  // reclaims storage rather than changing who is signed in.
+  //
+  // Failure is not allowed to block a sign-in; the rows are simply swept next time.
+  await db
+    .delete(adminSessions)
+    .where(lt(adminSessions.expiresAt, new Date()))
+    .catch(() => undefined);
 
   // 4. Save session in database
   await db.insert(adminSessions).values({

@@ -93,25 +93,38 @@ export function StepAddons({
     onChange({ addons: [...kept, { addonSlug: addon.slug, variantSlug, quantity }] });
   };
 
-  /**
-   * Clamp to the add-on's own limits, not to 1.
-   *
-   * The backend enforces minQuantity/maxQuantity now, so a value outside them is
-   * refused rather than quietly priced — clamping only at 1 meant typing into a
-   * sump box (minimum 1,000 L) produced a rejected estimate instead of a usable
-   * number. The `min`/`max` on the input only constrain the spinner arrows;
-   * typed and pasted values land here.
-   */
-  const updateAddonQty = (addon: AddonItem, qty: number) => {
-    const min = addon.minQuantity != null ? Number(addon.minQuantity) : 1;
-    const max = addon.maxQuantity != null ? Number(addon.maxQuantity) : Number.POSITIVE_INFINITY;
-    const clamped = Math.min(Math.max(qty, min), max);
+  const addonBounds = (addon: AddonItem) => ({
+    min: addon.minQuantity != null ? Number(addon.minQuantity) : 1,
+    max: addon.maxQuantity != null ? Number(addon.maxQuantity) : Number.POSITIVE_INFINITY,
+  });
 
+  /**
+   * Accept what is being typed. Do not clamp yet.
+   *
+   * Clamping on every keystroke made these boxes impossible to type into: on a
+   * sump (minimum 1,000) selecting the value and typing `8` snapped the field
+   * straight back to 1000, so reaching 8000 by keyboard could not be done. The
+   * value is held as the customer is entering it and settled on blur instead.
+   *
+   * The backend enforces the same bounds and refuses anything outside them, so
+   * nothing can be quoted from an out-of-range figure in the meantime.
+   */
+  const setAddonQty = (addon: AddonItem, qty: number) => {
     onChange({
       addons: formData.addons.map((a) =>
-        a.addonSlug === addon.slug ? { ...a, quantity: clamped } : a
+        a.addonSlug === addon.slug ? { ...a, quantity: qty } : a
       ),
     });
+  };
+
+  /**
+   * Settle the value once the customer leaves the field: clamp into the add-on's
+   * own limits so what is submitted is always something the catalogue can price.
+   */
+  const commitAddonQty = (addon: AddonItem, qty: number) => {
+    const { min, max } = addonBounds(addon);
+    const settled = Number.isFinite(qty) ? Math.min(Math.max(qty, min), max) : min;
+    setAddonQty(addon, settled);
   };
 
   // Rule #5: the authoritative add-on subtotal is returned by the backend preview engine.
@@ -260,9 +273,14 @@ export function StepAddons({
                       step="1"
                       className="form-input calculator-addon-qty__input"
                       value={selections[0]?.quantity ?? Number(addon.defaultQuantity ?? 1)}
-                      onChange={(e) =>
-                        updateAddonQty(addon, parseFloat(e.target.value) || 0)
-                      }
+                      onChange={(e) => {
+                        // An empty box is a value being replaced, not a zero.
+                        const raw = e.target.value;
+                        if (raw === '') return;
+                        const parsed = parseFloat(raw);
+                        if (Number.isFinite(parsed)) setAddonQty(addon, parsed);
+                      }}
+                      onBlur={(e) => commitAddonQty(addon, parseFloat(e.target.value))}
                     />
                   </div>
                 )}

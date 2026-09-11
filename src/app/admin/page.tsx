@@ -9,6 +9,8 @@ import { AdminDashboardOverview } from '@/components/admin/AdminDashboardOvervie
 import { AdminEnquiriesManager } from '@/components/admin/AdminEnquiriesManager';
 import { AdminEstimatesExplorer } from '@/components/admin/AdminEstimatesExplorer';
 import { AdminPricingConfigManager } from '@/components/admin/AdminPricingConfigManager';
+import { AdminAuditLogViewer } from '@/components/admin/AdminAuditLogViewer';
+import { AdminUsersManager } from '@/components/admin/AdminUsersManager';
 import { useAdminRoute, writeAdminHash } from '@/lib/useAdminRoute';
 import './admin.css';
 
@@ -17,6 +19,8 @@ const ADMIN_TABS: readonly AdminTab[] = [
   'enquiries',
   'estimates',
   'pricing',
+  'audit',
+  'users',
 ] as const;
 
 function isAdminTab(value: string): value is AdminTab {
@@ -79,6 +83,8 @@ export default function AdminPortalPage() {
       {activeTab === 'enquiries' && <AdminEnquiriesManager />}
       {activeTab === 'estimates' && <AdminEstimatesExplorer />}
       {activeTab === 'pricing' && <AdminPricingConfigManager />}
+      {activeTab === 'audit' && <AdminAuditLogViewer />}
+      {activeTab === 'users' && <AdminUsersManager currentUser={user} />}
     </AdminLayout>
   );
 }

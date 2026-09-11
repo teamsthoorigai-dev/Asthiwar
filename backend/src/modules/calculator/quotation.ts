@@ -3,7 +3,8 @@
  * quotation. The PDF and the JSON estimate both read from here, so the terms a
  * customer sees on screen and the terms printed on their document cannot drift.
  */
-import { db, estimates, sql } from '@asthiwar/database';
+import crypto from 'node:crypto';
+import { db, estimates, eq, sql } from '@asthiwar/database';
 
 /**
  * Quotation number: AW/2026/O/0001
@@ -79,8 +80,11 @@ export function urlSafeQuotationNumber(quotationNumber: string): string {
  * is four path segments, matches no route, and 404s for every customer who clicks
  * it. Going through `urlSafeQuotationNumber` is the whole point of that function.
  */
-export function quotationPdfPath(quotationNumber: string): string {
-  return `/api/v1/calculator/estimate/${urlSafeQuotationNumber(quotationNumber)}/pdf`;
+export function quotationPdfPath(quotationNumber: string, accessToken: string): string {
+  return (
+    `/api/v1/calculator/estimate/${urlSafeQuotationNumber(quotationNumber)}/pdf` +
+    `?t=${encodeURIComponent(accessToken)}`
+  );
 }
 
 /**
@@ -98,6 +102,93 @@ export function estimateRefCandidates(ref: string): string[] {
   }
 
   return candidates;
+}
+
+// ---------------------------------------------------------------------------
+// Quotation access
+// ---------------------------------------------------------------------------
+
+/**
+ * The secret half of a quotation link.
+ *
+ * The printed number is a sequence, so it identifies a quotation but cannot
+ * protect one. This is what a customer's link carries alongside it.
+ */
+export function generateEstimateAccessToken(): string {
+  return crypto.randomBytes(32).toString('hex');
+}
+
+/** A quotation could not be reached, for whichever of the two possible reasons. */
+export class EstimateAccessError extends Error {
+  constructor(
+    public readonly statusCode: number,
+    public readonly code: string,
+    message: string
+  ) {
+    super(message);
+    this.name = 'EstimateAccessError';
+  }
+}
+
+/** Look a quotation up by id, printed number, or the dash spelling of it. */
+export async function findEstimateByRef(ref: string) {
+  const trimmed = ref.trim();
+  const isUuid =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(trimmed);
+
+  if (isUuid) {
+    const [row] = await db.select().from(estimates).where(eq(estimates.id, trimmed)).limit(1);
+    return row ?? null;
+  }
+
+  for (const candidate of estimateRefCandidates(trimmed.toUpperCase())) {
+    const [row] = await db
+      .select()
+      .from(estimates)
+      .where(eq(estimates.estimateNumber, candidate))
+      .limit(1);
+    if (row) return row;
+  }
+
+  return null;
+}
+
+/**
+ * Constant-time token comparison.
+ *
+ * `===` on a secret leaks its prefix through timing, which is exactly the
+ * property that makes a 64-character token guessable one character at a time.
+ * Lengths are compared first because timingSafeEqual throws on a mismatch.
+ */
+function tokensMatch(supplied: string, stored: string): boolean {
+  const a = Buffer.from(supplied, 'utf8');
+  const b = Buffer.from(stored, 'utf8');
+  if (a.length !== b.length) return false;
+  return crypto.timingSafeEqual(a, b);
+}
+
+/**
+ * Resolve a quotation for an unauthenticated caller.
+ *
+ * Both failures answer 404 with one message. Saying "wrong token" on a number
+ * that exists, and "not found" on one that does not, would turn this endpoint
+ * back into the oracle the access token exists to close: an attacker walking the
+ * sequence would still learn exactly which quotations are real, and how many
+ * customers there are.
+ */
+export async function resolveEstimateForPublicAccess(ref: string, suppliedToken: unknown) {
+  const estimate = await findEstimateByRef(ref);
+  const token = typeof suppliedToken === 'string' ? suppliedToken.trim() : '';
+
+  if (!estimate || !token || !tokensMatch(token, estimate.accessToken)) {
+    throw new EstimateAccessError(
+      404,
+      'ESTIMATE_NOT_FOUND',
+      'That quotation could not be found. Please open it using the full link from your estimate.'
+    );
+  }
+
+  return estimate;
 }
 
 /** How long a quotation stands, in days. Printed on the document and in term 1. */

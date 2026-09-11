@@ -1,5 +1,10 @@
 @import "tailwindcss";
 
+@theme {
+  --font-mono: var(--font-brand);
+  --font-sans: var(--font-brand);
+}
+
 /* Width of the vertical scrollbar, measured and written by ScrollbarWidth.
    100vw includes the scrollbar; percentage-based containers do not. Anything
    that insets itself from the viewport with a vw calc therefore lands half a
@@ -32,6 +37,9 @@
   --stone:         #C7C7C5;  /* v1 principle-band ground — a light concrete, cooler than clay */
   --oxide:         #B8854F;  /* v1 --oxide — the one chromatic accent left */
   --oxide-deep:    #76522F;
+  --oxide-light:   #D9A971;  /* oxide lifted for text on a dark ground — #B8854F
+                                is only 4.5:1 on --ink and drops below AA over
+                                the tinted spec boxes; this is 7.5:1 on --ink */
   --on-accent:     #EFEAE3;  /* paper, not pure white — v1 button label */
 
   /* Social dock — translucent chrome that has to hold over photography as well
@@ -54,6 +62,18 @@
   --lh-tight: 1;
   --lh-head: 1.2;
   --lh-body: 1.6;
+
+  /* Typeface. ASTHIWAR sets in one face; --font-mono exists only because ~60
+     call sites across 15 stylesheets already ask for it by that name for the
+     technical registers (CAD refs, counters, deck tabs, spec labels).
+     It was never actually declared, so every one of them fell through to the
+     browser's default monospace — Consolas on Windows, Courier elsewhere — and
+     those blocks set in a face that has nothing to do with the brand. Pointing
+     the name at Satoshi puts the whole site back on one typeface; the technical
+     registers keep their letter-spacing and tabular-nums, which is what was
+     actually carrying that voice. */
+  --font-brand: "Satoshi", ui-sans-serif, system-ui, -apple-system, Arial, sans-serif;
+  --font-mono: var(--font-brand);
 
   --fw-regular: 400;
   --fw-medium: 500;
@@ -164,6 +184,7 @@
   --color-stone: var(--stone);
   --color-oxide: var(--oxide);
   --color-oxide-deep: var(--oxide-deep);
+  --color-oxide-light: var(--oxide-light);
   --color-surface-active: var(--hairline);
   --color-on-accent: var(--on-accent);
   /* `primary` is referenced by the admin console (save affordances, the
@@ -174,7 +195,8 @@
   --color-drafting-surface: var(--drafting-surface);
   --color-drafting-ink: var(--drafting-ink);
   --color-drafting-graphite: var(--drafting-graphite);
-  --font-sans: "Satoshi", ui-sans-serif, system-ui, -apple-system, Arial, sans-serif;
+  --font-sans: var(--font-brand);
+  --font-mono: var(--font-brand);
 }
 
 /* ------------------------------------------------------------------
@@ -218,7 +240,7 @@ html {
 body {
   background: var(--bg);
   color: var(--body);
-  font-family: "Satoshi", ui-sans-serif, system-ui, -apple-system, Arial, sans-serif;
+  font-family: var(--font-brand);
   font-size: var(--fs-md);
   line-height: var(--lh-body);
   overflow-x: clip;

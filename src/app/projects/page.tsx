@@ -3,6 +3,7 @@ import { Suspense } from 'react';
 import { ProjectsHeroSequence } from '@/components/projects/ProjectsHeroSequence';
 import { Section } from '@/components/ui/Section';
 import { ProjectsArchive } from '@/components/projects/ProjectsArchive';
+import styles from './page.module.css';
 
 export const metadata: Metadata = {
   title: 'Projects',
@@ -23,7 +24,7 @@ export default function ProjectsPage() {
       <ProjectsHeroSequence />
 
       <div id="project-archive">
-        <Section>
+        <Section className={styles.archiveSection}>
           <Suspense fallback={null}>
             <ProjectsArchive />
           </Suspense>

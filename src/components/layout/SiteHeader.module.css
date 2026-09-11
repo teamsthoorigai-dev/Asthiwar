@@ -23,8 +23,8 @@
 
 /* While over a dark hero sequence at the top of the page */
 .darkHero:not(.solid) {
-  background: linear-gradient(to bottom, rgba(22, 25, 23, 0.75), transparent);
-  border-bottom-color: rgba(250, 248, 245, 0.12);
+  background: linear-gradient(to bottom, color-mix(in srgb, var(--ink) 80%, transparent), transparent);
+  border-bottom-color: color-mix(in srgb, var(--on-accent) 12%, transparent);
 }
 
 .darkHero:not(.solid) .logo,
@@ -48,7 +48,7 @@
 
 .darkHero:not(.solid) .ctaButton {
   color: var(--film-text);
-  border-color: rgba(250, 248, 245, 0.32);
+  border-color: color-mix(in srgb, var(--on-accent) 32%, transparent);
 }
 
 .darkHero:not(.solid) .ctaButton .ctaBlock {
@@ -58,12 +58,12 @@
 .darkHero:not(.solid) .ctaButton:hover,
 .darkHero:not(.solid) .ctaButton:focus-visible {
   border-color: var(--bg);
-  color: #273229;
+  color: var(--ink);
 }
 
 .darkHero:not(.solid) .ctaButton:hover .ctaLabel,
 .darkHero:not(.solid) .ctaButton:focus-visible .ctaLabel {
-  color: #273229;
+  color: var(--ink);
 }
 
 .inner {
@@ -186,22 +186,28 @@
   color: var(--ink);
 }
 
-/* ---- Book Consultation CTA button (pixel-matched to spec) ---- */
+/* ---- Book Consultation CTA button ---- */
 
+/* Sized down from 0.625rem/1.35rem/13px. At that size the button was 35px tall
+   against a 22px wordmark and read as the loudest thing in the bar — it is a
+   secondary action next to the logo, not the page's primary CTA. Now 30px tall,
+   which still clears the 24px WCAG 2.5.8 target floor. The three hex values it
+   carried (#273229, #b7b6af, #ffffff) were near-misses for --ink, --hairline
+   and --on-accent; they are those tokens now. */
 .ctaButton {
   position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 0.625rem 1.35rem;
+  padding: 0.6875rem 0.85rem;
   background: transparent;
-  color: #273229;
-  border: 1px solid #b7b6af;
+  color: var(--ink);
+  border: 1px solid var(--hairline);
   border-radius: 4px;
   font-family: inherit;
-  font-size: 0.8125rem;
+  font-size: var(--fs-xs);
   font-weight: 600;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
   line-height: 1;
   text-decoration: none;
@@ -219,9 +225,9 @@
   position: absolute;
   inset: 0;
   z-index: -1;
-  background: #273229;
-  transform: translateY(101%);
-  transition: transform 0.35s var(--ease-out);
+  background: var(--ink);
+  opacity: 0;
+  transition: opacity 0.35s var(--ease-out);
 }
 
 .ctaLabel {
@@ -235,7 +241,7 @@
 .ctaFull {
   display: inline-flex;
   align-items: center;
-  gap: 0.45rem;
+  gap: 0.35rem;
 }
 
 .ctaShort {
@@ -250,18 +256,18 @@
 
 .ctaButton:hover,
 .ctaButton:focus-visible {
-  border-color: #273229;
-  color: #ffffff;
+  border-color: var(--ink);
+  color: var(--on-accent);
 }
 
 .ctaButton:hover .ctaBlock,
 .ctaButton:focus-visible .ctaBlock {
-  transform: translateY(0);
+  opacity: 1;
 }
 
 .ctaButton:hover .ctaLabel,
 .ctaButton:focus-visible .ctaLabel {
-  color: #ffffff;
+  color: var(--on-accent);
 }
 
 .ctaButton:hover .ctaArrow,
@@ -286,8 +292,8 @@
   }
 
   .ctaButton {
-    padding: 0.5rem 0.85rem;
-    font-size: var(--fs-xs);
+    padding: 0.45rem 0.75rem;
+    font-size: 0.6875rem;
     letter-spacing: 0.05em;
   }
 

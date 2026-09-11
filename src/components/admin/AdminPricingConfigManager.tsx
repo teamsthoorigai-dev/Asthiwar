@@ -41,6 +41,7 @@ import {
   createAddonVariant,
   deleteAddonVariant,
   updateOptionPricing,
+  updatePackageItem,
   createOption,
   deleteOption,
   createCategory,
@@ -57,6 +58,7 @@ import {
   AdminSpecificationCategory,
   AdminSpecificationItem,
   BrandOption,
+  OptionPackagePrice,
   AddonPricingUnitKey,
   AddonVariantPayload,
   ItemUnit,
@@ -173,8 +175,17 @@ interface ItemForm {
 interface OptionForm {
   name: string;
   slug: string;
-  priceDelta: number;
   description: string;
+  /**
+   * One rate per package, keyed by package id, held as the raw string the
+   * operator typed so a half-entered value ('-', '1.') survives a keystroke.
+   *
+   * Every option in the catalogue is priced per tier, and the server refuses a
+   * bare delta on one — a single number names no tier, so the change would have
+   * to guess which one was meant. The dialog previously sent exactly that, which
+   * is why no option's price could be edited from this console at all.
+   */
+  packageDeltas: Record<number, string>;
 }
 
 interface AddonForm {
@@ -206,7 +217,7 @@ const EMPTY_ITEM_FORM: ItemForm = {
   isCustomizable: true,
   sortOrder: 0,
 };
-const EMPTY_OPTION_FORM: OptionForm = { name: '', slug: '', priceDelta: 0, description: '' };
+const EMPTY_OPTION_FORM: OptionForm = { name: '', slug: '', description: '', packageDeltas: {} };
 const EMPTY_ADDON_FORM: AddonForm = {
   name: '',
   slug: '',
@@ -607,28 +618,47 @@ export function AdminPricingConfigManager() {
       pushToast('error', 'Package display name must be at least 2 characters.');
       return;
     }
+    // Strictly positive, matching updatePackagePriceSchema on the server. A zero
+    // passed this check and was then refused with a bare 400, which reads as a
+    // broken console rather than a rejected value.
     const invalid = [
       ['Standard rate', standardRate],
       ['Volume rate', volumeRate],
       ['Volume threshold', threshold],
-    ].find(([, v]) => !Number.isFinite(v as number) || (v as number) < 0);
+    ].find(([, v]) => !Number.isFinite(v as number) || (v as number) <= 0);
     if (invalid) {
-      pushToast('error', `${invalid[0]} must be a valid non-negative number.`);
+      pushToast('error', `${invalid[0]} must be a valid number greater than zero.`);
       return;
     }
 
+    if (volumeRate > standardRate) {
+      pushToast(
+        'error',
+        `The volume rate (₹${volumeRate}/sq.ft) is above the standard rate (₹${standardRate}/sq.ft), ` +
+          'so a larger build would be quoted more, not less.'
+      );
+      return;
+    }
+
+    // Two endpoints, run in sequence rather than together.
+    //
+    // Promise.all fired both at once, so a failure in either left the other
+    // applied under a single red toast — and because repricing versions the price
+    // row, that half was the irreversible one. Metadata goes first precisely
+    // because it is the reversible write: if it fails, the rate is never touched,
+    // and if the rate then fails, the operator is looking at a renamed package
+    // priced exactly as it was.
     await runAction(
       `pkg:${slug}`,
-      () =>
-        Promise.all([
-          updatePackagePricing(id, {
-            pricePerSqft: standardRate,
-            volumePricePerSqft: volumeRate,
-            volumeDiscountThresholdSqft: threshold,
-            headRoomPricePerSqft: headroomRate,
-          }),
-          updatePackageMetadata(id, { name, tagline, highlights, isRecommended }),
-        ]),
+      async () => {
+        await updatePackageMetadata(id, { name, tagline, highlights, isRecommended });
+        await updatePackagePricing(id, {
+          pricePerSqft: standardRate,
+          volumePricePerSqft: volumeRate,
+          volumeDiscountThresholdSqft: threshold,
+          headRoomPricePerSqft: headroomRate,
+        });
+      },
       {
         success: `Saved ${name || slug} package configuration.`,
         failure: `Failed to update the ${name || slug} package.`,
@@ -682,7 +712,11 @@ export function AdminPricingConfigManager() {
   const handleDeleteLocation = async (id: number, name: string) => {
     setConfirm({
       title: 'Delete city multiplier',
-      body: `'${name}' will be removed from the calculator's city list. Estimates already saved against it are not affected. This cannot be undone.`,
+      body:
+        `'${name}' will be removed from the calculator's city list. If any saved ` +
+        'quotation was priced against it, the deletion is refused — deactivate the ' +
+        'city instead to hide it from the calculator while keeping that history. ' +
+        'This cannot be undone.',
       confirmLabel: 'Delete city',
       onConfirm: () =>
         runAction(`loc:${id}`, () => deleteLocation(id), {
@@ -933,17 +967,44 @@ export function AdminPricingConfigManager() {
     );
   };
 
+  /** Every active package starts at 0.00 so the dialog always shows a full grid. */
+  const blankPackageDeltas = useCallback((): Record<number, string> => {
+    const deltas: Record<number, string> = {};
+    for (const pkg of config?.packages ?? []) deltas[pkg.id] = '0.00';
+    return deltas;
+  }, [config?.packages]);
+
   const openCreateOption = (itemId: number, itemName: string) => {
-    setOptionForm(EMPTY_OPTION_FORM);
+    setOptionForm({ ...EMPTY_OPTION_FORM, packageDeltas: blankPackageDeltas() });
     setOptionDialog({ mode: 'create', itemId, itemName });
   };
 
   const openEditOption = (option: BrandOption, itemName: string) => {
+    // Seed from the rows in force only. Retired rows are the record of what past
+    // quotations were issued under; loading one would resurrect an old rate.
+    const deltas = blankPackageDeltas();
+    for (const price of option.prices ?? []) {
+      if (price.effectiveTo != null || price.packageId == null) continue;
+      deltas[price.packageId] = Number(price.priceDelta).toFixed(2);
+    }
+
+    // An option priced universally (package_id IS NULL) has one rate covering
+    // every tier. Show that rate in each column rather than a grid of zeroes,
+    // so saving preserves what the option currently costs instead of zeroing it.
+    const universal = (option.prices ?? []).find(
+      (pr) => pr.effectiveTo == null && pr.packageId == null
+    );
+    if (universal) {
+      for (const key of Object.keys(deltas)) {
+        deltas[Number(key)] = Number(universal.priceDelta).toFixed(2);
+      }
+    }
+
     setOptionForm({
       name: option.brandName,
       slug: option.slug,
-      priceDelta: Number(option.activePrice?.priceDelta ?? 0),
       description: option.specification ?? '',
+      packageDeltas: deltas,
     });
     setOptionDialog({ mode: 'edit', option, itemName });
   };
@@ -955,8 +1016,26 @@ export function AdminPricingConfigManager() {
     const slug = slugify(optionForm.slug);
     if (!name || !slug) return;
 
-    const delta = Number(optionForm.priceDelta) || 0;
     const description = optionForm.description.trim();
+
+    // One row per active package. A blank box means 0.00, not "leave this tier
+    // out" — an option missing a row for a tier is charged at nothing there.
+    const prices: OptionPackagePrice[] = [];
+    for (const pkg of config?.packages ?? []) {
+      const raw = (optionForm.packageDeltas[pkg.id] ?? '').trim();
+      const value = raw === '' ? 0 : Number(raw);
+      if (!Number.isFinite(value)) {
+        pushToast('error', `${pkg.name}: rate delta must be a valid number.`);
+        return;
+      }
+      prices.push({ packageId: pkg.id, priceDelta: value });
+    }
+
+    if (prices.length === 0) {
+      pushToast('error', 'No active packages to price this option against.');
+      return;
+    }
+
     setCreatingOption(true);
 
     const ok =
@@ -968,8 +1047,8 @@ export function AdminPricingConfigManager() {
                 itemId: optionDialog.itemId,
                 name,
                 slug,
-                priceDelta: delta,
                 description,
+                prices,
               }),
             {
               success: `Brand option '${name}' created.`,
@@ -983,7 +1062,7 @@ export function AdminPricingConfigManager() {
                 name,
                 slug,
                 description,
-                priceDelta: delta,
+                prices,
               }),
             {
               success: `Brand option '${name}' updated.`,
@@ -993,6 +1072,33 @@ export function AdminPricingConfigManager() {
 
     setCreatingOption(false);
     if (ok) setOptionDialog(null);
+  };
+
+  /**
+   * Which brand a tier includes, and whether the component is in that tier at all.
+   *
+   * This endpoint existed and was routed from the day it was written, and nothing
+   * in the console ever called it. `package_items.default_option_id` is what the
+   * calculator reads to mark a brand as "included with your package", and what the
+   * public comparison matrix prints as the tier's specification — so a component
+   * added here showed an em dash in all four columns of that matrix, and the
+   * calculator fell back to whichever option the database happened to return
+   * first, labelled as included. Neither could be corrected from this console.
+   */
+  const handleUpdatePackageItem = async (
+    packageItemId: number,
+    itemName: string,
+    packageName: string,
+    patch: { isIncluded?: boolean; defaultOptionId?: number | null; additionalCostPrice?: number }
+  ) => {
+    await runAction(
+      `pkgitem:${packageItemId}`,
+      () => updatePackageItem(packageItemId, patch),
+      {
+        success: `${itemName} updated for ${packageName}.`,
+        failure: `Failed to update ${itemName} for ${packageName}.`,
+      }
+    );
   };
 
   const handleDeleteBrandOption = async (optionId: number, brandName: string, itemName: string) => {
@@ -1984,6 +2090,102 @@ export function AdminPricingConfigManager() {
                         </div>
                       </div>
 
+                      {/* Per-tier inclusion and the brand each tier includes. */}
+                      <div className="space-y-2">
+                        <span className="text-[10px] uppercase font-bold text-muted tracking-wider block">
+                          Included Brand per Package
+                        </span>
+                        {item.packageMappings.length === 0 ? (
+                          <p className="text-xs text-muted italic">
+                            This component is not mapped to any package tier.
+                          </p>
+                        ) : (
+                          <div className="space-y-1.5">
+                            {item.packageMappings
+                              .slice()
+                              .sort((a, b) => a.packageId - b.packageId)
+                              .map((mapping) => {
+                                const pkg = config?.packages.find(
+                                  (pk) => pk.id === mapping.packageId
+                                );
+                                const busyMapping = busyKeys[`pkgitem:${mapping.id}`];
+                                const hasDefault = mapping.defaultOptionId !== null;
+                                return (
+                                  <div
+                                    key={mapping.id}
+                                    className="flex flex-col sm:flex-row sm:items-center gap-2 p-2 rounded border border-border bg-surface"
+                                  >
+                                    <span className="text-[11px] font-bold w-full sm:w-32 shrink-0 truncate">
+                                      {pkg?.name ?? `Package ${mapping.packageId}`}
+                                    </span>
+
+                                    <label className="flex items-center gap-1.5 text-[11px] text-muted shrink-0">
+                                      <input
+                                        type="checkbox"
+                                        checked={mapping.isIncluded}
+                                        disabled={busyMapping}
+                                        onChange={(e) =>
+                                          handleUpdatePackageItem(
+                                            mapping.id,
+                                            item.name,
+                                            pkg?.name ?? 'this package',
+                                            { isIncluded: e.target.checked }
+                                          )
+                                        }
+                                      />
+                                      <span>Included</span>
+                                    </label>
+
+                                    <select
+                                      aria-label={`Included brand for ${item.name} in ${pkg?.name ?? 'this package'}`}
+                                      className="form-input text-xs py-1 flex-1 min-w-0"
+                                      value={mapping.defaultOptionId ?? ''}
+                                      disabled={busyMapping || item.options.length === 0}
+                                      onChange={(e) =>
+                                        handleUpdatePackageItem(
+                                          mapping.id,
+                                          item.name,
+                                          pkg?.name ?? 'this package',
+                                          {
+                                            defaultOptionId: e.target.value
+                                              ? Number(e.target.value)
+                                              : null,
+                                          }
+                                        )
+                                      }
+                                    >
+                                      <option value="">
+                                        {item.options.length === 0
+                                          ? 'Add a brand option first'
+                                          : 'No brand set — shows as a dash publicly'}
+                                      </option>
+                                      {item.options.map((opt) => (
+                                        <option key={opt.id} value={opt.id}>
+                                          {opt.brandName}
+                                        </option>
+                                      ))}
+                                    </select>
+
+                                    {busyMapping ? (
+                                      <Loader2
+                                        size={13}
+                                        className="animate-spin text-muted shrink-0"
+                                      />
+                                    ) : !hasDefault ? (
+                                      <span
+                                        className="text-[10px] font-bold text-amber-600 dark:text-amber-400 shrink-0"
+                                        title="The comparison matrix prints a dash for this tier, and the calculator falls back to an arbitrary brand."
+                                      >
+                                        Not set
+                                      </span>
+                                    ) : null}
+                                  </div>
+                                );
+                              })}
+                          </div>
+                        )}
+                      </div>
+
                       {/* Brand Options */}
                       <div className="space-y-2">
                         <span className="text-[10px] uppercase font-bold text-muted tracking-wider block">
@@ -2826,31 +3028,55 @@ export function AdminPricingConfigManager() {
               />
             </div>
 
-            <div>
-              <label className="font-bold text-muted block mb-1">Rate Delta (₹ / sq.ft)</label>
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                required
-                value={optionForm.priceDelta}
-                onChange={(e) => {
-                  const val = parseFloat(e.target.value);
-                  setOptionForm((prev) => ({
-                    ...prev,
-                    priceDelta: isNaN(val) ? 0 : val,
-                  }));
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === '-' || e.key === 'e') e.preventDefault();
-                }}
-                className="form-input text-xs w-full font-mono font-bold"
-                placeholder="0.00"
-              />
-              <span className="text-[10px] text-muted block mt-1">
-                0.00 if included in base package rate, or rate addition if premium brand
+            <fieldset>
+              <legend className="font-bold text-muted block mb-1">
+                Rate Delta per Package (₹ / sq.ft)
+              </legend>
+              <div className="space-y-1.5">
+                {(config?.packages ?? []).map((pkg) => (
+                  <div key={pkg.id} className="flex items-center gap-2">
+                    <label
+                      htmlFor={`opt-pkg-delta-${pkg.id}`}
+                      className="text-[11px] font-semibold flex-1 min-w-0 truncate"
+                    >
+                      {pkg.name}
+                    </label>
+                    <div className="relative w-28 shrink-0">
+                      <span className="absolute left-2 top-1/2 -translate-y-1/2 text-muted text-[11px] pointer-events-none">
+                        ₹
+                      </span>
+                      <input
+                        id={`opt-pkg-delta-${pkg.id}`}
+                        type="number"
+                        step="0.01"
+                        inputMode="decimal"
+                        value={optionForm.packageDeltas[pkg.id] ?? ''}
+                        onChange={(e) => {
+                          const raw = e.target.value;
+                          setOptionForm((prev) => ({
+                            ...prev,
+                            // Stored as typed. Coercing to a number here would
+                            // erase a half-entered '-' or '1.' on every keystroke.
+                            packageDeltas: { ...prev.packageDeltas, [pkg.id]: raw },
+                          }));
+                        }}
+                        onKeyDown={(e) => {
+                          // '-' stays allowed: a plainer brand than the tier
+                          // includes is a downgrade credit. 'e' is not a rate.
+                          if (e.key === 'e') e.preventDefault();
+                        }}
+                        className="form-input text-xs pl-6 py-1 w-full font-mono font-bold"
+                        placeholder="0.00"
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <span className="text-[10px] text-muted block mt-1.5">
+                0.00 where the brand is already included in that tier&apos;s base rate. A
+                negative value is a credit — a plainer brand than the tier includes.
               </span>
-            </div>
+            </fieldset>
 
             <div>
               <label className="font-bold text-muted block mb-1">Technical Specification Note</label>

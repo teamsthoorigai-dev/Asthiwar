@@ -124,11 +124,34 @@ export function urlSafeEstimateNumber(estimateNumber: string): string {
 }
 
 /**
- * Generates direct download / streaming URL for estimate PDF
+ * A customer's own quotation PDF link.
+ *
+ * The quotation number is a sequence, so it identifies the document but does not
+ * authorise reading it — the access token issued with the estimate does. A link
+ * built without one 404s, which is the point: it is what stops a stranger
+ * counting up the sequence and collecting every customer's PDF.
  */
-export function getEstimatePdfUrl(estimateNumber: string): string {
+export function getEstimatePdfUrl(estimateNumber: string, accessToken: string): string {
   const baseUrl = getApiBaseUrl();
-  return `${baseUrl}/api/v1/calculator/estimate/${urlSafeEstimateNumber(estimateNumber)}/pdf`;
+  return (
+    `${baseUrl}/api/v1/calculator/estimate/${urlSafeEstimateNumber(estimateNumber)}/pdf` +
+    `?t=${encodeURIComponent(accessToken)}`
+  );
+}
+
+/**
+ * The same PDF for an operator in the admin console.
+ *
+ * Goes through the authenticated admin route, so it needs no access token — the
+ * session is the authorisation. The console previously linked to the public
+ * route, which now refuses a request that carries no token; it also meant staff
+ * links were shareable with anyone.
+ *
+ * Accepts an estimate id or a quotation number.
+ */
+export function getAdminEstimatePdfUrl(estimateIdOrNumber: string): string {
+  const baseUrl = getApiBaseUrl();
+  return `${baseUrl}/api/v1/admin/estimates/${urlSafeEstimateNumber(estimateIdOrNumber)}/pdf`;
 }
 
 /**

@@ -4,89 +4,112 @@
   align-items: center;
   justify-content: center;
   gap: var(--s-1);
-  padding: 0.875rem 1.75rem;
+  padding: 0.8rem 1.6rem;
   border: 1px solid transparent;
   border-radius: 4px;
-  font-size: var(--fs-sm);
+  font-size: 0.8125rem;
   font-weight: var(--fw-medium);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   line-height: 1;
+  white-space: nowrap;
   cursor: pointer;
   overflow: hidden;
   isolation: isolate;
-  transition: border-color var(--dur-fast) var(--ease-out);
+  transition:
+    border-color var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out);
   -webkit-tap-highlight-color: transparent;
 }
 
-/* The colour block that slides up on hover — Novascape's .hover-color-block-2 */
+/* The colour block that fades in on hover */
 .block {
   position: absolute;
   inset: 0;
   z-index: -1;
-  transform: translateY(101%);
-  transition: transform 0.4s var(--ease-out);
+  opacity: 0;
+  transition: opacity 0.35s var(--ease-out);
 }
 
 .label {
   position: relative;
   z-index: 1;
-  transition: color 0.4s var(--ease-out);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  white-space: nowrap;
+  transition: color 0.35s var(--ease-out);
+}
+
+.arrow {
+  display: inline-block;
+  flex-shrink: 0;
+  transition: transform 0.3s var(--ease-out);
 }
 
 .button:hover .block,
 .button:focus-visible .block {
-  transform: translateY(0);
+  opacity: 1;
+}
+
+.button:hover .arrow,
+.button:focus-visible .arrow {
+  transform: translate(1px, -1px);
 }
 
 /* ---- variants ---- */
 
+/* Ghost & Primary: Outline pill on light background */
+.ghost,
 .primary {
-  background: var(--accent);
-  color: var(--on-accent);
-}
-
-/* Forest palette: --accent (#243228) and --ink (#19241D) are three points apart
-   in luminance, so the block that slides up on hover was invisible. The primary
-   button brightens on hover instead of darkening. */
-.primary .block {
-  background: var(--accent-bright);
-}
-
-.ghost {
   background: transparent;
   color: var(--ink);
   border-color: var(--hairline);
 }
 
-.ghost .block {
+.ghost .block,
+.primary .block {
   background: var(--ink);
 }
 
 .ghost:hover .label,
-.ghost:focus-visible .label {
+.ghost:focus-visible .label,
+.primary:hover .label,
+.primary:focus-visible .label {
   color: var(--on-accent);
 }
 
 .ghost:hover,
-.ghost:focus-visible {
+.ghost:focus-visible,
+.primary:hover,
+.primary:focus-visible {
   border-color: var(--ink);
 }
 
+/* White: Outline pill on dark background (Footer, Interludes) */
 .white {
-  background: var(--bg);
-  color: var(--accent);
+  background: transparent;
+  color: var(--on-accent);
+  border-color: color-mix(in srgb, var(--on-accent) 35%, transparent);
 }
 
 .white .block {
-  background: var(--ink);
+  background: var(--on-accent);
 }
 
 .white:hover .label,
 .white:focus-visible .label {
-  color: var(--on-accent);
+  color: var(--ink);
+}
+
+.white:hover,
+.white:focus-visible {
+  border-color: var(--on-accent);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .block {
+  .block,
+  .arrow {
     transition: none;
   }
 }

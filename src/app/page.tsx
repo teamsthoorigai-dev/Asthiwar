@@ -44,9 +44,9 @@ export default function HomePage() {
   return (
     <>
       <LogoReveal />
-      <PrinciplesMarquee />
-      <WorkGallery content={workGallery} />
       <EstimateBand />
+      <WorkGallery content={workGallery} />
+      <PrinciplesMarquee />
       <LastingCards />
       <DisciplinesSticky />
       <Faq content={faqContent} />

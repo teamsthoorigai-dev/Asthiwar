@@ -136,7 +136,7 @@ export function LastingCards() {
   }, []);
 
   return (
-    <Section background="surface" aria-labelledby="lasting-title">
+    <Section background="surface" tight className={styles.lastingSection} aria-labelledby="lasting-title">
       <SectionHeader
         id="lasting-title"
         eyebrow={lastingCards.eyebrow}
@@ -365,7 +365,7 @@ export function LastingCards() {
                 title={`Select principle 0${idx + 1}: ${card.title}`}
               >
                 <span className={styles.tabNum}>{String(idx + 1).padStart(2, '0')}</span>
-                <span className={styles.tabTitle}>{card.title.split(' ')[0]}</span>
+                <span className={styles.tabTitle}>{card.tabLabel}</span>
               </button>
             );
           })}

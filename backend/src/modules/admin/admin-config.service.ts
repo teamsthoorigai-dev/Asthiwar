@@ -377,6 +377,30 @@ export async function deleteAdminLocation(locationId: number) {
     throw new AdminServiceError(404, 'LOCATION_NOT_FOUND', `Location with ID ${locationId} not found`);
   }
 
+  // The only delete in this file that had no reference guard.
+  //
+  // `estimates.location_id` is ON DELETE SET NULL, so deleting a city did not
+  // fail — it quietly severed every quotation issued against that city from the
+  // catalogue row that priced it. The money is unaffected (the multiplier, the
+  // location name and the full snapshot are all stored on the estimate itself),
+  // but the lineage is gone and the dashboard's per-city grouping falls back to
+  // matching free text. Deactivating hides a city from the calculator without
+  // any of that.
+  const citedBy = await db
+    .select({ id: schema.estimates.id })
+    .from(schema.estimates)
+    .where(eq(schema.estimates.locationId, locationId))
+    .limit(1);
+
+  if (citedBy.length > 0) {
+    throw new AdminServiceError(
+      409,
+      'REFERENCED_BY_ESTIMATES',
+      `'${existing.name}' priced at least one saved quotation and cannot be deleted. ` +
+        'Deactivate it instead to hide it from the calculator.'
+    );
+  }
+
   await db
     .delete(schema.locations)
     .where(eq(schema.locations.id, locationId));
@@ -421,25 +445,73 @@ export async function updateAdminAddonPrice(addonIdOrSlug: number | string, dto:
     throw new AdminServiceError(404, 'ADDON_NOT_FOUND', `Addon '${addonIdOrSlug}' not found`);
   }
 
-  // Only the row in force is repriced. `addon_prices` has no unique key on
-  // (addon_id, variant_slug), so retired rows for this variant can sit alongside
-  // the live one — an unscoped UPDATE rewrote those too, silently restating the
-  // rates that historical quotations were issued under.
-  const [updatedPrice] = await db
-    .update(schema.addonPrices)
-    .set({
-      price: dto.price.toFixed(2),
-    })
-    .where(
-      and(
-        eq(schema.addonPrices.addonId, addon.id),
-        eq(schema.addonPrices.variantSlug, dto.variantSlug),
-        isNull(schema.addonPrices.effectiveTo)
-      )
-    )
-    .returning();
+  // Version on write, exactly as updateAdminPackagePrice does.
+  //
+  // This used to be an in-place UPDATE of the live row, under a response that
+  // told the operator the change had been saved "with history versioning". It had
+  // not: `effective_from` was left untouched, no row was retired, and the
+  // previous rate was simply gone. `addon_prices` carries the same
+  // effective_from/effective_to pair as `package_prices` for the same reason —
+  // an estimate issued last year has to stay explicable against the rates that
+  // produced it — and a table where only one of two writers versions is a table
+  // whose history cannot be trusted at all.
+  //
+  // Order matters: migration 0010 puts a partial unique index over
+  // (addon_id, variant_slug, package_tier) WHERE effective_to IS NULL, so the
+  // outgoing row has to be retired before its replacement is inserted. One
+  // transaction throughout, so a failure cannot leave a variant with no price.
+  return db.transaction(async (tx) => {
+    const liveRows = await tx
+      .select()
+      .from(schema.addonPrices)
+      .where(
+        and(
+          eq(schema.addonPrices.addonId, addon.id),
+          eq(schema.addonPrices.variantSlug, dto.variantSlug),
+          isNull(schema.addonPrices.effectiveTo)
+        )
+      );
 
-  return updatedPrice;
+    // A variant slug that matches nothing used to return `{ success: true }` with
+    // no data and the same "updated successfully" message — a green toast in the
+    // console for a write that never happened.
+    if (liveRows.length === 0) {
+      throw new AdminServiceError(
+        404,
+        'ADDON_VARIANT_NOT_FOUND',
+        `'${addon.name}' has no active variant with slug '${dto.variantSlug}'.`
+      );
+    }
+
+    const now = new Date();
+    const created = [];
+
+    // Normally one row. A variant offered to several package tiers under separate
+    // rows is repriced across all of them, which is what the caller is asking for:
+    // the endpoint identifies a variant, not a tier.
+    for (const current of liveRows) {
+      await tx
+        .update(schema.addonPrices)
+        .set({ effectiveTo: now })
+        .where(eq(schema.addonPrices.id, current.id));
+
+      const [row] = await tx
+        .insert(schema.addonPrices)
+        .values({
+          addonId: current.addonId,
+          variantName: current.variantName,
+          variantSlug: current.variantSlug,
+          packageTier: current.packageTier,
+          price: dto.price.toFixed(2),
+          effectiveFrom: now,
+        })
+        .returning();
+
+      created.push(row);
+    }
+
+    return created[0];
+  });
 }
 
 export async function updateAdminAddonMetadata(addonId: number, dto: UpdateAddonMetadataDto) {
@@ -970,69 +1042,115 @@ export async function createAdminOption(dto: CreateOptionDto) {
 
   const rawSlug = (dto.slug?.trim() || dto.name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_')).replace(/^_+|_+$/g, '') || `opt_${Date.now()}`;
 
-  const [createdOption] = await db
-    .insert(schema.options)
-    .values({
-      itemId: dto.itemId,
-      brandName: dto.name,
-      slug: rawSlug,
-      specification: dto.description || '',
-    })
-    .returning();
+  // A component cannot hold two options under one slug.
+  //
+  // updateAdminOptionPrice checked this and create did not, so the console could
+  // make a clash that its own edit screen then refused to fix. It is not cosmetic:
+  // the calculator keys its option lookup on `${itemId}:${slug}`, so the second
+  // row silently displaces the first — a customer picking one brand is priced at
+  // the other's rate, with both rendered under the same name.
+  const slugClash = await db.query.options.findFirst({
+    where: and(eq(schema.options.itemId, dto.itemId), eq(schema.options.slug, rawSlug)),
+  });
 
-  const itemPriceType = item.unit === 'fixed' ? 'fixed' : 'per_sqft';
-  let createdPrices: any[] = [];
-  if (dto.prices && dto.prices.length > 0) {
-    // Deduplicate by packageId to prevent DB issues
-    const priceMap = new Map();
-    for (const p of dto.prices) {
-      priceMap.set(p.packageId, p);
-    }
-    const inserts = Array.from(priceMap.values()).map((p) => {
-      const isComp = p.isComplimentary === true;
-      const rawDelta = isComp ? 0 : Number(p.priceDelta);
-      const deltaVal = isNaN(rawDelta) ? 0 : rawDelta;
-      return {
-        optionId: createdOption.id,
-        packageId: p.packageId,
-        priceDelta: deltaVal.toFixed(2),
-        priceType: itemPriceType,
-      };
-    });
-
-    createdPrices = await db.insert(schema.optionPrices).values(inserts).returning();
-  } else {
-    // Default to priceDelta if provided, else 0.00 for all active packages
-    const activePkgs = await db.query.packages.findMany({
-      where: eq(schema.packages.isActive, true),
-    });
-    const defaultDelta = (dto.priceDelta !== undefined && !isNaN(Number(dto.priceDelta)))
-      ? Number(dto.priceDelta).toFixed(2)
-      : '0.00';
-    if (activePkgs.length > 0) {
-      const inserts = activePkgs.map((pkg) => ({
-        optionId: createdOption.id,
-        packageId: pkg.id,
-        priceDelta: defaultDelta,
-        priceType: itemPriceType,
-      }));
-      createdPrices = await db.insert(schema.optionPrices).values(inserts).returning();
-    } else {
-      const [singlePrice] = await db.insert(schema.optionPrices).values({
-        optionId: createdOption.id,
-        priceDelta: defaultDelta,
-        priceType: itemPriceType,
-      }).returning();
-      createdPrices = [singlePrice];
-    }
+  if (slugClash) {
+    throw new AdminServiceError(
+      409,
+      'OPTION_ALREADY_EXISTS',
+      `'${item.name}' already has an option with slug '${rawSlug}'`
+    );
   }
 
-  return {
-    ...createdOption,
-    name: createdOption.brandName,
-    activePrice: createdPrices[0] || null,
-    prices: createdPrices,
-  };
+  const itemPriceType = item.unit === 'fixed' ? 'fixed' : 'per_sqft';
+
+  // One transaction, matching createAdminAddon and createAdminItem. An option
+  // written without its prices is priced at zero by the engine's fallback path —
+  // a free upgrade, created by a failure nobody saw.
+  return db.transaction(async (tx) => {
+    const [createdOption] = await tx
+      .insert(schema.options)
+      .values({
+        itemId: dto.itemId,
+        brandName: dto.name,
+        slug: rawSlug,
+        specification: dto.description || '',
+      })
+      .returning();
+
+    let createdPrices: any[] = [];
+
+    if (dto.prices && dto.prices.length > 0) {
+      // Deduplicate by packageId to prevent DB issues
+      const priceMap = new Map();
+      for (const p of dto.prices) {
+        priceMap.set(p.packageId, p);
+      }
+
+      // Every packageId has to name a real package. These go straight into a
+      // foreign key, so a stale or mistyped id came back as a raw 23503 wrapped
+      // in an HTTP 500 rather than something the operator could act on.
+      const requestedPackageIds = Array.from(priceMap.keys()) as number[];
+      const knownPackages = await tx
+        .select({ id: schema.packages.id })
+        .from(schema.packages)
+        .where(inArray(schema.packages.id, requestedPackageIds));
+      const knownIds = new Set(knownPackages.map((pkg) => pkg.id));
+      const unknownIds = requestedPackageIds.filter((id) => !knownIds.has(id));
+
+      if (unknownIds.length > 0) {
+        throw new AdminServiceError(
+          400,
+          'PACKAGE_NOT_FOUND',
+          `No package with ID ${unknownIds.join(', ')}`
+        );
+      }
+
+      const inserts = Array.from(priceMap.values()).map((p) => {
+        const isComp = p.isComplimentary === true;
+        const rawDelta = isComp ? 0 : Number(p.priceDelta);
+        const deltaVal = isNaN(rawDelta) ? 0 : rawDelta;
+        return {
+          optionId: createdOption.id,
+          packageId: p.packageId,
+          priceDelta: deltaVal.toFixed(2),
+          priceType: itemPriceType,
+        };
+      });
+
+      createdPrices = await tx.insert(schema.optionPrices).values(inserts).returning();
+    } else {
+      // Default to priceDelta if provided, else 0.00 for all active packages
+      const activePkgs = await tx.query.packages.findMany({
+        where: eq(schema.packages.isActive, true),
+      });
+      const defaultDelta = (dto.priceDelta !== undefined && !isNaN(Number(dto.priceDelta)))
+        ? Number(dto.priceDelta).toFixed(2)
+        : '0.00';
+      if (activePkgs.length > 0) {
+        const inserts = activePkgs.map((pkg) => ({
+          optionId: createdOption.id,
+          packageId: pkg.id,
+          priceDelta: defaultDelta,
+          priceType: itemPriceType,
+        }));
+        createdPrices = await tx.insert(schema.optionPrices).values(inserts).returning();
+      } else {
+        const [singlePrice] = await tx.insert(schema.optionPrices).values({
+          optionId: createdOption.id,
+          priceDelta: defaultDelta,
+          priceType: itemPriceType,
+        }).returning();
+        createdPrices = [singlePrice];
+      }
+    }
+
+    return {
+      ...createdOption,
+      name: createdOption.brandName,
+      activePrice: createdPrices[0] || null,
+      prices: createdPrices,
+    };
+  });
 }
 
 export async function deleteAdminOption(optionId: number) {
@@ -1105,33 +1223,56 @@ export async function updateAdminOptionPrice(optionId: number, dto: UpdateOption
   if (dto.prices && dto.prices.length > 0) {
     // Replace the live price set only. Retired rows are the record of what past
     // quotations were issued under and must survive a reprice.
-    await db
-      .delete(schema.optionPrices)
-      .where(
-        and(
-          eq(schema.optionPrices.optionId, optionId),
-          isNull(schema.optionPrices.effectiveTo)
-        )
-      );
+    //
+    // One transaction: the delete and the insert are a single replacement, and a
+    // failure between them left the option with no price in force at all — which
+    // the engine charges as zero, turning a failed edit into a free upgrade.
+    newPrices = await db.transaction(async (tx) => {
+      // Deduplicate by packageId
+      const priceMap = new Map();
+      for (const p of dto.prices!) {
+        priceMap.set(p.packageId, p);
+      }
 
-    // Deduplicate by packageId
-    const priceMap = new Map();
-    for (const p of dto.prices) {
-      priceMap.set(p.packageId, p);
-    }
-    const inserts = Array.from(priceMap.values()).map((p) => {
-      const isComp = p.isComplimentary === true;
-      const rawDelta = isComp ? 0 : Number(p.priceDelta);
-      const deltaVal = isNaN(rawDelta) ? 0 : rawDelta;
-      return {
-        optionId: optionId,
-        packageId: p.packageId,
-        priceDelta: deltaVal.toFixed(2),
-        priceType: itemPriceType,
-      };
+      const requestedPackageIds = Array.from(priceMap.keys()) as number[];
+      const knownPackages = await tx
+        .select({ id: schema.packages.id })
+        .from(schema.packages)
+        .where(inArray(schema.packages.id, requestedPackageIds));
+      const knownIds = new Set(knownPackages.map((pkg) => pkg.id));
+      const unknownIds = requestedPackageIds.filter((id) => !knownIds.has(id));
+
+      if (unknownIds.length > 0) {
+        throw new AdminServiceError(
+          400,
+          'PACKAGE_NOT_FOUND',
+          `No package with ID ${unknownIds.join(', ')}`
+        );
+      }
+
+      await tx
+        .delete(schema.optionPrices)
+        .where(
+          and(
+            eq(schema.optionPrices.optionId, optionId),
+            isNull(schema.optionPrices.effectiveTo)
+          )
+        );
+
+      const inserts = Array.from(priceMap.values()).map((p) => {
+        const isComp = p.isComplimentary === true;
+        const rawDelta = isComp ? 0 : Number(p.priceDelta);
+        const deltaVal = isNaN(rawDelta) ? 0 : rawDelta;
+        return {
+          optionId: optionId,
+          packageId: p.packageId,
+          priceDelta: deltaVal.toFixed(2),
+          priceType: itemPriceType,
+        };
+      });
+
+      return tx.insert(schema.optionPrices).values(inserts).returning();
     });
-
-    newPrices = await db.insert(schema.optionPrices).values(inserts).returning();
   } else if (dto.priceDelta !== undefined) {
     // A bare delta names no tier, and the specifications view it is sent from has
     // no package in scope — so it can only mean the universal row (package_id IS
@@ -1195,6 +1336,35 @@ export async function updateAdminPackageItem(packageItemId: number, dto: UpdateP
 
   if (!item) {
     throw new AdminServiceError(404, 'PACKAGE_ITEM_NOT_FOUND', `Package item with ID ${packageItemId} not found`);
+  }
+
+  // The default option has to be one of *this component's* options.
+  //
+  // `package_items.default_option_id` only carries a foreign key to options at
+  // large, so any option id in the catalogue satisfied the database — a tier's
+  // default for Flooring could be set to a door. It is not a cosmetic field:
+  // the calculator reads it to mark which brand is included in a tier, and the
+  // public comparison matrix prints it as that tier's specification.
+  if (dto.defaultOptionId !== undefined && dto.defaultOptionId !== null) {
+    const option = await db.query.options.findFirst({
+      where: eq(schema.options.id, dto.defaultOptionId),
+    });
+
+    if (!option) {
+      throw new AdminServiceError(
+        404,
+        'OPTION_NOT_FOUND',
+        `Option with ID ${dto.defaultOptionId} not found`
+      );
+    }
+
+    if (option.itemId !== item.itemId) {
+      throw new AdminServiceError(
+        400,
+        'OPTION_BELONGS_TO_ANOTHER_ITEM',
+        `'${option.brandName}' is an option of a different component and cannot be this one's default.`
+      );
+    }
   }
 
   const [updated] = await db

@@ -132,6 +132,7 @@ export const lastingCards = {
     {
       icon: 'site',
       tag: 'Microclimate & Sun Path',
+      tabLabel: 'Site',
       title: 'Read the site first',
       body: 'Orientation, wind, shade and drainage are settled before a single wall is drawn. Comfort begins in plan and section.',
       image: '/images/courtyard.jpg',
@@ -146,6 +147,7 @@ export const lastingCards = {
     {
       icon: 'load',
       tag: 'Structural Geometry',
+      tabLabel: 'Load Path',
       title: 'One load path',
       body: 'Architecture asks what life needs; engineering asks what the idea demands. The grid is simplified until both answers agree.',
       image: '/images/asthivar-villa.jpg',
@@ -160,6 +162,7 @@ export const lastingCards = {
     {
       icon: 'detail',
       tag: 'Zero-Tolerance Detailing',
+      tabLabel: 'Detailing',
       title: 'Detail before pour',
       body: 'Critical junctions are drawn and prototyped on paper. Coordination is cheaper on paper than under a poured slab.',
       image: '/images/materials.jpg',
@@ -174,6 +177,7 @@ export const lastingCards = {
     {
       icon: 'material',
       tag: 'Earth & Breathable Lime',
+      tabLabel: 'Materials',
       title: 'Material honesty',
       body: 'Lime plaster, exposed masonry, engineered timber. Finishes are the material, not a coating over it.',
       image: '/images/lime-plaster.jpg',
@@ -188,6 +192,7 @@ export const lastingCards = {
     {
       icon: 'less',
       tag: 'Low-Carbon CSEB Blocks',
+      tabLabel: 'Low-Carbon',
       title: 'Ask less of the material',
       body: 'Low-cement and cement-free methods where the structure allows, without trading away structural integrity.',
       image: '/images/sustainable.jpg',
@@ -202,6 +207,7 @@ export const lastingCards = {
     {
       icon: 'record',
       tag: 'Full Lifetime Traceability',
+      tabLabel: 'As-Built',
       title: 'Recorded, not remembered',
       body: 'Progress, quality checks and site decisions are written down and handed over with the building.',
       image: '/images/workshop.jpg',
@@ -220,6 +226,7 @@ export const lastingCards = {
   cards: ReadonlyArray<{
     icon: LastingCardIcon;
     tag: string;
+    tabLabel: string;
     title: string;
     body: string;
     image: string;
@@ -299,12 +306,20 @@ export const processReveal = {
 
 export const disciplines = {
   eyebrow: 'Services',
-  title: 'Five disciplines. One continuous process.',
-  body: 'Architecture, interior, construction, structural engineering and green building brought together through one coordinated process.',
+  title: 'Six disciplines. One continuous process.',
+  body: 'Real estate, architecture, interior, construction, structural engineering and green building brought together through one coordinated process.',
+  cta: {
+    label: 'Explore all services',
+    href: '/services',
+  },
 } as const satisfies {
   eyebrow: string;
   title: string;
   body: string;
+  cta: {
+    label: string;
+    href: string;
+  };
 };
 
 /* ---- Section 09 · CoverageCounters ---- */
@@ -315,7 +330,7 @@ export const coverage = {
   body: 'ASTHIWAR works from Coimbatore, with projects and site supervision across the western and central districts.',
   counters: [
     { value: 7, label: 'Cities served' },
-    { value: 5, label: 'Disciplines in-house' },
+    { value: 6, label: 'Disciplines in-house' },
     { value: 1, label: 'Point of accountability' },
   ],
 } as const satisfies {

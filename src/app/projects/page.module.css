@@ -1,0 +1,3 @@
+.archiveSection.archiveSection {
+  padding-block-start: clamp(1.5rem, 1rem + 1vw, 2.25rem);
+}

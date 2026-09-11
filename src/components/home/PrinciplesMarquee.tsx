@@ -22,7 +22,7 @@ const principleIcons = {
   environment: <EnvironmentalResponsibilityIcon />,
 } satisfies Record<HomePrincipleIcon, ReactNode>;
 
-const marqueeItems = homePrinciples.map((principle) => ({
+const marqueeItems = [...homePrinciples, ...homePrinciples, ...homePrinciples].map((principle) => ({
   label: principle.label,
   lines: principle.lines,
   icon: principleIcons[principle.icon],
@@ -41,6 +41,7 @@ export function PrinciplesMarquee() {
     <section className={styles.section}>
       <Marquee
         items={marqueeItems}
+        speed={38}
         variant="band"
         direction="right"
         aria-label={homePrinciplesLabel}

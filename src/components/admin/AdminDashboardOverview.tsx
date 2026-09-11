@@ -15,7 +15,7 @@ import {
   PieChart,
   BarChart3,
 } from 'lucide-react';
-import { getDashboardAnalytics, DashboardAnalytics } from '@/lib/api/admin';
+import { getDashboardAnalytics, DashboardAnalytics, DashboardRange } from '@/lib/api/admin';
 
 function formatINR(amount: number | string | undefined | null): string {
   if (amount === undefined || amount === null) return '₹0';
@@ -30,37 +30,97 @@ function formatINR(amount: number | string | undefined | null): string {
   return `₹${num.toLocaleString('en-IN')}`;
 }
 
+/**
+ * The windows a sales meeting actually asks about.
+ *
+ * Every figure on this page used to be all-time and nothing else was on offer,
+ * so "pipeline value" was a number that could only ever rise and answered no
+ * question about how the month was going. All-time is kept as one option among
+ * several rather than as the only one.
+ */
+const RANGE_OPTIONS: Array<{ label: string; range: DashboardRange }> = [
+  { label: '7 days', range: { days: 7 } },
+  { label: '30 days', range: { days: 30 } },
+  { label: '90 days', range: { days: 90 } },
+  { label: '1 year', range: { days: 365 } },
+  { label: 'All time', range: {} },
+];
+
 export function AdminDashboardOverview() {
   const [data, setData] = useState<DashboardAnalytics | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [rangeIndex, setRangeIndex] = useState<number>(1);
 
   useEffect(() => {
-    getDashboardAnalytics()
+    let mounted = true;
+    setLoading(true);
+    setError(null);
+
+    getDashboardAnalytics(RANGE_OPTIONS[rangeIndex].range)
       .then((res) => {
+        if (!mounted) return;
         setData(res);
         setLoading(false);
       })
       .catch((err: unknown) => {
+        if (!mounted) return;
         const msg = err instanceof Error ? err.message : 'Failed to fetch dashboard metrics';
         setError(msg);
         setLoading(false);
       });
-  }, []);
+
+    return () => {
+      mounted = false;
+    };
+  }, [rangeIndex]);
+
+  const rangeSwitcher = (
+    <div
+      role="group"
+      aria-label="Reporting period"
+      className="flex flex-wrap items-center gap-1 mb-1"
+    >
+      <span className="text-[10px] uppercase font-bold text-muted tracking-wider mr-1">
+        Period
+      </span>
+      {RANGE_OPTIONS.map((option, index) => (
+        <button
+          key={option.label}
+          type="button"
+          onClick={() => setRangeIndex(index)}
+          aria-pressed={rangeIndex === index}
+          className={`text-[11px] font-semibold px-2.5 py-1 rounded border transition-colors ${
+            rangeIndex === index
+              ? 'border-foreground bg-surface-active text-foreground'
+              : 'border-border bg-surface text-muted hover:text-foreground'
+          }`}
+        >
+          {option.label}
+        </button>
+      ))}
+    </div>
+  );
 
   if (loading) {
     return (
-      <div className="py-24 text-center">
-        <Loader2 className="w-8 h-8 animate-spin text-muted mx-auto mb-3" />
-        <p className="text-xs text-muted">Loading live analytics from PostgreSQL...</p>
+      <div className="space-y-6">
+        {rangeSwitcher}
+        <div className="py-24 text-center">
+          <Loader2 className="w-8 h-8 animate-spin text-muted mx-auto mb-3" />
+          <p className="text-xs text-muted">Loading live analytics from PostgreSQL...</p>
+        </div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="p-4 rounded border border-red-500/30 bg-red-500/10 text-red-600 dark:text-red-400 text-xs">
-        {error}
+      <div className="space-y-4">
+        {rangeSwitcher}
+        <div className="p-4 rounded border border-red-500/30 bg-red-500/10 text-red-600 dark:text-red-400 text-xs">
+          {error}
+        </div>
       </div>
     );
   }
@@ -86,6 +146,8 @@ export function AdminDashboardOverview() {
 
   return (
     <div className="space-y-6 animate-fade-in">
+      {rangeSwitcher}
+
       {/* Top 6 KPI Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3.5">
         <div className="calculator-card p-4">
@@ -182,7 +244,11 @@ export function AdminDashboardOverview() {
             {kpis.conversionRate ? `${kpis.conversionRate}%` : '0%'}
           </div>
           <span className="text-[10px] text-muted block mt-1">
-            Won / Total consultations
+            {/* Measured over decided leads. Dividing wins by every lead ever
+                raised counted the open pipeline as losses, so the figure fell
+                whenever business picked up. */}
+            Won / {kpis.decidedEnquiriesCount ?? 0} decided lead
+            {(kpis.decidedEnquiriesCount ?? 0) === 1 ? '' : 's'}
           </span>
         </div>
       </div>

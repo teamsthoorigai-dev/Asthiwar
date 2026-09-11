@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { ArrowDownRight, ArrowUpRight } from 'lucide-react';
+import { ArrowDownRight } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { estimateBand } from '@/data/home';
 import styles from './EstimateBand.module.css';
@@ -47,7 +47,6 @@ export function EstimateBand() {
             <p className={styles.note}>{estimateBand.note}</p>
             <Button href={estimateBand.cta.href} className={styles.cta}>
               {estimateBand.cta.label}
-              <ArrowUpRight size={16} aria-hidden="true" />
             </Button>
           </div>
         </div>

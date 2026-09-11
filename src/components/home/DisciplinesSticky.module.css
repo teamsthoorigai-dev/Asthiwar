@@ -104,11 +104,9 @@
 }
 
 @media (min-width: 1024px) {
-  /* Scroll distance for the section. 400vh spent 80vh per discipline against
-     the reference's ~67vh, which made the image swaps feel sluggish and cost
-     ~500px of page. 350vh lands on 70vh each. */
+  /* Scroll distance for the section. 420vh lands on 70vh each across all 6 disciplines. */
   .track {
-    height: 350vh;
+    height: 420vh;
     position: relative;
   }
 

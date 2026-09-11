@@ -2,7 +2,7 @@
   background: var(--bg);
   width: 100%;
   padding-block-start: calc(var(--header-height, 4.5rem) + 2rem);
-  padding-block-end: var(--section-y);
+  padding-block-end: 0;
 }
 
 .inner {
@@ -67,55 +67,78 @@
   margin-block-end: var(--s-4);
 }
 
+/* Profile Grid: Text on Left, Building Pillar Mark in Empty Space on Right */
+.profileGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--s-5);
+  align-items: start;
+}
+
+@media (min-width: 1024px) {
+  .profileGrid {
+    grid-template-columns: minmax(0, 1.35fr) minmax(0, 0.9fr);
+    gap: clamp(3rem, 6vw, 6.5rem);
+  }
+}
+
+.profileContent {
+  display: flex;
+  flex-direction: column;
+}
+
 /* Body Prose */
 .bodyText {
   display: flex;
   flex-direction: column;
   gap: var(--s-3);
-  max-width: 76ch;
+  max-width: 68ch;
 }
 
 .paragraph {
-  font-size: clamp(1rem, 1.25vw, 1.125rem);
+  font-size: clamp(1rem, 1.15vw, 1.125rem);
   line-height: 1.75;
   color: var(--body);
 }
 
-/* Hero Studio Image */
-.heroMedia {
-  margin-block: var(--s-6);
-}
-
-.heroImageFrame {
-  position: relative;
-  width: 100%;
-  aspect-ratio: 16 / 9;
-  overflow: hidden;
-  border: 1px solid var(--hairline);
-  background: var(--surface);
-}
-
-.heroImage {
-  object-fit: cover;
-  transition: transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.heroImageFrame:hover .heroImage {
-  transform: scale(1.02);
-}
-
-.heroCaption {
+/* Building Pillar Emblem in Empty Space */
+.pillarStickyCol {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-  padding-block-start: 0.75rem;
-  font-size: var(--fs-xs);
-  color: var(--muted);
-  font-family: monospace;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
+  justify-content: center;
+  padding-block: var(--s-4);
+}
+
+@media (min-width: 1024px) {
+  .pillarStickyCol {
+    position: sticky;
+    top: calc(var(--header-height, 4.5rem) + 2rem);
+    height: fit-content;
+    padding-block-start: 1rem;
+    padding-block-end: 2rem;
+  }
+}
+
+.pillarFrame {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+.pillarMark {
+  display: block;
+  width: auto;
+  height: clamp(280px, 46vh, 380px);
+  color: var(--ink);
+  transition: opacity 0.3s ease;
+}
+
+@media (min-width: 1024px) {
+  .pillarMark {
+    height: clamp(420px, 60vh, 560px);
+    max-height: 85vh;
+  }
 }
 
 /* Stats / Milestones Grid */
@@ -141,6 +164,16 @@
   gap: 0.35rem;
 }
 
+.stateOdometer {
+  --odo-color: var(--ink);
+  --odo-size: clamp(2rem, 3.5vw, 2.75rem);
+  --odo-weight: 500;
+  --odo-label-color: var(--muted);
+  --odo-label-size: var(--fs-xs);
+  --odo-label-spacing: 0.06em;
+  gap: 0.35rem;
+}
+
 .stateHeading {
   font-size: clamp(2rem, 3.5vw, 2.75rem);
   font-weight: 500;
@@ -157,117 +190,126 @@
 }
 
 /* ==========================================================================
-   Team Section — Unknown Architects Style (uploaded reference)
+   Our People Section — 3-Column Image Overlay Grid (media_1789119603362.jpg)
    ========================================================================== */
 .teamSection {
   background: var(--bg);
 }
 
-.teamLead {
-  font-size: clamp(1rem, 1.25vw, 1.125rem);
-  line-height: 1.6;
-  color: var(--body);
-  max-width: 65ch;
-  margin-block-end: var(--s-6);
+.peopleTitleCard {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  margin-block-end: clamp(2rem, 3.5vw, 3rem);
 }
 
-/* Owners / Principals Top Row (2-column side by side) */
-.ownersContainer {
-  margin-block-end: var(--s-7);
-}
-
-.subSectionLabel {
-  font-size: var(--fs-xs);
-  font-weight: 600;
+.peopleEyebrow {
   color: var(--accent);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-medium);
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  margin-block-end: var(--s-4);
-  display: inline-block;
+  white-space: nowrap;
 }
 
-.ownersGrid {
+.peopleLine {
+  width: 48px;
+  height: 1px;
+  background-color: var(--hairline);
+}
+
+.peopleGrid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 2.5rem;
-  max-width: 820px;
+  gap: clamp(1.25rem, 2.5vw, 2.5rem);
+  max-width: 100%;
 }
 
 @media (min-width: 640px) {
-  .ownersGrid {
+  .peopleGrid {
     grid-template-columns: repeat(2, 1fr);
-    gap: 3rem;
-  }
-}
-
-/* Team / Execution Row */
-.teamGrid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 2rem;
-  max-width: 820px;
-}
-
-@media (min-width: 640px) {
-  .teamGrid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 3rem;
   }
 }
 
 @media (min-width: 1024px) {
-  .teamGrid {
+  .peopleGrid {
     grid-template-columns: repeat(3, 1fr);
-    max-width: 100%;
   }
 }
 
-/* Clean Minimalist Member Card (Unknown Architects) */
-.memberItem {
-  display: flex;
-  flex-direction: column;
-}
-
-.memberImageFrame {
+.peopleCard {
   position: relative;
   width: 100%;
-  aspect-ratio: 1 / 1; /* Pure square frame matching unknownarchitects.in */
+  aspect-ratio: 1 / 1;
   overflow: hidden;
-  background: #f0ede8;
+  background: #181818;
 }
 
-.memberImage {
+.peopleImage {
   object-fit: cover;
-  object-position: center 15%;
-  filter: grayscale(100%) contrast(108%);
-  transition: filter 0.4s ease, transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  filter: grayscale(100%) contrast(106%);
+  transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), filter 0.4s ease;
 }
 
-.memberItem:hover .memberImage {
+.akileshwaranPos {
+  object-position: center 15%;
+}
+
+.arthiyaPos {
+  object-position: center 15%;
+}
+
+.gowthamPos {
+  object-position: center 10%;
+}
+
+.peopleCard:hover .peopleImage {
   filter: grayscale(85%) contrast(105%);
   transform: scale(1.03);
 }
 
-.memberMeta {
-  display: flex;
-  flex-direction: column;
-  padding-block-start: 0.85rem;
+.peopleGradient {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to top,
+    rgba(0, 0, 0, 0.9) 0%,
+    rgba(0, 0, 0, 0.55) 26%,
+    rgba(0, 0, 0, 0.18) 46%,
+    transparent 68%
+  );
+  pointer-events: none;
+  z-index: 1;
 }
 
-.memberName {
-  font-size: 1.05rem;
+.peopleMeta {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: clamp(1.25rem, 2.2vw, 1.75rem);
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  pointer-events: none;
+}
+
+.peopleName {
+  font-size: clamp(1.1rem, 1.4vw, 1.3rem);
   font-weight: 500;
-  color: var(--ink);
-  line-height: 1.3;
+  color: #ffffff;
+  line-height: 1.25;
   letter-spacing: -0.01em;
 }
 
-.memberRole {
-  font-size: 0.85rem;
-  font-weight: 400;
-  color: var(--muted);
+.peopleRole {
+  font-size: clamp(0.68rem, 0.8vw, 0.75rem);
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.85);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
   line-height: 1.4;
-  margin-block-start: 0.2rem;
 }
 
 /* ==========================================================================
@@ -275,6 +317,7 @@
    ========================================================================== */
 .locationsSection {
   background: var(--bg);
+  padding-block-end: clamp(2.5rem, 5vw, 4.5rem);
 }
 
 .locationHeader {
@@ -466,35 +509,3 @@
   border-color: var(--ink);
 }
 
-/* Bottom CTA band */
-.studioCta {
-  margin-block-start: var(--s-6);
-  padding: var(--s-6);
-  background: var(--surface);
-  border: 1px solid var(--hairline);
-  display: flex;
-  flex-direction: column;
-  gap: var(--s-3);
-  align-items: flex-start;
-}
-
-@media (min-width: 768px) {
-  .studioCta {
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
-  }
-}
-
-.ctaHeading {
-  font-size: clamp(1.25rem, 2vw, 1.75rem);
-  font-weight: 500;
-  color: var(--ink);
-  line-height: 1.25;
-}
-
-.ctaSub {
-  font-size: var(--fs-sm);
-  color: var(--body);
-  margin-block-start: 0.25rem;
-}

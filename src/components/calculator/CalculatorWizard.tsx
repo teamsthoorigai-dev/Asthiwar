@@ -101,20 +101,13 @@ export function CalculatorWizard() {
     scrollToWizardTop(true);
   }, [reset, scrollToWizardTop]);
 
+  const prevStepRef = useRef(currentStep);
   useEffect(() => {
-    if (isFirstRender.current) {
-      isFirstRender.current = false;
-      return;
-    }
-
-    scrollToWizardTop(true);
-
-    const rafId = requestAnimationFrame(() => {
+    if (prevStepRef.current !== currentStep) {
+      prevStepRef.current = currentStep;
       scrollToWizardTop(true);
-    });
-
-    return () => cancelAnimationFrame(rafId);
-  }, [currentStep, estimateResult, scrollToWizardTop]);
+    }
+  }, [currentStep, scrollToWizardTop]);
 
   if (loading) {
     return (

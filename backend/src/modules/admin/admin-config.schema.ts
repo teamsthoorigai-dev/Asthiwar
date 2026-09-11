@@ -1,11 +1,31 @@
 import { z } from 'zod';
 
-export const updatePackagePriceSchema = z.object({
-  pricePerSqft: z.coerce.number().positive('Standard price per sqft must be positive'),
-  volumePricePerSqft: z.coerce.number().positive('Volume price per sqft must be positive'),
-  volumeDiscountThresholdSqft: z.coerce.number().int().positive().default(3500),
-  headRoomPricePerSqft: z.coerce.number().nonnegative().optional(),
-});
+export const updatePackagePriceSchema = z
+  .object({
+    pricePerSqft: z.coerce.number().positive('Standard price per sqft must be positive'),
+    volumePricePerSqft: z.coerce.number().positive('Volume price per sqft must be positive'),
+    volumeDiscountThresholdSqft: z.coerce.number().int().positive().default(3500),
+    headRoomPricePerSqft: z.coerce.number().nonnegative().optional(),
+  })
+  .superRefine((data, ctx) => {
+    // The volume rate is a discount for building bigger. Above the standard rate
+    // it is the opposite: crossing the threshold makes the quote jump rather than
+    // ease, and by a multiple — a mistyped 9999 against a 2000 standard rate
+    // quoted a 4,000 sq.ft build at Rs 3.99 crore, live, with no warning.
+    //
+    // Equal is allowed: a tier that offers no volume discount is a pricing
+    // decision, not a mistake.
+    if (data.volumePricePerSqft > data.pricePerSqft) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['volumePricePerSqft'],
+        message:
+          `The volume rate (Rs ${data.volumePricePerSqft}/sq.ft) is above the standard rate ` +
+          `(Rs ${data.pricePerSqft}/sq.ft), so crossing the threshold would raise the price ` +
+          'rather than discount it. Set it at or below the standard rate.',
+      });
+    }
+  });
 
 export const updatePackageMetadataSchema = z.object({
   name: z.string().min(2).optional(),
@@ -65,33 +85,78 @@ export const addonVariantItemSchema = z.object({
     .min(1, 'Select at least one package this variant is available in'),
 });
 
-export const createAddonSchema = z.object({
-  name: z.string().min(2, 'Add-on name is required'),
-  slug: slugField,
-  description: z.string().optional(),
-  pricingUnit: z.enum(ADDON_PRICING_UNITS),
-  defaultQuantity: z.coerce.number().min(0).optional(),
-  minQuantity: z.coerce.number().min(0).optional(),
-  maxQuantity: z.coerce.number().min(0).optional(),
-  sortOrder: z.coerce.number().int().default(0),
-  allowsMultiple: z.boolean().default(false),
-  isActive: z.boolean().default(true),
-  // At least one variant, so a freshly created add-on is immediately priceable
-  // in the calculator instead of rendering with no selectable rate.
-  variants: z.array(addonVariantItemSchema).min(1, 'At least one price variant is required'),
-});
+/**
+ * Quantity bounds have to be satisfiable by the quantity the calculator opens at.
+ *
+ * The engine enforces min/max and refuses anything outside them, so a default
+ * sitting outside its own bounds produces an add-on that is rejected the instant
+ * a customer ticks it — configured in the console, broken on the site, with
+ * nothing linking the two. Checked on create and on edit alike.
+ */
+function refineQuantityBounds(
+  data: { defaultQuantity?: number | null; minQuantity?: number | null; maxQuantity?: number | null },
+  ctx: z.RefinementCtx
+): void {
+  const min = data.minQuantity ?? null;
+  const max = data.maxQuantity ?? null;
+  const def = data.defaultQuantity ?? null;
 
-export const updateAddonMetadataSchema = z.object({
-  name: z.string().min(2).optional(),
-  description: z.string().optional(),
-  pricingUnit: z.enum(ADDON_PRICING_UNITS).optional(),
-  defaultQuantity: z.coerce.number().min(0).nullable().optional(),
-  minQuantity: z.coerce.number().min(0).nullable().optional(),
-  maxQuantity: z.coerce.number().min(0).nullable().optional(),
-  allowsMultiple: z.boolean().optional(),
-  isActive: z.boolean().optional(),
-  sortOrder: z.coerce.number().int().optional(),
-});
+  if (min !== null && max !== null && min > max) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['minQuantity'],
+      message: `Minimum quantity (${min}) cannot exceed the maximum (${max}).`,
+    });
+  }
+
+  if (def !== null && min !== null && def < min) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['defaultQuantity'],
+      message: `Default quantity (${def}) is below the minimum (${min}), so the add-on could never be selected.`,
+    });
+  }
+
+  if (def !== null && max !== null && def > max) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['defaultQuantity'],
+      message: `Default quantity (${def}) is above the maximum (${max}), so the add-on could never be selected.`,
+    });
+  }
+}
+
+export const createAddonSchema = z
+  .object({
+    name: z.string().min(2, 'Add-on name is required'),
+    slug: slugField,
+    description: z.string().optional(),
+    pricingUnit: z.enum(ADDON_PRICING_UNITS),
+    defaultQuantity: z.coerce.number().min(0).optional(),
+    minQuantity: z.coerce.number().min(0).optional(),
+    maxQuantity: z.coerce.number().min(0).optional(),
+    sortOrder: z.coerce.number().int().default(0),
+    allowsMultiple: z.boolean().default(false),
+    isActive: z.boolean().default(true),
+    // At least one variant, so a freshly created add-on is immediately priceable
+    // in the calculator instead of rendering with no selectable rate.
+    variants: z.array(addonVariantItemSchema).min(1, 'At least one price variant is required'),
+  })
+  .superRefine(refineQuantityBounds);
+
+export const updateAddonMetadataSchema = z
+  .object({
+    name: z.string().min(2).optional(),
+    description: z.string().optional(),
+    pricingUnit: z.enum(ADDON_PRICING_UNITS).optional(),
+    defaultQuantity: z.coerce.number().min(0).nullable().optional(),
+    minQuantity: z.coerce.number().min(0).nullable().optional(),
+    maxQuantity: z.coerce.number().min(0).nullable().optional(),
+    allowsMultiple: z.boolean().optional(),
+    isActive: z.boolean().optional(),
+    sortOrder: z.coerce.number().int().optional(),
+  })
+  .superRefine(refineQuantityBounds);
 
 export const createAddonVariantSchema = addonVariantItemSchema;
 
@@ -164,7 +229,9 @@ export const updatePackageItemSchema = z.object({
   isIncluded: z.boolean().optional(),
   additionalCostPrice: z.coerce.number().min(0).optional(),
   includedCoverage: z.string().optional().nullable(),
-  defaultOptionId: z.coerce.number().int().optional().nullable(),
+  // null clears the tier's default; a number has to be a plausible id. The
+  // service additionally checks it is an option of this same component.
+  defaultOptionId: z.coerce.number().int().positive().optional().nullable(),
 });
 
 export const milestoneStageItemSchema = z.object({
@@ -180,6 +247,23 @@ export const updateMilestonesSchema = z.object({
   milestones: z
     .array(milestoneStageItemSchema)
     .min(1, 'At least one milestone stage is required')
+    .superRefine((items, ctx) => {
+      // stage_number is the upsert key, so two entries sharing one collapse into
+      // a single row — after the 100% check below has already passed on both.
+      // The saved schedule then sums to less than 100 and the last stage silently
+      // absorbs the shortfall on every quotation.
+      const seen = new Set<number>();
+      items.forEach((item, index) => {
+        if (seen.has(item.stageNumber)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: [index, 'stageNumber'],
+            message: `Stage number ${item.stageNumber} is used more than once. Each stage needs its own number.`,
+          });
+        }
+        seen.add(item.stageNumber);
+      });
+    })
     .refine(
       (items) => {
         const sum = items

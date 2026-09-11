@@ -4,6 +4,7 @@
   background: var(--clay);
   color: var(--ink);
   padding-block: var(--section-y);
+  border-block: 1px solid var(--hairline);
 }
 
 .grid {
@@ -173,16 +174,27 @@
   line-height: var(--lh-body);
 }
 
-.cta {
+.section .cta {
   margin-top: var(--s-3);
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+  background: var(--ink);
+  color: var(--on-accent);
+  border-color: var(--ink);
 }
 
-/* Button renders its children inside a single label span so the sliding block
-   can sit behind them; the trailing arrow needs that span to be a flex row. */
-.cta > :first-child {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
+.section .cta,
+.section .cta span {
+  color: var(--on-accent);
 }
+
+.section .cta:hover,
+.section .cta:focus-visible {
+  background: #090e0b;
+  border-color: #090e0b;
+  box-shadow: 0 4px 14px rgb(25 36 29 / 0.25);
+}
+
+.section .cta:hover span,
+.section .cta:focus-visible span {
+  color: #ffffff;
+}
+

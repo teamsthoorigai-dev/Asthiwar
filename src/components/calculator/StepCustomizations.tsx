@@ -107,22 +107,15 @@ export function StepCustomizations({
 
         {previewResult && (
           <div className="flex gap-5 sm:border-l sm:border-border sm:pl-5">
-            <div>
-              <p className="text-[10px] uppercase tracking-wider text-muted font-semibold">
-                Effective rate
-              </p>
-              <p className="text-sm font-bold tabular-nums">
-                {formatINR(previewResult.breakdown.effectiveTotalCostPerSqft)} / sq.ft
-              </p>
-            </div>
-            <div>
+            
+            
               <p className="text-[10px] uppercase tracking-wider text-muted font-semibold">
                 Built-up area
               </p>
               <p className="text-sm font-bold tabular-nums">
                 {previewResult.dimensions.totalBuiltupAreaSqft.toLocaleString('en-IN')} sq.ft
               </p>
-            </div>
+           
           </div>
         )}
       </section>

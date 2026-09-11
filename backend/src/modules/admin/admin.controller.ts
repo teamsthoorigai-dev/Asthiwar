@@ -3,6 +3,7 @@ import {
   getAdminEnquiries,
   getAdminEnquiryById,
   updateAdminEnquiry,
+  deleteAdminEnquiry,
   getAdminEstimates,
   getAdminEstimateById,
   updateAdminEstimate,
@@ -11,12 +12,14 @@ import {
   getAdminAuditLogs,
   getAdminAuditLogById,
 } from './admin.service.js';
+import { logAuditEvent } from '../../services/audit.service.js';
 import {
   EnquiriesQuery,
   UpdateEnquiryDto,
   EstimatesQuery,
   UpdateEstimateDto,
   AuditLogsQuery,
+  DashboardQuery,
 } from './admin.schema.js';
 
 // ----------------------------------------------------
@@ -83,6 +86,42 @@ export async function updateEnquiryController(req: Request, res: Response, next:
 // ESTIMATES CONTROLLER
 // ----------------------------------------------------
 
+export async function deleteEnquiryController(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const id = req.params.id as string;
+    const result = await deleteAdminEnquiry(id);
+
+    logAuditEvent({
+      eventType: 'ADMIN_MUTATION',
+      action: 'DELETE_ENQUIRY',
+      severity: 'HIGH',
+      actorType: 'ADMIN',
+      actorId: req.user?.email || req.user?.id,
+      endpoint: req.originalUrl,
+      httpMethod: req.method,
+      statusCode: 200,
+      metadata: { enquiryId: id, estimateNumber: result.estimateNumber },
+      ipAddress: req.ip || req.socket?.remoteAddress,
+      userAgent: req.headers['user-agent'],
+    }).catch(() => {});
+
+    res.json({
+      success: true,
+      message: `Lead '${result.fullName}' deleted successfully`,
+      data: result,
+    });
+  } catch (error) {
+    if (error instanceof AdminServiceError) {
+      res.status(error.statusCode).json({
+        success: false,
+        error: { code: error.code, message: error.message },
+      });
+      return;
+    }
+    next(error);
+  }
+}
+
 export async function getEstimatesController(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const query = req.query as unknown as EstimatesQuery;
@@ -141,7 +180,7 @@ export async function updateEstimateController(req: Request, res: Response, next
 
 export async function getDashboardAnalyticsController(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const analytics = await getAdminDashboardAnalytics();
+    const analytics = await getAdminDashboardAnalytics(req.query as DashboardQuery);
     res.json({
       success: true,
       data: analytics,

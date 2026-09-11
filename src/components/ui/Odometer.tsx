@@ -18,6 +18,9 @@ type Props = {
   hideLabel?: boolean;
   /** Digit grouping, e.g. 2099 shown as 2,099. Separators do not roll. */
   group?: boolean;
+  /** Pad with leading zeroes to this total length (e.g. pad=2 turns 3 into "03"). */
+  pad?: number;
+  className?: string;
 };
 
 /** Two stacked 0-9 cycles, so even a target of 0 rolls a full rotation. */
@@ -46,6 +49,8 @@ export function Odometer({
   size = 'display',
   hideLabel = false,
   group = false,
+  pad,
+  className,
 }: Props) {
   const ref = useRef<HTMLDivElement>(null);
   const [mounted, setMounted] = useState(false);
@@ -58,8 +63,9 @@ export function Odometer({
   // when assigning digit targets.
   const characters = useMemo(() => {
     const n = Math.abs(Math.trunc(value));
-    return (group ? new Intl.NumberFormat('en-IN').format(n) : String(n)).split('');
-  }, [value, group]);
+    const raw = group ? new Intl.NumberFormat('en-IN').format(n) : String(n);
+    return (pad ? raw.padStart(pad, '0') : raw).split('');
+  }, [value, group, pad]);
 
   const digits = useMemo(
     () => characters.filter((c) => /\d/.test(c)).map(Number),
@@ -95,7 +101,13 @@ export function Odometer({
 
   return (
     <div
-      className={[styles.odometer, size === 'inline' && styles.inline].filter(Boolean).join(' ')}
+      className={[
+        styles.odometer,
+        size === 'inline' && styles.inline,
+        className,
+      ]
+        .filter(Boolean)
+        .join(' ')}
       ref={ref}
     >
       <div className={styles.value} role="img" aria-label={`${spoken} ${label}`}>

@@ -49,22 +49,21 @@
   font-size: var(--fs-md);
 }
 
-/* ---- band: full-width four-up, mark above label ----
-
-   Each set is its own viewport-wide grid, so exactly four marks are on screen at
-   rest and the seam between the two sets falls at the track's -50%. The 64rem
-   floor stops the columns stretching past a comfortable measure on wide screens
-   — below that width the set simply runs wider than the viewport and scrolls. */
+/* ---- band: four-up mark above label, tight rhythmic spacing ---- */
 
 .band .set {
-  display: grid;
-  flex: 0 0 max(100vw, 64rem);
-  width: max(100vw, 64rem);
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: clamp(2rem, 4vw, 3.5rem);
+  padding-right: clamp(2rem, 4vw, 3.5rem);
+  flex-shrink: 0;
 }
 
 .band .item {
   display: grid;
+  flex: 0 0 auto;
+  width: clamp(11.5rem, 14vw, 14rem);
   min-height: clamp(8.5rem, 11vw, 10.25rem);
   /* A fixed first row keeps the four labels on one baseline, however tall each
      mark's own artwork happens to be. */

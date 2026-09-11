@@ -37,7 +37,7 @@ export function SiteHeader() {
     return () => window.removeEventListener('scroll', onScroll);
   }, [menuOpen]);
 
-  const isDarkHero = pathname === '/projects';
+  const isDarkHero = pathname === '/projects' || pathname === '/cost-calculator';
 
   return (
     <>

@@ -7,19 +7,25 @@ import {
   Users,
   FileSpreadsheet,
   Sliders,
+  KeyRound,
   LogOut,
+  ScrollText,
+  UserCog,
   ShieldCheck,
   Building2,
   Menu,
   X,
 } from 'lucide-react';
 import { AdminUser, adminLogout } from '@/lib/api/admin';
+import { AdminChangePasswordDialog } from './AdminChangePasswordDialog';
 
 export type AdminTab =
   | 'dashboard'
   | 'enquiries'
   | 'estimates'
-  | 'pricing';
+  | 'pricing'
+  | 'audit'
+  | 'users';
 
 interface AdminLayoutProps {
   user: AdminUser;
@@ -37,6 +43,7 @@ export function AdminLayout({
   children,
 }: AdminLayoutProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [changingPassword, setChangingPassword] = useState(false);
 
   const handleLogout = async () => {
     try {
@@ -56,6 +63,10 @@ export function AdminLayout({
     { id: 'enquiries', label: 'Enquiries & Leads', icon: Users },
     { id: 'estimates', label: 'Estimates Explorer', icon: FileSpreadsheet },
     { id: 'pricing', label: 'Pricing Matrix Config', icon: Sliders },
+    { id: 'audit', label: 'Audit Trail', icon: ScrollText },
+    // Only a super admin can reach these endpoints; the tab is shown to everyone
+    // and the server refuses the calls, so a role change needs no reload here.
+    { id: 'users', label: 'Admin Accounts', icon: UserCog },
   ];
 
   return (
@@ -141,6 +152,14 @@ export function AdminLayout({
           </div>
           <button
             type="button"
+            onClick={() => setChangingPassword(true)}
+            className="button button--ghost w-full flex items-center justify-center gap-2 text-xs py-2 mb-2"
+          >
+            <KeyRound size={14} />
+            <span>Change Password</span>
+          </button>
+          <button
+            type="button"
             onClick={handleLogout}
             className="button button--ghost w-full flex items-center justify-center gap-2 text-xs py-2 text-red-600 dark:text-red-400"
           >
@@ -149,6 +168,18 @@ export function AdminLayout({
           </button>
         </div>
       </aside>
+
+      {changingPassword && (
+        <AdminChangePasswordDialog
+          onClose={() => setChangingPassword(false)}
+          // A password change drops every session for the account, this one
+          // included, so there is nothing left to stay signed in to.
+          onChanged={() => {
+            setChangingPassword(false);
+            onLogout();
+          }}
+        />
+      )}
 
       {/* Main Content Area */}
       <main className="flex-1 p-4 sm:p-8 overflow-y-auto">

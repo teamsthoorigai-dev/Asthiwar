@@ -18,6 +18,7 @@ import {
   EstimatesQuery,
   UpdateEstimateDto,
   AuditLogsQuery,
+  DashboardQuery,
 } from './admin.schema.js';
 import { estimateRefCandidates } from '../calculator/quotation.js';
 
@@ -175,6 +176,32 @@ export async function updateAdminEnquiry(id: string, dto: UpdateEnquiryDto) {
     .returning();
 
   return updated;
+}
+
+/**
+ * Remove a lead from the pipeline.
+ *
+ * The console could set a lead's status and notes and nothing else, so junk
+ * could only be buried under CLOSED_LOST, never cleared — and every submission
+ * to the public estimate endpoint creates one. An operator facing a few hundred
+ * generated leads had no way to get the list back.
+ *
+ * The estimate itself is untouched. A quotation is an issued document and the
+ * snapshot behind it stays readable; this deletes the CRM record that was raised
+ * alongside it, which is working state.
+ */
+export async function deleteAdminEnquiry(id: string) {
+  const existing = await db.query.enquiries.findFirst({
+    where: eq(schema.enquiries.id, id),
+  });
+
+  if (!existing) {
+    throw new AdminServiceError(404, 'ENQUIRY_NOT_FOUND', `Enquiry with ID ${id} not found`);
+  }
+
+  await db.delete(schema.enquiries).where(eq(schema.enquiries.id, id));
+
+  return { id, fullName: existing.fullName, estimateNumber: existing.estimateNumber };
 }
 
 // ----------------------------------------------------
@@ -341,7 +368,35 @@ export async function updateAdminEstimate(id: string, dto: UpdateEstimateDto) {
 // ANALYTICS & DASHBOARD KPIS
 // ----------------------------------------------------
 
-export async function getAdminDashboardAnalytics() {
+export async function getAdminDashboardAnalytics(query: DashboardQuery = {}) {
+  // The window every figure below is measured over.
+  //
+  // `days` is relative to now; `from`/`to` name a period outright. With none of
+  // them the range is open and the numbers mean all-time, which is what this
+  // endpoint used to be able to say and nothing else.
+  const now = new Date();
+  const from =
+    query.from ??
+    (query.days !== undefined
+      ? new Date(now.getTime() - query.days * 24 * 60 * 60 * 1000)
+      : undefined);
+  const to = query.to;
+
+  // Spelled out per table rather than through a shared helper: Drizzle's column
+  // types are table-specific, so one generic helper would need a cast that hides
+  // a genuine mistake (windowing enquiries by the estimates column, say).
+  const estimateBounds = [
+    ...(from ? [gte(schema.estimates.createdAt, from)] : []),
+    ...(to ? [lte(schema.estimates.createdAt, to)] : []),
+  ];
+  const enquiryBounds = [
+    ...(from ? [gte(schema.enquiries.createdAt, from)] : []),
+    ...(to ? [lte(schema.enquiries.createdAt, to)] : []),
+  ];
+
+  const estimateWindow = estimateBounds.length > 0 ? and(...estimateBounds) : undefined;
+  const enquiryWindow = enquiryBounds.length > 0 ? and(...enquiryBounds) : undefined;
+
   // 1. Total estimates and pipeline valuation
   const estimateAggregates = await db
     .select({
@@ -350,14 +405,16 @@ export async function getAdminDashboardAnalytics() {
       avgProjectValue: sql<string>`COALESCE(AVG(CAST(${schema.estimates.totalProjectCost} AS NUMERIC)), 0)`,
       avgBuiltupArea: sql<string>`COALESCE(AVG(CAST(${schema.estimates.totalBuiltupAreaSqft} AS NUMERIC)), 0)`,
     })
-    .from(schema.estimates);
+    .from(schema.estimates)
+    .where(estimateWindow);
 
   // 2. Total enquiries and status breakdown
   const enquiryAggregates = await db
     .select({
       totalCount: count(),
     })
-    .from(schema.enquiries);
+    .from(schema.enquiries)
+    .where(enquiryWindow);
 
   const enquiriesByStatus = await db
     .select({
@@ -365,6 +422,7 @@ export async function getAdminDashboardAnalytics() {
       count: count(),
     })
     .from(schema.enquiries)
+    .where(enquiryWindow)
     .groupBy(schema.enquiries.status);
 
   // 3. Estimates breakdown by Package
@@ -375,6 +433,7 @@ export async function getAdminDashboardAnalytics() {
       totalValue: sql<string>`COALESCE(SUM(CAST(${schema.estimates.totalProjectCost} AS NUMERIC)), 0)`,
     })
     .from(schema.estimates)
+    .where(estimateWindow)
     .groupBy(schema.estimates.packageSlug);
 
   // 4. Estimates breakdown by Location
@@ -397,6 +456,7 @@ export async function getAdminDashboardAnalytics() {
     })
     .from(schema.estimates)
     .leftJoin(schema.locations, eq(schema.locations.id, schema.estimates.locationId))
+    .where(estimateWindow)
     .groupBy(locationLabel)
     .orderBy(desc(count()));
 
@@ -414,6 +474,7 @@ export async function getAdminDashboardAnalytics() {
       status: schema.estimates.status,
     })
     .from(schema.estimates)
+    .where(estimateWindow)
     .orderBy(desc(schema.estimates.createdAt))
     .limit(5);
 
@@ -429,6 +490,7 @@ export async function getAdminDashboardAnalytics() {
       createdAt: schema.enquiries.createdAt,
     })
     .from(schema.enquiries)
+    .where(enquiryWindow)
     .orderBy(desc(schema.enquiries.createdAt))
     .limit(5);
 
@@ -445,9 +507,29 @@ export async function getAdminDashboardAnalytics() {
 
   const newEnquiriesCount = statusMap['NEW'] || 0;
   const closedWonCount = statusMap['CLOSED_WON'] || 0;
-  const conversionRate = totalEnquiries > 0 ? Number(((closedWonCount / totalEnquiries) * 100).toFixed(2)) : 0;
+  const closedLostCount = statusMap['CLOSED_LOST'] || 0;
+
+  // Measured over leads that have actually been decided.
+  //
+  // Dividing wins by every lead ever raised counts leads still in the pipeline as
+  // losses, so the figure is permanently depressed and falls further with every
+  // new enquiry — it went *down* when business improved. Both denominators are
+  // returned so the all-lead view is still available where it is wanted.
+  const decidedEnquiriesCount = closedWonCount + closedLostCount;
+  const conversionRate =
+    decidedEnquiriesCount > 0
+      ? Number(((closedWonCount / decidedEnquiriesCount) * 100).toFixed(2))
+      : 0;
+  const winRateOfAllLeads =
+    totalEnquiries > 0 ? Number(((closedWonCount / totalEnquiries) * 100).toFixed(2)) : 0;
 
   return {
+    /** The window these figures cover; null bounds mean all-time. */
+    range: {
+      from: from ? from.toISOString() : null,
+      to: to ? to.toISOString() : null,
+      days: query.days ?? null,
+    },
     kpis: {
       totalEstimates,
       totalPipelineValue,
@@ -456,7 +538,10 @@ export async function getAdminDashboardAnalytics() {
       totalEnquiries,
       newEnquiriesCount,
       closedWonCount,
+      closedLostCount,
+      decidedEnquiriesCount,
       conversionRate,
+      winRateOfAllLeads,
     },
     enquiriesByStatus: statusMap,
     estimatesByPackage: estimatesByPackage.map((p) => ({

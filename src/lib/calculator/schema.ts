@@ -15,19 +15,49 @@ export const addonItemSchema = z.object({
   quantity: z.number().positive('Quantity must be greater than 0').optional(),
 });
 
+/**
+ * How many floors a build has, counting the ground floor.
+ *
+ * `floorCount` counts floors *above* ground — 0 is Ground only, 3 is G+3 — so a
+ * build always has one more floor than its label. Mirrors floorsIncludingGround
+ * in the backend's calculator.types.ts.
+ */
+function floorsIncludingGround(floorCount: number): number {
+  return floorCount + 1;
+}
+
 // Step 1: Dimensions, floor configuration and additional areas
-export const dimensionsStepSchema = z.object({
-  plotArea: z.number().positive('Plot area must be greater than 0'),
-  plotAreaUnit: AreaUnitEnum.default('sqft'),
-  floorCount: FloorCountEnum,
-  builtupAreaPerFloor: z.number().positive('Built-up area is required'),
-  builtupAreaUnit: AreaUnitEnum.default('sqft'),
-  floorBreakdown: z
-    .array(z.number().positive('Every floor needs a built-up area'))
-    .optional(),
-  carParkingAreaSqft: z.number().min(0, 'Car parking area cannot be negative').default(0),
-  headRoomAreaSqft: z.number().min(0, 'Head room area cannot be negative').default(0),
-});
+export const dimensionsStepSchema = z
+  .object({
+    plotArea: z.number().positive('Plot area must be greater than 0'),
+    plotAreaUnit: AreaUnitEnum.default('sqft'),
+    floorCount: FloorCountEnum,
+    builtupAreaPerFloor: z.number().positive('Built-up area is required'),
+    builtupAreaUnit: AreaUnitEnum.default('sqft'),
+    floorBreakdown: z
+      .array(z.number().positive('Every floor needs a built-up area'))
+      .optional(),
+    carParkingAreaSqft: z.number().min(0, 'Car parking area cannot be negative').default(0),
+    headRoomAreaSqft: z.number().min(0, 'Head room area cannot be negative').default(0),
+  })
+  .superRefine((data, ctx) => {
+    // The server enforces this and the wizard did not, so a mismatched breakdown
+    // passed step one and was only refused at the end — after the customer had
+    // filled in package, customisations, add-ons and their contact details.
+    if (!data.floorBreakdown || data.floorBreakdown.length === 0) return;
+
+    const expected = floorsIncludingGround(data.floorCount);
+    if (data.floorBreakdown.length !== expected) {
+      const label = data.floorCount === 0 ? 'Ground' : `G+${data.floorCount}`;
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['floorBreakdown'],
+        message: `${label} needs one area per floor — ${expected} ${
+          expected === 1 ? 'entry' : 'entries'
+        }, but ${data.floorBreakdown.length} were given.`,
+      });
+    }
+  });
 
 // Step 2: Package Schema
 export const packageStepSchema = z.object({

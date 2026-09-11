@@ -2,7 +2,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: var(--s-1);
-  margin-bottom: var(--s-5);
+  margin-bottom: 0;
 }
 
 .pill {
@@ -43,7 +43,7 @@
 .count {
   color: var(--muted);
   font-size: var(--fs-sm);
-  margin: 0 0 var(--s-3);
+  margin: 0 0 var(--s-2);
 }
 
 .empty {
@@ -59,7 +59,7 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--s-3);
-  margin-bottom: var(--s-4);
+  margin-bottom: var(--s-2);
 }
 
 .viewSwitcher {

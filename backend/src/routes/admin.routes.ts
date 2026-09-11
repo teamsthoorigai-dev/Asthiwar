@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { requireAdminAuth } from '../middleware/auth.js';
+import { requireAdminAuth, requireRole } from '../middleware/auth.js';
 import { validateRequest } from '../middleware/validate.js';
 import {
   enquiriesQuerySchema,
@@ -7,11 +7,13 @@ import {
   estimatesQuerySchema,
   updateEstimateSchema,
   auditLogsQuerySchema,
+  dashboardQuerySchema,
 } from '../modules/admin/admin.schema.js';
 import {
   getEnquiriesController,
   getEnquiryByIdController,
   updateEnquiryController,
+  deleteEnquiryController,
   getEstimatesController,
   getEstimateByIdController,
   updateEstimateController,
@@ -24,6 +26,9 @@ const router = Router();
 
 // Apply requireAdminAuth guard across all admin management endpoints
 router.use(requireAdminAuth);
+
+/** Reading the pipeline is open to any admin; changing it is not. */
+const canWriteCrm = requireRole('admin');
 
 import {
   sendEstimateNotificationController,
@@ -41,13 +46,18 @@ router.get(
 
 router.get('/enquiries/:id', getEnquiryByIdController);
 
-router.post('/enquiries/:id/notify', sendLeadNotificationController);
+router.post('/enquiries/:id/notify', canWriteCrm, sendLeadNotificationController);
 
 router.patch(
   '/enquiries/:id',
+  canWriteCrm,
   validateRequest({ body: updateEnquirySchema }),
   updateEnquiryController
 );
+
+// Clearing a lead out of the pipeline is the destructive one, so it needs the
+// same role that deleting catalogue rows does.
+router.delete('/enquiries/:id', requireRole('super_admin'), deleteEnquiryController);
 
 import { downloadEstimatePdfController } from '../modules/pdf/pdf.controller.js';
 
@@ -64,10 +74,11 @@ router.get('/estimates/:id', getEstimateByIdController);
 
 router.get('/estimates/:id/pdf', downloadEstimatePdfController);
 
-router.post('/estimates/:id/notify', sendEstimateNotificationController);
+router.post('/estimates/:id/notify', canWriteCrm, sendEstimateNotificationController);
 
 router.patch(
   '/estimates/:id',
+  canWriteCrm,
   validateRequest({ body: updateEstimateSchema }),
   updateEstimateController
 );
@@ -75,7 +86,11 @@ router.patch(
 // ----------------------------------------------------
 // ANALYTICS ROUTES
 // ----------------------------------------------------
-router.get('/analytics/dashboard', getDashboardAnalyticsController);
+router.get(
+  '/analytics/dashboard',
+  validateRequest({ query: dashboardQuerySchema }),
+  getDashboardAnalyticsController
+);
 
 // ----------------------------------------------------
 // AUDIT LOG ROUTES (/api/v1/admin/audit-logs)

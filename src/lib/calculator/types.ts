@@ -175,6 +175,12 @@ export interface AddonDetail {
 export interface CalculationResult {
   estimateNumber: string;
   estimateId?: string;
+  /**
+   * The secret half of this quotation's link, issued when the estimate is saved.
+   * The quotation number is a sequence and authorises nothing on its own, so any
+   * link to the PDF has to carry this too.
+   */
+  accessToken?: string;
   customer: {
     name: string;
     phone: string;

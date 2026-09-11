@@ -11,6 +11,17 @@
   backdrop-filter: blur(18px) saturate(135%);
   color: var(--on-accent);
   user-select: none;
+  transition:
+    opacity var(--dur-fast) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out),
+    visibility var(--dur-fast) var(--ease-out);
+}
+
+.dockHidden {
+  opacity: 0;
+  transform: translateY(1.25rem) scale(0.92);
+  pointer-events: none;
+  visibility: hidden;
 }
 
 .list {

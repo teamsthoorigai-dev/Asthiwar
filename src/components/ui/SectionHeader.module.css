@@ -36,3 +36,41 @@
   max-width: 56ch;
   margin: 0;
 }
+
+/* ---- with action / CTA ---- */
+
+.withAction {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+  margin-bottom: var(--s-6);
+}
+
+.textGroup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  min-width: 0;
+}
+
+.action {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+@media (min-width: 768px) {
+  .withAction {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--s-6);
+  }
+
+  .center.withAction {
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+  }
+}
+

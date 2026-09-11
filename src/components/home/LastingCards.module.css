@@ -1,3 +1,12 @@
+/* SectionHeader ships a 4rem gap, which is the right rhythm under a headline
+   that introduces a grid of text. Under a 540px card stack it read as a hole:
+   with the stage's own 1rem and the deck's 1.5rem on top of it, the headline
+   sat 104px clear of the card. Scoped here so every other section keeps the
+   shared rhythm. */
+.lastingSection header {
+  margin-bottom: var(--s-3);
+}
+
 .deckStage {
   perspective: 1400px;
   outline: none;
@@ -10,7 +19,10 @@
   align-items: center;
   user-select: none;
   -webkit-user-select: none;
-  padding: var(--s-2) 0 var(--s-5);
+  /* The top pad is not rhythm — it is clearance. Cards behind the active one
+     lift by --depth * -6px, and at depth 5 the tallest of them rises past the
+     stage box; without this they get cut by the overflow clip. */
+  padding: var(--s-2) 0 var(--s-2);
 }
 
 /* ---- Deck Section (Flex container for side arrows + stack) ---- */
@@ -22,7 +34,7 @@
   width: 100%;
   max-width: 580px;
   position: relative;
-  margin: var(--s-3) auto var(--s-4);
+  margin: 0 auto var(--s-3);
 }
 
 .sideNavButton {
@@ -111,7 +123,7 @@
   filter: brightness(calc(1 - var(--depth) * 0.05));
   transform: translate(-50%, -50%)
     translateX(calc(var(--peek-dir) * 18px))
-    translateY(calc(var(--depth) * -8px))
+    translateY(calc(var(--depth) * -6px))
     rotate(calc(var(--peek-dir) * 2deg))
     scale(calc(1 - var(--depth) * 0.035));
 }
@@ -121,7 +133,7 @@
   filter: brightness(1);
   transform: translate(-50%, -50%)
     translateX(calc(var(--peek-dir) * 26px))
-    translateY(calc(var(--depth) * -12px))
+    translateY(calc(var(--depth) * -9px))
     rotate(calc(var(--peek-dir) * 3deg))
     scale(calc(1 - var(--depth) * 0.035 + 0.01));
 }
@@ -196,11 +208,11 @@
 
 .counter {
   color: var(--muted);
-  font-family: var(--font-mono, monospace);
+  font-family: var(--font-brand);
   font-size: var(--fs-xs);
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.08em;
-  font-weight: 600;
+  font-weight: var(--fw-bold);
 }
 
 .tag {
@@ -210,9 +222,10 @@
   background: var(--surface);
   border: 1px solid var(--hairline);
   color: var(--accent);
+  font-family: var(--font-brand);
   font-size: 0.65rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
+  font-weight: var(--fw-bold);
+  letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
@@ -220,13 +233,14 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 0.2rem 0.6rem;
+  padding: 0.25rem 0.65rem;
   border: 1px solid var(--hairline);
   background: var(--bg);
   color: var(--ink);
-  font-family: var(--font-mono, monospace);
+  font-family: var(--font-brand);
   font-size: 0.7rem;
-  font-weight: 600;
+  font-weight: var(--fw-bold);
+  letter-spacing: 0.08em;
   cursor: pointer;
   transition: background 0.2s, color 0.2s, border-color 0.2s;
 }
@@ -320,7 +334,7 @@
   position: absolute;
   inset: auto 0 0 0;
   padding: 8px 12px;
-  background: linear-gradient(transparent, rgba(20, 18, 16, 0.75));
+  background: linear-gradient(transparent, color-mix(in srgb, var(--ink) 80%, transparent));
   display: flex;
   justify-content: center;
   opacity: 0;
@@ -332,24 +346,38 @@
 }
 
 .overlayPrompt {
-  color: #f7f3ee;
-  font-family: var(--font-mono, monospace);
+  color: var(--film-text);
+  font-family: var(--font-brand);
   font-size: 0.68rem;
-  letter-spacing: 0.04em;
+  font-weight: var(--fw-medium);
+  letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
 /* =========================================================
    BACK FACE: Technical Engineering Blueprint Plate
    ========================================================= */
+/* The ground was #17181a — a neutral near-black that exists nowhere in the
+   palette, carrying thirteen more off-system hex values on top of it (a second
+   orange at #c98a58, a third at #e2a06b, four greys). It now sits on --ink, the
+   brand's own forest-deep, and every mark on it is either paper at an alpha or
+   --oxide. The grid, the crosshair and the tolerance box do the technical work;
+   the colour no longer has to. */
 .cardFaceBack {
   transform: rotateY(180deg);
-  background-color: #17181a;
-  background-image: linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  background-color: var(--ink);
+  background-image: linear-gradient(
+      color-mix(in srgb, var(--on-accent) 6%, transparent) 1px,
+      transparent 1px
+    ),
+    linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--on-accent) 6%, transparent) 1px,
+      transparent 1px
+    );
   background-size: 20px 20px;
-  color: #e5dfd7;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: var(--film-text-muted);
+  border: 1px solid var(--film-border);
   justify-content: space-between;
 }
 
@@ -357,7 +385,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid var(--film-border);
   padding-bottom: var(--s-3);
 }
 
@@ -368,38 +396,42 @@
 }
 
 .cadRef {
-  font-family: var(--font-mono, monospace);
-  font-size: 0.72rem;
-  font-weight: 700;
-  color: #c98a58;
-  letter-spacing: 0.08em;
+  font-family: var(--font-brand);
+  font-size: 0.75rem;
+  font-weight: var(--fw-bold);
+  color: var(--oxide-light);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
 }
 
 .blueprintStandard {
-  font-family: var(--font-mono, monospace);
-  font-size: 0.65rem;
-  color: #8c8882;
-  letter-spacing: 0.03em;
+  font-family: var(--font-brand);
+  font-size: 0.68rem;
+  font-weight: var(--fw-regular);
+  color: var(--film-text-muted);
+  letter-spacing: 0.05em;
 }
 
 .flipPillBack {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 0.2rem 0.6rem;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  background: rgba(255, 255, 255, 0.06);
-  color: #f5f0eb;
-  font-family: var(--font-mono, monospace);
+  padding: 0.25rem 0.65rem;
+  border: 1px solid var(--film-border);
+  background: color-mix(in srgb, var(--on-accent) 8%, transparent);
+  color: var(--film-text);
+  font-family: var(--font-brand);
   font-size: 0.7rem;
-  font-weight: 600;
+  font-weight: var(--fw-bold);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   cursor: pointer;
   transition: background 0.2s, border-color 0.2s;
 }
 
 .flipPillBack:hover {
-  background: rgba(255, 255, 255, 0.15);
-  border-color: #f5f0eb;
+  background: color-mix(in srgb, var(--on-accent) 16%, transparent);
+  border-color: var(--film-text);
 }
 
 .blueprintBody {
@@ -417,24 +449,27 @@
 }
 
 .blueprintEyebrow {
-  font-family: var(--font-mono, monospace);
-  font-size: 0.65rem;
-  color: #a39e97;
+  font-family: var(--font-brand);
+  font-size: 0.68rem;
+  font-weight: var(--fw-medium);
+  color: var(--film-text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.14em;
 }
 
 .blueprintTitle {
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: #fdfaf6;
+  font-family: var(--font-brand);
+  font-size: 1.35rem;
+  font-weight: var(--fw-bold);
+  letter-spacing: -0.02em;
+  color: var(--film-text);
   line-height: 1.2;
   margin: 0;
 }
 
 .specMetricBox {
-  background: rgba(201, 138, 88, 0.08);
-  border: 1px solid rgba(201, 138, 88, 0.25);
+  background: color-mix(in srgb, var(--oxide) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--oxide) 32%, transparent);
   padding: var(--s-3);
   display: flex;
   flex-direction: column;
@@ -442,18 +477,21 @@
 }
 
 .metricLabel {
-  font-family: var(--font-mono, monospace);
-  font-size: 0.62rem;
-  color: #a39e97;
+  font-family: var(--font-brand);
+  font-size: 0.65rem;
+  font-weight: var(--fw-medium);
+  color: var(--film-text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.1em;
 }
 
 .metricValue {
-  font-family: var(--font-mono, monospace);
-  font-size: 0.88rem;
-  font-weight: 700;
-  color: #e2a06b;
+  font-family: var(--font-brand);
+  font-size: 0.95rem;
+  font-weight: var(--fw-bold);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  color: var(--oxide-light);
 }
 
 .specDetailBlock {
@@ -463,9 +501,10 @@
 }
 
 .specText {
-  font-size: 0.82rem;
-  line-height: 1.5;
-  color: #b8b2aa;
+  font-family: var(--font-brand);
+  font-size: 0.85rem;
+  line-height: 1.6;
+  color: var(--film-text-muted);
   margin: 0;
 }
 
@@ -473,14 +512,14 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-top: 1px solid var(--film-border);
   padding-top: var(--s-3);
 }
 
 .cadCrosshair {
   width: 28px;
   height: 28px;
-  color: #68645e;
+  color: color-mix(in srgb, var(--on-accent) 55%, transparent);
 }
 
 .crosshairSvg {
@@ -489,10 +528,12 @@
 }
 
 .sealText {
-  font-family: var(--font-mono, monospace);
-  font-size: 0.62rem;
-  letter-spacing: 0.08em;
-  color: #68645e;
+  font-family: var(--font-brand);
+  font-size: 0.65rem;
+  font-weight: var(--fw-medium);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--on-accent) 55%, transparent);
 }
 
 /* =========================================================
@@ -505,33 +546,40 @@
   background: var(--surface);
   border: 1px solid var(--hairline);
   padding: 4px;
-  margin-top: var(--s-2);
+  margin-top: 0;
 }
 
 .indexTab {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 12px;
+  padding: 8px 14px;
   background: transparent;
   border: none;
   cursor: pointer;
   color: var(--muted);
-  font-family: var(--font-mono, monospace);
+  font-family: var(--font-brand);
   font-size: 0.75rem;
-  font-weight: 600;
+  font-weight: var(--fw-medium);
   transition: all 0.2s ease;
 }
 
 .indexTab:hover:not(.indexTabActive) {
   color: var(--ink);
-  background: rgba(0, 0, 0, 0.04);
+  background: color-mix(in srgb, var(--ink) 6%, transparent);
 }
 
 .indexTabActive {
   background: var(--bg);
   color: var(--ink);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 2px 6px color-mix(in srgb, var(--ink) 12%, transparent);
+}
+
+.tabNum {
+  font-family: var(--font-brand);
+  font-weight: var(--fw-bold);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
 }
 
 .tabTitle {
@@ -541,9 +589,16 @@
 @media (min-width: 900px) {
   .tabTitle {
     display: inline;
-    font-size: 0.72rem;
-    font-weight: 500;
+    font-family: var(--font-brand);
+    font-size: 0.75rem;
+    font-weight: var(--fw-medium);
+    letter-spacing: 0.02em;
     color: var(--body);
+  }
+
+  .indexTabActive .tabTitle {
+    color: var(--ink);
+    font-weight: var(--fw-bold);
   }
 }
 
@@ -552,10 +607,11 @@
   align-items: center;
   justify-content: center;
   gap: 10px;
-  margin-top: var(--s-3);
-  font-family: var(--font-mono, monospace);
+  margin-top: var(--s-2);
+  font-family: var(--font-brand);
   font-size: 0.72rem;
-  letter-spacing: 0.04em;
+  font-weight: var(--fw-regular);
+  letter-spacing: 0.08em;
   color: var(--muted);
   text-transform: uppercase;
 }

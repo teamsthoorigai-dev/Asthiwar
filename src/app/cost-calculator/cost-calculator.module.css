@@ -1,0 +1,84 @@
+/* ASTHIWAR Cost Calculator Page Styles */
+
+.page {
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--ink);
+}
+
+.hero {
+  position: relative;
+  overflow: hidden;
+  padding-top: calc(var(--header-height, 4.5rem) + 2.5rem);
+  padding-bottom: 3.5rem;
+  background: var(--accent); /* ASTHIWAR carbon #243228 */
+  color: var(--bg);
+}
+
+.heroLinework {
+  position: absolute;
+  inset: 0;
+  opacity: 0.22;
+  background-image:
+    linear-gradient(to right, transparent calc(100% - 1px), rgba(239, 234, 227, 0.16) 1px),
+    linear-gradient(to bottom, transparent calc(100% - 1px), rgba(239, 234, 227, 0.1) 1px);
+  background-size:
+    12.5% 100%,
+    100% 6rem;
+  pointer-events: none;
+}
+
+.heroInner {
+  position: relative;
+  z-index: 1;
+  max-width: 92rem;
+  margin-inline: auto;
+  padding-inline: clamp(1rem, 7.5vw, 7.5rem);
+}
+
+.eyebrow {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(239, 234, 227, 0.78);
+  margin-bottom: 1.25rem;
+}
+
+.title {
+  max-width: 14ch;
+  font-size: clamp(2.35rem, 6vw, 4.5rem);
+  font-weight: 500;
+  letter-spacing: -0.035em;
+  line-height: 0.95;
+  color: var(--bg);
+  text-wrap: balance;
+  margin: 0;
+}
+
+.introRow {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid rgba(239, 234, 227, 0.2);
+}
+
+.intro {
+  max-width: 36rem;
+  font-size: clamp(0.95rem, 0.9rem + 0.25vw, 1.125rem);
+  line-height: 1.6;
+  color: rgba(239, 234, 227, 0.82);
+  margin: 0;
+}
+
+.calculatorSection {
+  padding-top: 2rem;
+  padding-bottom: 6rem;
+  background: var(--bg);
+}
+
+.calculatorInner {
+  max-width: 92rem;
+  margin-inline: auto;
+  padding-inline: clamp(1rem, 5vw, 5rem);
+}

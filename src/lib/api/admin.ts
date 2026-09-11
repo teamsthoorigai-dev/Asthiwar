@@ -12,27 +12,34 @@ export interface AdminLoginResponse {
   token?: string;
 }
 
+export interface DashboardKpis {
+  totalEstimates: number;
+  totalPipelineValue: number;
+  avgProjectValue: number;
+  avgBuiltupArea: number;
+  totalEnquiries: number;
+  newEnquiriesCount: number;
+  closedWonCount: number;
+  /** Wins over leads that have actually been decided (won + lost). */
+  conversionRate: number;
+  closedLostCount?: number;
+  decidedEnquiriesCount?: number;
+  /** Wins over every lead raised, pipeline included. Kept for comparison. */
+  winRateOfAllLeads?: number;
+}
+
+/** How far back a dashboard figure reaches. Omit everything for all-time. */
+export interface DashboardRange {
+  days?: number;
+  from?: string;
+  to?: string;
+}
+
 export interface DashboardAnalytics {
-  kpis?: {
-    totalEstimates: number;
-    totalPipelineValue: number;
-    avgProjectValue: number;
-    avgBuiltupArea: number;
-    totalEnquiries: number;
-    newEnquiriesCount: number;
-    closedWonCount: number;
-    conversionRate: number;
-  };
-  metrics?: {
-    totalEstimates: number;
-    totalPipelineValue: number;
-    avgProjectValue: number;
-    avgBuiltupArea: number;
-    totalEnquiries: number;
-    newEnquiriesCount: number;
-    closedWonCount: number;
-    conversionRate: number;
-  };
+  /** Echo of the window the server measured over; null bounds mean all-time. */
+  range?: { from: string | null; to: string | null; days: number | null };
+  kpis?: DashboardKpis;
+  metrics?: DashboardKpis;
   enquiriesByStatus?: Record<string, number>;
   estimatesByPackage: Array<{
     packageSlug: string;
@@ -359,11 +366,83 @@ export async function adminLogout(
 // ANALYTICS & DASHBOARD
 // ----------------------------------------------------
 
+/**
+ * Change the signed-in account's password.
+ *
+ * The server invalidates every session for the account on success — including
+ * this one — so the caller has to send the operator back to the login screen.
+ */
+export async function adminChangePassword(
+  payload: { currentPassword: string; newPassword: string },
+  options?: RequestOptions
+): Promise<{ message: string }> {
+  return apiClient<{ message: string }>('/api/v1/admin/auth/password', {
+    method: 'POST',
+    body: payload,
+    ...options,
+  });
+}
+
+export type AdminRole = 'viewer' | 'admin' | 'super_admin';
+
+export interface AdminAccount {
+  id: string;
+  email: string;
+  fullName: string;
+  role: AdminRole;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+/**
+ * Admin accounts.
+ *
+ * `admin_users` has always held a role per account, and until now the only way
+ * to create one was the seed script — so every operator shared one login and the
+ * audit trail recorded a single name for everything. Super-admin only.
+ */
+export async function listAdminAccounts(options?: RequestOptions): Promise<AdminAccount[]> {
+  return apiClient<AdminAccount[]>('/api/v1/admin/auth/users', {
+    method: 'GET',
+    ...options,
+  });
+}
+
+export async function createAdminAccount(
+  payload: { email: string; fullName: string; password: string; role: AdminRole },
+  options?: RequestOptions
+): Promise<AdminAccount> {
+  return apiClient<AdminAccount>('/api/v1/admin/auth/users', {
+    method: 'POST',
+    body: payload,
+    ...options,
+  });
+}
+
+export async function updateAdminAccount(
+  id: string,
+  payload: { fullName?: string; role?: AdminRole; isActive?: boolean },
+  options?: RequestOptions
+): Promise<AdminAccount> {
+  return apiClient<AdminAccount>(`/api/v1/admin/auth/users/${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    body: payload,
+    ...options,
+  });
+}
+
 export async function getDashboardAnalytics(
+  range?: DashboardRange,
   options?: RequestOptions
 ): Promise<DashboardAnalytics> {
   return apiClient<DashboardAnalytics>('/api/v1/admin/analytics/dashboard', {
     method: 'GET',
+    params: {
+      days: range?.days,
+      from: range?.from,
+      to: range?.to,
+    },
     ...options,
   });
 }
@@ -429,6 +508,27 @@ export async function updateAdminEnquiry(
     body: payload,
     ...options,
   });
+}
+
+/**
+ * Remove a lead from the pipeline.
+ *
+ * The console could only move a lead's status, so junk could be buried under
+ * CLOSED_LOST but never cleared — and every public estimate submission raises
+ * one. The linked estimate is untouched: a quotation is an issued document, the
+ * CRM record beside it is working state.
+ */
+export async function deleteAdminEnquiry(
+  id: string,
+  options?: RequestOptions
+): Promise<{ id: string; fullName: string }> {
+  return apiClient<{ id: string; fullName: string }>(
+    `/api/v1/admin/enquiries/${encodeURIComponent(id)}`,
+    {
+      method: 'DELETE',
+      ...options,
+    }
+  );
 }
 
 export async function sendLeadNotification(
@@ -521,6 +621,78 @@ export async function sendEstimateNotification(
 // ----------------------------------------------------
 // PRICING & SPECIFICATIONS CONFIGURATION
 // ----------------------------------------------------
+
+export interface AdminAuditLog {
+  id: number;
+  eventType: string;
+  action: string;
+  severity: string;
+  actorType: string;
+  actorId: string | null;
+  endpoint: string | null;
+  httpMethod: string | null;
+  statusCode: number | null;
+  errorMessage: string | null;
+  ipAddress: string | null;
+  userAgent: string | null;
+  createdAt: string;
+}
+
+export interface AdminAuditLogDetail extends AdminAuditLog {
+  errorStack?: string | null;
+  metadata?: unknown;
+}
+
+export interface AuditLogFilters {
+  page?: number;
+  limit?: number;
+  search?: string;
+  eventType?: string;
+  severity?: string;
+  actorType?: string;
+  from?: string;
+  to?: string;
+}
+
+/**
+ * Read the audit trail.
+ *
+ * Three call sites have written to `audit_logs` since the table was created —
+ * the error handler, the admin config controller and the calculator controller —
+ * a read endpoint was added, and nothing in the console ever called it. A
+ * compliance table nobody can query is storage, not a compliance measure.
+ */
+export async function getAdminAuditLogs(
+  filters: AuditLogFilters = {},
+  options?: RequestOptions
+): Promise<Paginated<AdminAuditLog[]>> {
+  const res = await apiClientEnvelope<AdminAuditLog[]>('/api/v1/admin/audit-logs', {
+    method: 'GET',
+    params: {
+      page: filters.page,
+      limit: filters.limit,
+      search: filters.search || undefined,
+      eventType: filters.eventType || undefined,
+      severity: filters.severity || undefined,
+      actorType: filters.actorType || undefined,
+      from: filters.from || undefined,
+      to: filters.to || undefined,
+    },
+    ...options,
+  });
+  return { items: res.items ?? [], pagination: res.pagination };
+}
+
+/** One entry in full, including the stack and captured request metadata. */
+export async function getAdminAuditLogById(
+  id: number,
+  options?: RequestOptions
+): Promise<AdminAuditLogDetail> {
+  return apiClient<AdminAuditLogDetail>(`/api/v1/admin/audit-logs/${id}`, {
+    method: 'GET',
+    ...options,
+  });
+}
 
 export async function getAdminPricingConfig(
   options?: RequestOptions
@@ -667,13 +839,30 @@ export async function updateAddonMetadata(
   );
 }
 
+/**
+ * One tier's rate for a brand option.
+ *
+ * Every option in the catalogue is priced per package — a Jaquar fitting is not
+ * the same upgrade against Basic as it is against Luxury — so this is the shape
+ * the console edits in. `priceDelta` may be negative: choosing a plainer brand
+ * than the tier includes is a credit, not an upgrade.
+ */
+export interface OptionPackagePrice {
+  packageId: number;
+  priceDelta: number;
+  isComplimentary?: boolean;
+}
+
 export async function createOption(
   payload: {
     itemId: number;
     name: string;
     slug: string;
     description?: string;
-    priceDelta: number;
+    priceDelta?: number;
+    /** Per-tier rates. Sent for every option; the bare `priceDelta` above is
+     *  only a fallback for a catalogue with no active packages. */
+    prices?: OptionPackagePrice[];
   },
   options?: RequestOptions
 ): Promise<{ success: boolean; data: any }> {
@@ -689,7 +878,19 @@ export async function createOption(
 
 export async function updateOptionPricing(
   optionId: number,
-  payload: { priceDelta?: number; name?: string; slug?: string; description?: string | null },
+  payload: {
+    priceDelta?: number;
+    name?: string;
+    slug?: string;
+    description?: string | null;
+    /**
+     * Per-tier rates. Required in practice: the server refuses a bare
+     * `priceDelta` on an option that is priced per package (which is all of
+     * them), because a single number names no tier and the change would have to
+     * guess which one the operator meant.
+     */
+    prices?: OptionPackagePrice[];
+  },
   options?: RequestOptions
 ): Promise<{ success: boolean; message?: string }> {
   return apiClient<{ success: boolean; message?: string }>(

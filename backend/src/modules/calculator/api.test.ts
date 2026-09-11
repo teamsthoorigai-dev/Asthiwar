@@ -167,6 +167,11 @@ async function runApiTests() {
     assert(Boolean(estRes.data.data.estimateNumber), `Estimate Number: ${estRes.data.data.estimateNumber}`);
 
     const createdEstimateNumber = estRes.data.data.estimateNumber;
+    const createdAccessToken = estRes.data.data.accessToken;
+    assert(
+      typeof createdAccessToken === 'string' && createdAccessToken.length === 64,
+      'Estimate is issued with a 64-character access token'
+    );
 
     // -----------------------------------------------------------------------
     // Test 7: GET /api/v1/calculator/estimate/:estimateNumber
@@ -176,13 +181,34 @@ async function runApiTests() {
     // stops at the first one, so the raw number in a path is a guaranteed 404 —
     // callers must use the dash form, which the lookup resolves back. This is what
     // urlSafeQuotationNumber exists for.
+    //
+    // The number is also not, on its own, permission to read the quotation: it is
+    // a sequence, so counting it up used to return every customer's name, phone
+    // and email. The access token issued with the estimate is what authorises it.
+    const urlSafeNumber = urlSafeQuotationNumber(createdEstimateNumber);
+
     const fetchEstRes = await request(
-      `/api/v1/calculator/estimate/${urlSafeQuotationNumber(createdEstimateNumber)}`
+      `/api/v1/calculator/estimate/${urlSafeNumber}?t=${createdAccessToken}`
     );
-    assert(fetchEstRes.status === 200, 'Status code is 200 (url-safe quotation number)');
+    assert(fetchEstRes.status === 200, 'Status code is 200 (url-safe quotation number + token)');
     assert(fetchEstRes.data.data.estimateNumber === createdEstimateNumber, 'Fetched estimate number matches');
     assert(fetchEstRes.data.data.customer.name === 'Aswin Kumar', 'Customer name matches');
     assert(fetchEstRes.data.data.milestones.length === 10, 'Contains 10 milestone stages in snapshot');
+
+    // The enumeration this token exists to stop.
+    const noTokenRes = await request(`/api/v1/calculator/estimate/${urlSafeNumber}`);
+    assert(noTokenRes.status === 404, 'Quotation number alone is refused (404)');
+
+    const wrongTokenRes = await request(
+      `/api/v1/calculator/estimate/${urlSafeNumber}?t=${'0'.repeat(64)}`
+    );
+    assert(wrongTokenRes.status === 404, 'A wrong token is refused (404)');
+    // Both failures have to look identical, or walking the sequence still reveals
+    // which quotation numbers are real.
+    assert(
+      noTokenRes.data.error.code === wrongTokenRes.data.error.code,
+      'A missing token and a wrong one are indistinguishable'
+    );
 
     // -----------------------------------------------------------------------
     // Test 8: POST /api/v1/enquiries (Consultation Lead)

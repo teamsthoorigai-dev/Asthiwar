@@ -9,11 +9,11 @@ import styles from './services.module.css';
 export const metadata: Metadata = {
   title: 'Services',
   description:
-    'Architecture, interior, construction, structural engineering and green building by ASTHIWAR in Coimbatore, Tamil Nadu. Five disciplines coordinated through one process.',
+    'Real estate, architecture, interior, construction, structural engineering and green building by ASTHIWAR in Coimbatore, Tamil Nadu. Six disciplines coordinated through one process.',
   openGraph: {
     title: 'Services — ASTHIWAR',
     description:
-      'Five disciplines. One continuous process. Architecture, interior, construction, structural engineering and green building.',
+      'Six disciplines. One continuous process. Real estate, architecture, interior, construction, structural engineering and green building.',
     url: '/services',
   },
   alternates: {
@@ -28,8 +28,9 @@ export default function ServicesPage() {
 
       <PageHero
         eyebrow="Services"
-        title="Five disciplines. One continuous process."
-        body="ASTHIWAR brings architecture, engineering and execution together through one coordinated process."
+        title="Six disciplines. One continuous process."
+        body="ASTHIWAR brings real estate, architecture, interior, engineering and construction together through one coordinated process."
+        className={styles.servicesHero}
       />
 
       <ServicesClient />

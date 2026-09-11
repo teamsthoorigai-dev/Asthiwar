@@ -20,7 +20,7 @@ import {
   Check,
 } from 'lucide-react';
 import type { CalculationResult } from '@/lib/calculator/types';
-import { getEstimatePdfUrl, urlSafeEstimateNumber } from '@/lib/api/calculator';
+import { getEstimatePdfUrl } from '@/lib/api/calculator';
 import { submitEnquiry } from '@/lib/api/enquiries';
 
 interface StepEstimateReportProps {
@@ -96,13 +96,16 @@ export function StepEstimateReport({ result, onReset }: StepEstimateReportProps)
     }
   };
 
+  // A persisted estimate always carries an access token; a preview never reaches
+  // this report, so the fallback is only here to keep the type honest.
+  const pdfDownloadUrl = getEstimatePdfUrl(result.estimateNumber, result.accessToken ?? '');
+
   const handleWhatsAppShare = () => {
-    // The quotation number carries slashes (AW/2026/O/0001). Interpolating it raw
-    // built .../estimate/AW/2026/O/0001/pdf — four path segments, no matching
-    // route — so every estimate a customer shared carried a link that 404s.
-    const sharedPdfUrl = `${window.location.origin}/api/v1/calculator/estimate/${urlSafeEstimateNumber(
-      result.estimateNumber
-    )}/pdf`;
+    // Built through getEstimatePdfUrl so the shared link carries both halves the
+    // route needs: the URL-safe quotation number (the printed one has slashes,
+    // and interpolating it raw produced four path segments that matched no route)
+    // and the access token that authorises reading it.
+    const sharedPdfUrl = `${window.location.origin}${pdfDownloadUrl}`;
     const text = encodeURIComponent(
       `ASTHIWAR Construction Estimate (${result.estimateNumber || 'Ref'})\nTotal Cost: ${formatINR(
         totalCost
@@ -111,12 +114,11 @@ export function StepEstimateReport({ result, onReset }: StepEstimateReportProps)
     window.open(`https://wa.me/?text=${text}`, '_blank');
   };
 
-  const pdfDownloadUrl = getEstimatePdfUrl(result.estimateNumber);
 
   return (
     <div className="calculator-report animate-fade-in space-y-6">
       {/* Top Banner Card */}
-      <div className="calculator-card p-6 border-foreground/30 bg-surface">
+      <div className="calculator-card p-6">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div>
             <div className="flex items-center gap-2 mb-2">
@@ -228,14 +230,24 @@ export function StepEstimateReport({ result, onReset }: StepEstimateReportProps)
               {formatINR(breakdown?.baseConstructionCost)}
             </span>
           </div>
-          {(breakdown?.headRoomCost ?? 0) > 0 && (
+          {/* Shown whenever head room was entered, priced or not.
+              The row was hidden when the cost came to zero, so a customer who
+              entered 500 sq.ft of head room saw no mention of it anywhere on the
+              quotation — not a line, not an inclusion, nothing. The area they
+              gave has to be accounted for on the document either way. */}
+          {(breakdown?.headRoomAreaSqft ?? 0) > 0 && (
             <div className="flex justify-between py-2 border-b border-border">
               <span className="text-muted">
-                Head Room ({breakdown?.headRoomAreaSqft} sq.ft @ ₹
-                {breakdown?.headRoomRatePerSqft}/sq.ft)
+                Head Room ({breakdown?.headRoomAreaSqft} sq.ft
+                {(breakdown?.headRoomRatePerSqft ?? 0) > 0
+                  ? ` @ ₹${breakdown?.headRoomRatePerSqft}/sq.ft`
+                  : ''}
+                )
               </span>
               <span className="tabular-nums font-medium">
-                {formatINR(breakdown?.headRoomCost)}
+                {(breakdown?.headRoomCost ?? 0) > 0
+                  ? formatINR(breakdown?.headRoomCost)
+                  : 'Included'}
               </span>
             </div>
           )}
@@ -282,7 +294,7 @@ export function StepEstimateReport({ result, onReset }: StepEstimateReportProps)
 
       {/* Standard Exclusions & Disclaimers */}
       {result.disclaimers && result.disclaimers.length > 0 && (
-        <div className="calculator-card p-5 bg-surface/50">
+        <div className="calculator-card p-5">
           <h3 className="text-xs uppercase tracking-wider text-muted font-bold mb-2">
             Standard Exclusions & Disclaimers
           </h3>

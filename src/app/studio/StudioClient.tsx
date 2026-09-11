@@ -4,6 +4,8 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useState } from 'react';
 import { studioPage } from '@/data/studio';
+import { AsthiwarMark } from '@/components/brand/AsthiwarMark';
+import { Odometer } from '@/components/ui/Odometer';
 import { StudioLineArtMap } from '@/components/studio/StudioLineArtMap';
 import styles from './studio.module.css';
 
@@ -29,131 +31,92 @@ export function StudioClient() {
             <div className={styles.greyLine} aria-hidden="true" />
           </div>
 
-          <h1 className={styles.heading48}>
-            {studioPage.profile.heading}
-          </h1>
+          {/* 2-Column Grid: Story Narrative on Left, Building Pillar Mark in Empty Space on Right */}
+          <div className={styles.profileGrid}>
+            <div className={styles.profileContent}>
+              <h1 className={styles.heading48}>
+                {studioPage.profile.heading}
+              </h1>
 
-          <div className={styles.bodyText}>
-            {studioPage.profile.paragraphs.map((p, i) => (
-              <p key={i} className={styles.paragraph}>
-                {p}
-              </p>
-            ))}
-          </div>
+              <div className={styles.bodyText}>
+                {studioPage.profile.paragraphs.map((p, i) => (
+                  <p key={i} className={styles.paragraph}>
+                    {p}
+                  </p>
+                ))}
+              </div>
 
-          {/* Large Studio / Office Showcase Photo */}
-          <div className={styles.heroMedia}>
-            <figure className={styles.heroImageFrame}>
-              <Image
-                src={studioPage.profile.heroImage.src}
-                alt={studioPage.profile.heroImage.alt}
-                fill
-                priority
-                sizes="(max-width: 1024px) 100vw, 78rem"
-                className={styles.heroImage}
-              />
-            </figure>
-            <div className={styles.heroCaption}>
-              <span>{studioPage.profile.heroImage.caption[0]}</span>
-              <span>{studioPage.profile.heroImage.caption[1]}</span>
+              {/* Secondary Editorial Heading & Narrative */}
+              <h2 className={styles.headingSecondary}>
+                {studioPage.profile.secondaryHeading}
+              </h2>
+
+              <div className={styles.bodyText}>
+                {studioPage.profile.secondaryParagraphs.map((p, i) => (
+                  <p key={i} className={styles.paragraph}>
+                    {p}
+                  </p>
+                ))}
+              </div>
+            </div>
+
+            {/* Architectural Building Pillar Emblem in Full Size */}
+            <div className={styles.pillarStickyCol} aria-hidden="true">
+              <div className={styles.pillarFrame}>
+                <AsthiwarMark className={styles.pillarMark} />
+              </div>
             </div>
           </div>
 
-          {/* Secondary Editorial Heading & Narrative */}
-          <h2 className={styles.headingSecondary}>
-            {studioPage.profile.secondaryHeading}
-          </h2>
-
-          <div className={styles.bodyText}>
-            {studioPage.profile.secondaryParagraphs.map((p, i) => (
-              <p key={i} className={styles.paragraph}>
-                {p}
-              </p>
-            ))}
-          </div>
-
-          {/* Milestone Stats */}
+          {/* Milestone Stats with Rolling Odometer Effect */}
           <div className={styles.states}>
-            {studioPage.profile.stats.map((stat, i) => (
-              <div key={i} className={styles.stateBlock}>
-                <span className={styles.stateHeading}>{stat.number}</span>
-                <span className={styles.stateLabel}>{stat.label}</span>
-              </div>
+            {studioPage.profile.stats.map((stat) => (
+              <Odometer
+                key={stat.label}
+                value={stat.value}
+                pad={'pad' in stat ? stat.pad : undefined}
+                suffix={'suffix' in stat ? stat.suffix : undefined}
+                label={stat.label}
+                className={styles.stateOdometer}
+              />
             ))}
           </div>
         </div>
       </section>
 
-      {/* 2. Our Team Section — Styled matching unknownarchitects.in/team */}
+      {/* 2. Our People Section — 3-Column Card Overlay matching media_1789119603362.jpg */}
       <section className={`${styles.section} ${styles.teamSection}`} aria-labelledby="team-heading">
         <div className={styles.inner}>
-          <div className={styles.titleCard}>
-            <h6 className={styles.eyebrow} id="team-heading">
+          <div className={styles.peopleTitleCard}>
+            <h6 className={styles.peopleEyebrow} id="team-heading">
               {studioPage.team.eyebrow}
             </h6>
-            <div className={styles.greyLine} aria-hidden="true" />
+            <div className={styles.peopleLine} aria-hidden="true" />
           </div>
 
-          <h2 className={styles.heading48}>
-            {studioPage.team.heading}
-          </h2>
-
-          <p className={styles.teamLead}>
-            {studioPage.team.lead}
-          </p>
-
-          {/* Top Row: Owners / Principals (Side by Side) */}
-          <div className={styles.ownersContainer}>
-            <span className={styles.subSectionLabel}>
-              {studioPage.team.principalsHeading}
-            </span>
-
-            <div className={styles.ownersGrid}>
-              {studioPage.team.principals.map((principal) => (
-                <article key={principal.id} className={styles.memberItem}>
-                  <div className={styles.memberImageFrame}>
-                    <Image
-                      src={principal.image.src}
-                      alt={principal.image.alt}
-                      fill
-                      sizes="(max-width: 640px) 100vw, 410px"
-                      className={styles.memberImage}
-                    />
-                  </div>
-                  <div className={styles.memberMeta}>
-                    <h3 className={styles.memberName}>{principal.name}</h3>
-                    <div className={styles.memberRole}>{principal.role}</div>
-                  </div>
-                </article>
-              ))}
-            </div>
-          </div>
-
-          {/* Lower Row: Execution Team Grid */}
-          <div>
-            <span className={styles.subSectionLabel}>
-              {studioPage.team.teamHeading}
-            </span>
-
-            <div className={styles.teamGrid}>
-              {studioPage.team.executionTeam.map((member) => (
-                <article key={member.id} className={styles.memberItem}>
-                  <div className={styles.memberImageFrame}>
-                    <Image
-                      src={member.image.src}
-                      alt={member.image.alt}
-                      fill
-                      sizes="(max-width: 640px) 100vw, 360px"
-                      className={styles.memberImage}
-                    />
-                  </div>
-                  <div className={styles.memberMeta}>
-                    <h3 className={styles.memberName}>{member.name}</h3>
-                    <div className={styles.memberRole}>{member.role}</div>
-                  </div>
-                </article>
-              ))}
-            </div>
+          <div className={styles.peopleGrid}>
+            {studioPage.team.members.map((member) => (
+              <article key={member.id} className={styles.peopleCard}>
+                <Image
+                  src={member.image.src}
+                  alt={member.image.alt}
+                  fill
+                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                  className={`${styles.peopleImage} ${
+                    member.id === 'akileshwaran'
+                      ? styles.akileshwaranPos
+                      : member.id === 'arthiya'
+                      ? styles.arthiyaPos
+                      : styles.gowthamPos
+                  }`}
+                />
+                <div className={styles.peopleGradient} aria-hidden="true" />
+                <div className={styles.peopleMeta}>
+                  <h3 className={styles.peopleName}>{member.name}</h3>
+                  <p className={styles.peopleRole}>{member.role}</p>
+                </div>
+              </article>
+            ))}
           </div>
         </div>
       </section>
@@ -236,20 +199,6 @@ export function StudioClient() {
 
             {/* Architectural Line-Art Map with Click-to-Reveal */}
             <StudioLineArtMap key={activeOffice.id} office={activeOffice} />
-          </div>
-
-          {/* Bottom consultation CTA */}
-          <div className={styles.studioCta}>
-            <div>
-              <h3 className={styles.ctaHeading}>Ready to begin your architectural conversation?</h3>
-              <p className={styles.ctaSub}>
-                Visit our Coimbatore studios or Virudhunagar execution center, or book a consultation online.
-              </p>
-            </div>
-            <Link href="/contact" className={styles.directionsButton}>
-              <span>Book Consultation</span>
-              <span aria-hidden="true">↗</span>
-            </Link>
           </div>
         </div>
       </section>

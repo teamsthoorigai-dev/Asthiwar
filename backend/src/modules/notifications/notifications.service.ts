@@ -22,9 +22,15 @@ import { estimateRefCandidates, quotationPdfPath } from '../calculator/quotation
  */
 const NOTHING_IS_DISPATCHED_YET = 'PENDING' as const;
 
-/** A link a customer can actually open. */
-function publicQuotationPdfUrl(quotationNumber: string): string {
-  return `${env.PUBLIC_BASE_URL}${quotationPdfPath(quotationNumber)}`;
+/**
+ * A link a customer can actually open.
+ *
+ * Carries the estimate's access token: the quotation number alone no longer
+ * authorises reading it, so a link built without the token 404s for the very
+ * customer it was composed for.
+ */
+function publicQuotationPdfUrl(quotationNumber: string, accessToken: string): string {
+  return `${env.PUBLIC_BASE_URL}${quotationPdfPath(quotationNumber, accessToken)}`;
 }
 
 export class NotificationError extends Error {
@@ -71,7 +77,7 @@ export async function sendEstimateQuotationNotification(estimateIdOrNumber: stri
     throw new NotificationError(404, 'ESTIMATE_NOT_FOUND', `Estimate ${estimateIdOrNumber} not found`);
   }
 
-  const pdfUrl = publicQuotationPdfUrl(estimate.estimateNumber);
+  const pdfUrl = publicQuotationPdfUrl(estimate.estimateNumber, estimate.accessToken);
 
   const results = [];
 

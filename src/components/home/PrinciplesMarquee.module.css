@@ -1,6 +1,11 @@
-/* Full-bleed: the band runs edge to edge, with no container and no gutter. It
-   carries its own ground and its own ink, and the marks inside inherit both. */
+/* Full-bleed: the band runs edge to edge, with no container and no gutter.
+
+   It carries no ground of its own. --stone (#C7C7C5) is a cool concrete and the
+   page either side of it is warm paper (--bg, #EFEAE3), so the band read as a
+   grey slab dropped onto the page rather than as part of it. The marks sit on
+   the page ground and the hairlines do the separating. */
 .section {
-  background: var(--stone);
+  background: var(--bg);
   color: var(--ink);
+  border-block: 1px solid var(--hairline);
 }

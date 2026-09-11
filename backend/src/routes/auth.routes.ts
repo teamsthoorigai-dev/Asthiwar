@@ -1,13 +1,23 @@
 import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
 import {
+  changePasswordController,
   loginController,
   logoutController,
   meController,
 } from '../modules/auth/auth.controller.js';
 import { validateRequest } from '../middleware/validate.js';
-import { requireAdminAuth } from '../middleware/auth.js';
-import { loginSchema } from '../modules/auth/auth.schema.js';
+import { requireAdminAuth, requireRole } from '../middleware/auth.js';
+import { changePasswordSchema, loginSchema } from '../modules/auth/auth.schema.js';
+import {
+  createAdminUserSchema,
+  updateAdminUserSchema,
+} from '../modules/auth/users.schema.js';
+import {
+  createAdminUserController,
+  listAdminUsersController,
+  updateAdminUserController,
+} from '../modules/auth/users.controller.js';
 
 const router = Router();
 
@@ -71,5 +81,51 @@ router.post('/logout', requireAdminAuth, logoutController);
 
 // GET /api/v1/admin/auth/me — Verify active session and return profile
 router.get('/me', requireAdminAuth, meController);
+
+/**
+ * POST /api/v1/admin/auth/password — Change the signed-in account's password.
+ *
+ * The controller and service for this were written, tested against, and never
+ * routed, so the only way to change an admin password was to reach into the
+ * database — while the login screen advertised the seeded default. Rate-limited
+ * on the same flood budget as login: it takes the current password, so it is
+ * another place an attacker with a session could grind at one.
+ */
+router.post(
+  '/password',
+  loginFloodLimiter,
+  requireAdminAuth,
+  validateRequest({ body: changePasswordSchema }),
+  changePasswordController
+);
+
+/**
+ * Admin accounts (/api/v1/admin/auth/users).
+ *
+ * `admin_users` has always supported several accounts with distinct roles, and
+ * the only way to make one was to run the seed script — so every operator shared
+ * the seeded login and the audit trail recorded a single name for everything
+ * anyone did. Super-admin only: handing out access is the one thing that must not
+ * be delegated to the accounts it creates.
+ */
+const canManageUsers = requireRole('super_admin');
+
+router.get('/users', requireAdminAuth, canManageUsers, listAdminUsersController);
+
+router.post(
+  '/users',
+  requireAdminAuth,
+  canManageUsers,
+  validateRequest({ body: createAdminUserSchema }),
+  createAdminUserController
+);
+
+router.patch(
+  '/users/:id',
+  requireAdminAuth,
+  canManageUsers,
+  validateRequest({ body: updateAdminUserSchema }),
+  updateAdminUserController
+);
 
 export default router;

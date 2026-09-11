@@ -67,3 +67,20 @@ export const auditLogsQuerySchema = paginationQuerySchema.extend({
 });
 
 export type AuditLogsQuery = z.infer<typeof auditLogsQuerySchema>;
+
+/**
+ * The window a dashboard figure covers.
+ *
+ * Every KPI was all-time and nothing else was offered, so "pipeline value" was a
+ * number that could only ever go up and answered no question a sales meeting
+ * actually asks. `days` is the common case in one parameter; `from`/`to` cover a
+ * specific period. Omitting all three keeps the all-time view.
+ */
+export const dashboardQuerySchema = z.object({
+  days: z.coerce.number().int().positive().max(3650).optional(),
+  from: z.coerce.date().optional(),
+  to: z.coerce.date().optional(),
+});
+
+export type DashboardQuery = z.infer<typeof dashboardQuerySchema>;
+

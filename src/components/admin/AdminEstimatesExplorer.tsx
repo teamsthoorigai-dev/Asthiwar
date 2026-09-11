@@ -29,7 +29,8 @@ import {
   AdminEstimateDetail,
   EstimateStatus,
 } from '@/lib/api/admin';
-import { getEstimatePdfUrl } from '@/lib/api/calculator';
+import { getAdminEstimatePdfUrl } from '@/lib/api/calculator';
+import { CsvColumn, downloadCsv, timestampedFilename, toCsv } from '@/lib/csv';
 
 function formatINR(amount: number | string | undefined | null): string {
   if (amount === undefined || amount === null) return '₹0';
@@ -155,6 +156,35 @@ export function AdminEstimatesExplorer() {
     }
   };
 
+  /**
+   * Export the estimates currently listed — same filters, same sort, same page.
+   * See the note on the leads export for why this is built client-side.
+   */
+  const handleExportCsv = () => {
+    const columns: Array<CsvColumn<AdminEstimate>> = [
+      { header: 'Issued', value: (r) => new Date(r.createdAt).toISOString() },
+      { header: 'Quotation', value: (r) => r.estimateNumber },
+      { header: 'Customer', value: (r) => r.customerName },
+      { header: 'Phone', value: (r) => r.customerPhone },
+      { header: 'Email', value: (r) => r.customerEmail ?? '' },
+      { header: 'Location', value: (r) => r.plotLocation },
+      { header: 'Package', value: (r) => r.packageSlug },
+      { header: 'Rate (INR/sq.ft)', value: (r) => r.packageRatePerSqft },
+      { header: 'Built-up Area (sq.ft)', value: (r) => r.totalBuiltupAreaSqft },
+      { header: 'Base Construction (INR)', value: (r) => r.baseConstructionCost },
+      { header: 'Upgrades (INR)', value: (r) => r.upgradesCost },
+      { header: 'Add-ons (INR)', value: (r) => r.addonsCost },
+      { header: 'Total (INR)', value: (r) => r.totalProjectCost },
+      { header: 'Status', value: (r) => r.status },
+    ];
+
+    downloadCsv(timestampedFilename('asthiwar-estimates'), toCsv(estimates, columns));
+    showAlert(
+      'success',
+      `Exported ${estimates.length} estimate${estimates.length === 1 ? '' : 's'}.`
+    );
+  };
+
   const handleSendQuotation = async (id: string) => {
     setSendingQuotation(true);
     try {
@@ -234,6 +264,19 @@ export function AdminEstimatesExplorer() {
               ))}
             </select>
           </div>
+
+          {/* Export what is listed. Placed beside the page-size control because
+              both act on the current view rather than on a single record. */}
+          <button
+            type="button"
+            onClick={handleExportCsv}
+            disabled={estimates.length === 0}
+            className="button button--ghost text-xs py-1.5 px-3 shrink-0 inline-flex items-center gap-1.5 disabled:opacity-40"
+            title="Download the rows currently listed as a CSV file"
+          >
+            <Download size={13} />
+            <span>Export CSV</span>
+          </button>
         </div>
       </div>
 
@@ -351,7 +394,7 @@ export function AdminEstimatesExplorer() {
                     <td className="p-3.5 text-right">
                       <div className="flex items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
                         <a
-                          href={getEstimatePdfUrl(est.estimateNumber)}
+                          href={getAdminEstimatePdfUrl(est.id)}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="button button--ghost p-1.5 inline-flex items-center gap-1 text-[11px]"
@@ -501,7 +544,7 @@ export function AdminEstimatesExplorer() {
                     </button>
 
                     <a
-                      href={getEstimatePdfUrl(estimateDetail.estimateNumber)}
+                      href={getAdminEstimatePdfUrl(estimateDetail.id)}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="button button--ghost text-xs py-1.5 px-3 inline-flex items-center gap-1"

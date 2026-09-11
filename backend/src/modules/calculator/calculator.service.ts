@@ -30,6 +30,7 @@ import {
   DRAFT_QUOTATION_NUMBER,
   QUOTATION_CHANNELS,
   QUOTATION_EXCLUSIONS,
+  generateEstimateAccessToken,
   nextQuotationNumber,
 } from './quotation.js';
 import {
@@ -326,7 +327,27 @@ export async function calculateEstimate(
       : [];
     const packageItemMap = new Map(fetchedPackageItems.map((pi) => [pi.itemId, pi]));
 
+    // One component resolves to one choice.
+    //
+    // Nothing stopped the same itemSlug appearing twice, and both lines were
+    // priced: a request naming two different basement heights was quoted for two
+    // basements on one house — Rs 90,000 where the single choice costs Rs 60,000.
+    // The configurator replaces a selection rather than appending one, so this is
+    // unreachable through the UI; the endpoint is public, so that is not a
+    // guarantee. Refused rather than silently collapsed, because picking which of
+    // the two the customer meant is a guess.
+    const seenItemSlugs = new Set<string>();
+
     for (const [index, cust] of input.customizations.entries()) {
+      if (seenItemSlugs.has(cust.itemSlug)) {
+        issues.push({
+          path: `customizations.${index}.itemSlug`,
+          message: `'${cust.itemSlug}' is chosen more than once. Each component takes a single option.`,
+        });
+        continue;
+      }
+      seenItemSlugs.add(cust.itemSlug);
+
       const itm = itemMap.get(cust.itemSlug);
       if (!itm) {
         issues.push({
@@ -387,32 +408,83 @@ export async function calculateEstimate(
   let addonsCost = 0;
 
   if (input.addons && input.addons.length > 0) {
-    for (const [index, ad] of input.addons.entries()) {
-      const addonRows = await db
-        .select()
-        .from(addons)
-        .where(and(eq(addons.slug, ad.addonSlug), eq(addons.isActive, true)))
-        .limit(1);
+    // Batched, rather than two queries per add-on inside the loop. A fifteen
+    // add-on estimate issued thirty sequential round trips, on the endpoint that
+    // runs behind every keystroke in the configurator.
+    const requestedAddonSlugs = Array.from(new Set(input.addons.map((a) => a.addonSlug)));
 
-      if (addonRows.length === 0) {
+    const fetchedAddons = await db
+      .select()
+      .from(addons)
+      .where(and(inArray(addons.slug, requestedAddonSlugs), eq(addons.isActive, true)));
+    const addonMap = new Map(fetchedAddons.map((a) => [a.slug, a]));
+
+    const fetchedAddonPrices = fetchedAddons.length > 0
+      ? await db
+          .select()
+          .from(addonPrices)
+          .where(
+            and(
+              inArray(
+                addonPrices.addonId,
+                fetchedAddons.map((a) => a.id)
+              ),
+              isCurrentPrice(addonPrices.effectiveTo)
+            )
+          )
+      : [];
+
+    const pricesByAddonVariant = new Map<string, typeof fetchedAddonPrices>();
+    for (const row of fetchedAddonPrices) {
+      const key = `${row.addonId}:${row.variantSlug}`;
+      const bucket = pricesByAddonVariant.get(key);
+      if (bucket) bucket.push(row);
+      else pricesByAddonVariant.set(key, [row]);
+    }
+
+    // The same add-on twice is billed twice.
+    //
+    // Three of one water tank came back as three lines and three times the money,
+    // on an "authoritative" quotation. An exact repeat of the same variant is
+    // never meaningful — the quantity field is how you ask for more of something.
+    // A second *variant* of the same add-on is meaningful only where the
+    // catalogue says so: `allows_multiple` covers cases like motor automation
+    // fitted to the bore-water and corporation-water tanks independently.
+    const seenAddonVariants = new Set<string>();
+    const seenAddonSlugs = new Set<string>();
+
+    for (const [index, ad] of input.addons.entries()) {
+      const add = addonMap.get(ad.addonSlug);
+
+      if (!add) {
         issues.push({
           path: `addons.${index}.addonSlug`,
           message: `Add-on '${ad.addonSlug}' is not available.`,
         });
         continue;
       }
-      const add = addonRows[0];
 
-      const apRows = await db
-        .select()
-        .from(addonPrices)
-        .where(
-          and(
-            eq(addonPrices.addonId, add.id),
-            eq(addonPrices.variantSlug, ad.variantSlug),
-            isCurrentPrice(addonPrices.effectiveTo)
-          )
-        );
+      const variantKey = `${ad.addonSlug}:${ad.variantSlug}`;
+      if (seenAddonVariants.has(variantKey)) {
+        issues.push({
+          path: `addons.${index}.addonSlug`,
+          message: `${add.name} is selected more than once with the same option. Use the quantity to ask for more.`,
+        });
+        continue;
+      }
+
+      if (seenAddonSlugs.has(ad.addonSlug) && !add.allowsMultiple) {
+        issues.push({
+          path: `addons.${index}.variantSlug`,
+          message: `${add.name} takes a single option, but more than one was selected.`,
+        });
+        continue;
+      }
+
+      seenAddonVariants.add(variantKey);
+      seenAddonSlugs.add(ad.addonSlug);
+
+      const apRows = pricesByAddonVariant.get(`${add.id}:${ad.variantSlug}`) ?? [];
 
       // Prefer the row scoped most narrowly to this package; fall back to any
       // row so an odd tier value still prices rather than silently dropping.
@@ -435,7 +507,7 @@ export async function calculateEstimate(
 
       // The catalogue's own quantity bounds, enforced. They were read only to
       // render the spinner's min/max, which a hand-made request never sees — so a
-      // 1-litre sump (minimum 1,000) priced at ₹26 and was accepted as authoritative.
+      // 1-litre sump (minimum 1,000) priced at Rs 26 and was accepted as authoritative.
       const minQty = add.minQuantity !== null ? Number(add.minQuantity) : null;
       const maxQty = add.maxQuantity !== null ? Number(add.maxQuantity) : null;
 
@@ -484,8 +556,8 @@ export async function calculateEstimate(
       //
       // This was a switch listing the measured units, with everything else falling
       // through to a flat price. Two bugs came out of that shape: 'per_sqft' was
-      // never listed even though the admin console offers it, so a ₹120/sq.ft
-      // ceiling billed as ₹120 flat; and the fallback multiplied by
+      // never listed even though the admin console offers it, so a Rs 120/sq.ft
+      // ceiling billed as Rs 120 flat; and the fallback multiplied by
       // `ad.quantity ?? 1` instead of `qty`, so an add-on with a catalogue default
       // quantity reported one amount on the line and charged another. An allow-list
       // of units fails silently every time a new unit is added — this cannot.
@@ -649,6 +721,12 @@ export async function calculateEstimate(
     const MAX_NUMBERING_ATTEMPTS = 10;
     let claimedNumber: string | null = null;
 
+    // One token per quotation, generated once rather than per attempt: a losing
+    // attempt rolls back, so reusing the token across retries is safe and keeps
+    // the value returned to the caller identical to the one that was stored.
+    const accessToken = generateEstimateAccessToken();
+    result.accessToken = accessToken;
+
     for (let attempt = 0; attempt < MAX_NUMBERING_ATTEMPTS; attempt++) {
       const candidateNumber = await nextQuotationNumber(QUOTATION_CHANNELS.ONLINE, attempt);
       // The stored snapshot has to carry the number it was actually issued under.
@@ -660,6 +738,7 @@ export async function calculateEstimate(
             .insert(estimates)
             .values({
               estimateNumber: candidateNumber,
+              accessToken,
               customerName: input.customerName,
               customerPhone: input.customerPhone,
               customerEmail: input.customerEmail ?? '',
