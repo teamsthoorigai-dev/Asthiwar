@@ -20,7 +20,7 @@ import {
   Check,
 } from 'lucide-react';
 import type { CalculationResult } from '@/lib/calculator/types';
-import { getEstimatePdfUrl } from '@/lib/api/calculator';
+import { getEstimatePdfUrl, urlSafeEstimateNumber } from '@/lib/api/calculator';
 import { submitEnquiry } from '@/lib/api/enquiries';
 
 interface StepEstimateReportProps {
@@ -97,10 +97,16 @@ export function StepEstimateReport({ result, onReset }: StepEstimateReportProps)
   };
 
   const handleWhatsAppShare = () => {
+    // The quotation number carries slashes (AW/2026/O/0001). Interpolating it raw
+    // built .../estimate/AW/2026/O/0001/pdf — four path segments, no matching
+    // route — so every estimate a customer shared carried a link that 404s.
+    const sharedPdfUrl = `${window.location.origin}/api/v1/calculator/estimate/${urlSafeEstimateNumber(
+      result.estimateNumber
+    )}/pdf`;
     const text = encodeURIComponent(
       `ASTHIWAR Construction Estimate (${result.estimateNumber || 'Ref'})\nTotal Cost: ${formatINR(
         totalCost
-      )}\nBuilt-up Area: ${builtupArea} sq.ft\nLocation: ${customer?.location || 'Tamil Nadu'}\nVerified PDF: ${window.location.origin}/api/v1/calculator/estimate/${result.estimateNumber}/pdf`
+      )}\nBuilt-up Area: ${builtupArea} sq.ft\nLocation: ${customer?.location || 'Tamil Nadu'}\nVerified PDF: ${sharedPdfUrl}`
     );
     window.open(`https://wa.me/?text=${text}`, '_blank');
   };
@@ -212,12 +218,27 @@ export function StepEstimateReport({ result, onReset }: StepEstimateReportProps)
         <div className="space-y-2.5 text-xs sm:text-sm">
           <div className="flex justify-between py-2 border-b border-border">
             <span className="text-muted">
-              Base Civil & Structural Construction ({builtupArea} sq.ft @ ₹{pkg?.baseRatePerSqft}/sq.ft)
+              {/* The effective rate, not the list rate: it carries the regional
+                  multiplier that is already inside the amount on the right, so
+                  area × the printed rate equals the printed total. */}
+              Base Civil & Structural Construction ({builtupArea} sq.ft @ ₹
+              {pkg?.effectiveRatePerSqft}/sq.ft)
             </span>
             <span className="tabular-nums font-medium">
               {formatINR(breakdown?.baseConstructionCost)}
             </span>
           </div>
+          {(breakdown?.headRoomCost ?? 0) > 0 && (
+            <div className="flex justify-between py-2 border-b border-border">
+              <span className="text-muted">
+                Head Room ({breakdown?.headRoomAreaSqft} sq.ft @ ₹
+                {breakdown?.headRoomRatePerSqft}/sq.ft)
+              </span>
+              <span className="tabular-nums font-medium">
+                {formatINR(breakdown?.headRoomCost)}
+              </span>
+            </div>
+          )}
           <div className="flex justify-between py-2 border-b border-border">
             <span className="text-muted">
               Material & Brand Customizations ({result.customizations?.length || 0} upgrades)
@@ -238,10 +259,20 @@ export function StepEstimateReport({ result, onReset }: StepEstimateReportProps)
             <span>Subtotal (Excl. Taxes)</span>
             <span className="tabular-nums">{formatINR(breakdown?.subtotalCost)}</span>
           </div>
-          <div className="flex justify-between py-2 border-b border-border text-muted">
-            <span>GST ({breakdown?.gstPercentage || 18}%)</span>
-            <span className="tabular-nums">{formatINR(breakdown?.gstAmount)}</span>
-          </div>
+          {/* Never invent a rate here. `gstPercentage` is 0 on a civil construction
+              quote, and `|| 18` turned that falsy 0 into a printed "GST (18%)"
+              sitting next to ₹0 — a tax line the customer was never charged. */}
+          {(breakdown?.gstPercentage ?? 0) > 0 ? (
+            <div className="flex justify-between py-2 border-b border-border text-muted">
+              <span>GST ({breakdown?.gstPercentage}%)</span>
+              <span className="tabular-nums">{formatINR(breakdown?.gstAmount)}</span>
+            </div>
+          ) : (
+            <div className="flex justify-between py-2 border-b border-border text-muted">
+              <span>GST</span>
+              <span className="tabular-nums">Not applicable</span>
+            </div>
+          )}
           <div className="flex justify-between py-3 text-base sm:text-lg font-bold border-t-2 border-foreground">
             <span>Total Authoritative Project Cost</span>
             <span className="tabular-nums">{formatINR(breakdown?.totalProjectCost)}</span>

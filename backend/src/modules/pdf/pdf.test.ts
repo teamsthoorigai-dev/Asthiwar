@@ -106,7 +106,7 @@ async function runPdfTests() {
         carCount: 1,
         packageSlug: 'premium',
         customizations: [
-          { itemSlug: 'masonry_work', optionSlug: 'red_brick' },
+          { itemSlug: 'masonry_work', optionSlug: 'red_bricks' },
         ],
         addons: [
           { addonSlug: 'underground_sump', variantSlug: 'flyash', quantity: 6000 },

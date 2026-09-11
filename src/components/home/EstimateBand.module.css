@@ -1,0 +1,188 @@
+/* Full-bleed clay ground, contained content — the band is its own section, so it
+   does not go through the Section primitive (which has no clay ground). */
+.section {
+  background: var(--clay);
+  color: var(--ink);
+  padding-block: var(--section-y);
+}
+
+.grid {
+  display: grid;
+  /* v1 used clamp(2.75rem, 7vw, 7rem) inside a 92rem shell. This container is
+     78rem, where 112px of gutter is 9% of the width and squeezes both columns.
+     At 4.5vw the gap is 80px at 1600 and the ~24px each column gains goes back
+     into the headline's measure. */
+  gap: clamp(2rem, 4.5vw, 5rem);
+  width: 100%;
+  /* --container-large, not --container: WorkGallery directly above this band is
+     already 90rem, so 78rem here stepped the content in by 96px against its own
+     neighbour. It also matches v1's 92rem shell closely enough that the 8.5ch
+     headline measure finally binds instead of the column doing it. */
+  max-width: var(--container-large);
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+}
+
+@media (min-width: 48rem) {
+  .grid {
+    grid-template-columns: minmax(20rem, 0.95fr) minmax(22rem, 1.05fr);
+    align-items: start;
+  }
+}
+
+/* ---- left: eyebrow + headline ---- */
+
+.eyebrow {
+  margin: 0;
+  color: var(--body);
+  font-size: clamp(0.7rem, 1.45vw, 1.43rem);
+  font-weight: var(--fw-bold);
+  letter-spacing: 0.18em;
+  line-height: var(--lh-head);
+  text-transform: uppercase;
+}
+
+.title {
+  /* 8.5ch is measured, not chosen: "your budget" — the longest line we want —
+     is 7.68ch, and "Understand your" — the break we do not want — is 10.6ch, so
+     8.5 sits between them and the headline stacks four lines at every width.
+     ch scales with the clamp, so the break holds as the type grows. */
+  max-width: 8.5ch;
+  margin: 1rem 0 0;
+  font-size: clamp(2.75rem, 6.4vw, 6.3rem);
+  font-weight: var(--fw-medium);
+  letter-spacing: -0.04em;
+  /* Below 1.02 the descenders of "your budget" collide with the ascenders of
+     "before you". */
+  line-height: 1.02;
+  /* Deliberately not balanced: at 8.5ch greedy wrapping gives the approved
+     break, and balancing pulls "you" up a line and orphans "before". */
+  text-wrap: wrap;
+}
+
+/* ---- right: the three rows ---- */
+
+.panel {
+  border-top: 1px solid var(--hairline);
+}
+
+.fields {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.field {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-3);
+  border-bottom: 1px solid var(--hairline);
+  padding-block: clamp(1rem, 1.2vw, 1.4rem);
+  color: inherit;
+  transition:
+    color var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out);
+}
+
+/* Both sides of a row are the same size on purpose — the right-hand values read
+   as the row's answer, not as a heading above it. */
+.fieldLabel,
+.fieldAction {
+  font-size: clamp(0.66rem, 0.85vw, 0.88rem);
+  font-weight: var(--fw-bold);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.fieldAction {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: var(--body);
+  white-space: nowrap;
+  transition: color var(--dur-fast) var(--ease-out);
+}
+
+.fieldAction svg {
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+
+.field:hover,
+.field:focus-visible {
+  border-color: var(--accent);
+}
+
+.field:hover .fieldAction,
+.field:focus-visible .fieldAction {
+  color: var(--accent);
+}
+
+.field:hover .fieldAction svg,
+.field:focus-visible .fieldAction svg {
+  transform: translate3d(2px, 2px, 0);
+}
+
+/* ---- the figure ---- */
+
+.figure {
+  display: grid;
+  justify-items: start;
+  padding-block: 1.25rem 0;
+}
+
+/* The rupee mark sits on the figure's own baseline at the figure's own size and
+   ink, so "₹ —" reads as one figure rather than a small mark stranded above a
+   bar. */
+.number {
+  display: flex;
+  align-items: baseline;
+  gap: 0.22em;
+  margin: 0;
+  color: var(--ink);
+  font-size: clamp(3.25rem, 6.5vw, 6.3rem);
+  font-weight: var(--fw-medium);
+  letter-spacing: -0.04em;
+  line-height: 0.9;
+}
+
+.number strong {
+  font-weight: inherit;
+  font-variant-numeric: tabular-nums;
+}
+
+.figureLabel {
+  /* A step larger than the row labels — it names the headline figure rather
+     than a form row. */
+  margin: 0.85rem 0 0;
+  color: inherit;
+  font-size: clamp(0.62rem, 1.05vw, 1.05rem);
+  font-weight: var(--fw-bold);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+/* The caveat sits tight under the label, not below the CTA, so the panel reads
+   figure → label → caveat. */
+.note {
+  max-width: 34rem;
+  margin: 0.9rem 0 0;
+  color: var(--body);
+  font-size: clamp(0.85rem, 1.06vw, 1.05rem);
+  line-height: var(--lh-body);
+}
+
+.cta {
+  margin-top: var(--s-3);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+/* Button renders its children inside a single label span so the sliding block
+   can sit behind them; the trailing arrow needs that span to be a flex row. */
+.cta > :first-child {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}

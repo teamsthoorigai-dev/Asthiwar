@@ -17,7 +17,13 @@ export const packages = pgTable('packages', {
 
 export const packagePrices = pgTable('package_prices', {
   id: serial('id').primaryKey(),
-  packageId: integer('package_id').references(() => packages.id, { onDelete: 'cascade' }).notNull().unique(),
+  // Deliberately NOT unique: this table is the rate history for a package, one
+  // row per repricing, and only the row with a null `effective_to` is in force.
+  // A `.unique()` was declared here but never made it into a migration — the live
+  // table holds 17 rows for Basic alone. Re-adding it would fail on that data and
+  // would contradict the effective_from/effective_to design; readers must filter
+  // instead (see backend/src/services/pricing-window.ts).
+  packageId: integer('package_id').references(() => packages.id, { onDelete: 'cascade' }).notNull(),
   pricePerSqft: numeric('price_per_sqft', { precision: 10, scale: 2 }).notNull(), // Standard rate <= 3500 sq.ft
   headRoomPricePerSqft: numeric('head_room_price_per_sqft', { precision: 10, scale: 2 }).default('0.00').notNull(),
   volumeDiscountThresholdSqft: integer('volume_discount_threshold_sqft').default(3500).notNull(),

@@ -76,7 +76,7 @@ async function runTests() {
     // -----------------------------------------------------------------------
     console.log('\n[Test 3] Volume Rate Trigger (> 3,500 sq.ft)');
     // 2,000 sqft per floor * G+1 (2 floors) = 4,000 sqft (> 3,500).
-    // Basic volume rate = ₹2,000 (standard is ₹2,099). Base cost = 4,000 * 2,000 = ₹80,00,000
+    // Basic volume rate = ₹1,999 (standard is ₹2,099). Base cost = 4,000 * 1,999 = ₹79,96,000
     const resVol = await calculateEstimate({
       customerName: 'Volume Customer',
       customerPhone: '9876543211',
@@ -90,8 +90,10 @@ async function runTests() {
 
     assert(resVol.dimensions.totalBuiltupAreaSqft === 4000, 'Total builtup area is 4000 sqft');
     assert(resVol.package.isVolumeRateApplied, 'Volume discount rate is applied');
-    assert(resVol.package.baseRatePerSqft === 2000, 'Volume base rate is ₹2,000 / sqft (standard is ₹2,099)');
-    assert(resVol.breakdown.baseConstructionCost === 8000000, 'Base cost is exactly ₹80,00,000', `Got ${resVol.breakdown.baseConstructionCost}`);
+    // ₹1,999 is what seed.ts writes and what the live row holds; the ₹2,000 this
+    // asserted predates that seed value.
+    assert(resVol.package.baseRatePerSqft === 1999, 'Volume base rate is ₹1,999 / sqft (standard is ₹2,099)', `Got ${resVol.package.baseRatePerSqft}`);
+    assert(resVol.breakdown.baseConstructionCost === 7996000, 'Base cost is exactly ₹79,96,000', `Got ${resVol.breakdown.baseConstructionCost}`);
 
     // -----------------------------------------------------------------------
     // Test 4: Location Multipliers
@@ -143,15 +145,16 @@ async function runTests() {
       floorCount: 1,
       packageSlug: 'standard',
       customizations: [
-        { itemSlug: 'masonry_work', optionSlug: 'red_brick' },
+        { itemSlug: 'masonry_work', optionSlug: 'red_bricks' },
       ],
     });
 
     assert(resCust.customizations.length === 1, '1 customization recognized');
-    assert(resCust.customizations[0].unitPriceDelta === 100, 'Red brick upgrade delta is ₹100/sqft');
-    assert(resCust.customizations[0].calculatedPrice === 200000, 'Red brick calculated price is ₹2,00,000 (2000 sqft * ₹100)');
-    assert(resCust.breakdown.upgradesCost === 200000, 'Total upgrades cost is ₹2,00,000');
-    assert(resCust.breakdown.totalProjectCost === 4936000 + 200000, 'Total project cost includes upgrades (₹51,36,000)');
+    // seed.ts prices red_bricks at +₹110/sq.ft for Standard (+₹130 for Basic).
+    assert(resCust.customizations[0].unitPriceDelta === 110, 'Red bricks upgrade delta is ₹110/sqft for Standard', `Got ${resCust.customizations[0].unitPriceDelta}`);
+    assert(resCust.customizations[0].calculatedPrice === 220000, 'Red bricks calculated price is ₹2,20,000 (2000 sqft * ₹110)', `Got ${resCust.customizations[0].calculatedPrice}`);
+    assert(resCust.breakdown.upgradesCost === 220000, 'Total upgrades cost is ₹2,20,000');
+    assert(resCust.breakdown.totalProjectCost === 4936000 + 220000, 'Total project cost includes upgrades (₹51,56,000)');
 
     // -----------------------------------------------------------------------
     // Test 6: 15 Add-Ons Matrix
@@ -178,13 +181,18 @@ async function runTests() {
     const sump = resAddons.addons.find((a) => a.addonSlug === 'underground_sump');
     assert(sump?.totalPrice === 130000, '5000L Flyash Sump is ₹1,30,000 (@ ₹26/L)', `Got ${sump?.totalPrice}`);
 
+    // ₹1,90,000 is what seed.ts writes for rooftop_solar/3kw, and the seed is the
+    // only defensible baseline: prices are admin-editable, so any value taken from
+    // a particular database is that environment's edit, not the contract. This
+    // read ₹1,80,000 while the engine ignored `effective_to` and returned a retired
+    // row — the test passed by agreeing with the bug.
     const solar = resAddons.addons.find((a) => a.addonSlug === 'rooftop_solar');
-    assert(solar?.totalPrice === 180000, '3kW Solar is ₹1,80,000', `Got ${solar?.totalPrice}`);
+    assert(solar?.totalPrice === 190000, '3kW Solar is ₹1,90,000 (seed rate)', `Got ${solar?.totalPrice}`);
 
     const lift = resAddons.addons.find((a) => a.addonSlug === 'passenger_lift');
     assert(lift?.totalPrice === 1250000, '4-Pax Lift is ₹12,50,000', `Got ${lift?.totalPrice}`);
 
-    const expectedAddonsTotal = 130000 + 180000 + 1250000;
+    const expectedAddonsTotal = 130000 + 190000 + 1250000;
     assert(resAddons.breakdown.addonsCost === expectedAddonsTotal, `Addons cost is exactly ₹${expectedAddonsTotal.toLocaleString('en-IN')}`);
 
     // -----------------------------------------------------------------------
@@ -205,8 +213,14 @@ async function runTests() {
     // Test 8: Estimate Number Format
     // -----------------------------------------------------------------------
     console.log('\n[Test 8] Estimate Number Format');
-    const estNumRegex = /^EST-\d{4}-\d{6}$/;
-    assert(estNumRegex.test(resStd.estimateNumber), `Estimate Number '${resStd.estimateNumber}' matches 'EST-YYYY-XXXXXX' format`);
+    // Quotations are numbered AW/YYYY/O/NNNN (see quotation.ts); the older
+    // EST-YYYY-XXXXXX scheme is only still read, never issued. A preview must not
+    // consume a sequence number, so an unpersisted calculation reads .../DRAFT.
+    const draftRegex = /^AW\/\d{4}\/[A-Z]\/DRAFT$/;
+    assert(
+      draftRegex.test(resStd.estimateNumber),
+      `Preview estimate number '${resStd.estimateNumber}' matches 'AW/YYYY/C/DRAFT'`
+    );
 
     // -----------------------------------------------------------------------
     // Test 9: Live Database Persistence & Snapshot Immutability
@@ -226,7 +240,7 @@ async function runTests() {
         carCount: 1,
         packageSlug: 'premium',
         customizations: [
-          { itemSlug: 'masonry_work', optionSlug: 'red_brick' },
+          { itemSlug: 'masonry_work', optionSlug: 'red_bricks' },
         ],
         addons: [
           { addonSlug: 'underground_sump', variantSlug: 'flyash', quantity: 5000 },

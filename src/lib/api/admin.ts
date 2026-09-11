@@ -162,39 +162,6 @@ export interface AdminEstimateDetail extends AdminEstimate {
   addons?: AdminEstimateAddon[];
 }
 
-export interface NotificationLog {
-  id: string;
-  estimateId: string | null;
-  enquiryId: string | null;
-  channel: 'EMAIL' | 'WHATSAPP' | 'SMS';
-  recipient: string;
-  template: 'ESTIMATE_QUOTATION' | 'NEW_LEAD_ALERT' | 'FOLLOW_UP';
-  subject: string | null;
-  payload: any;
-  status: 'PENDING' | 'SENT' | 'FAILED';
-  errorMessage: string | null;
-  sentAt: string | null;
-  createdAt: string;
-}
-
-export interface AuditLogItem {
-  id: number;
-  eventType: 'ERROR' | 'WARN' | 'INFO' | 'ADMIN_MUTATION' | 'CALCULATOR_SUBMISSION' | 'NOTIFICATION_DISPATCH';
-  action: string;
-  severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
-  actorType: 'ANONYMOUS_USER' | 'ADMIN' | 'SYSTEM';
-  actorId: string | null;
-  endpoint: string | null;
-  httpMethod: string | null;
-  statusCode: number | null;
-  errorMessage: string | null;
-  errorStack: string | null;
-  metadata: any;
-  ipAddress: string | null;
-  userAgent: string | null;
-  createdAt: string;
-}
-
 /** Pricing units the calculator knows how to render and multiply. */
 export const ADDON_PRICING_UNITS = [
   'fixed',
@@ -252,6 +219,8 @@ export interface BrandOption {
     packageId: number | null;
     priceDelta: string;
     priceType: string;
+    // null = still in force. Retired rows are returned too, as history.
+    effectiveTo?: string | null;
   }>;
   activePrice?: {
     id: number;
@@ -382,17 +351,6 @@ export async function adminLogout(
 ): Promise<{ message: string }> {
   return apiClient<{ message: string }>('/api/v1/admin/auth/logout', {
     method: 'POST',
-    ...options,
-  });
-}
-
-export async function changeAdminPassword(
-  payload: { currentPassword: string; newPassword: string },
-  options?: RequestOptions
-): Promise<{ success: boolean; message: string }> {
-  return apiClient<{ success: boolean; message: string }>('/api/v1/admin/auth/change-password', {
-    method: 'POST',
-    body: payload,
     ...options,
   });
 }
@@ -555,87 +513,6 @@ export async function sendEstimateNotification(
     {
       method: 'POST',
       body: { channels },
-      ...options,
-    }
-  );
-}
-
-// ----------------------------------------------------
-// NOTIFICATIONS
-// ----------------------------------------------------
-
-export async function getAdminNotifications(
-  params?: {
-    channel?: string;
-    template?: string;
-    estimateId?: string;
-    enquiryId?: string;
-    page?: number;
-    limit?: number;
-  },
-  options?: RequestOptions
-): Promise<Paginated<NotificationLog[]>> {
-  const query = new URLSearchParams();
-  if (params?.channel && params.channel !== 'ALL') query.set('channel', params.channel);
-  if (params?.template && params.template !== 'ALL') query.set('template', params.template);
-  if (params?.estimateId) query.set('estimateId', params.estimateId);
-  if (params?.enquiryId) query.set('enquiryId', params.enquiryId);
-  if (params?.page) query.set('page', params.page.toString());
-  if (params?.limit) query.set('limit', params.limit.toString());
-
-  const qStr = query.toString();
-  return apiClientEnvelope<NotificationLog[]>(
-    `/api/v1/admin/notifications${qStr ? `?${qStr}` : ''}`,
-    {
-      method: 'GET',
-      ...options,
-    }
-  );
-}
-
-export async function resendNotification(
-  id: string,
-  options?: RequestOptions
-): Promise<{ success: boolean; message: string; data: any }> {
-  return apiClient<{ success: boolean; message: string; data: any }>(
-    `/api/v1/admin/notifications/${id}/resend`,
-    {
-      method: 'POST',
-      ...options,
-    }
-  );
-}
-
-// ----------------------------------------------------
-// AUDIT LOGS
-// ----------------------------------------------------
-
-export async function getAdminAuditLogs(
-  params?: {
-    eventType?: string;
-    action?: string;
-    severity?: string;
-    startDate?: string;
-    endDate?: string;
-    page?: number;
-    limit?: number;
-  },
-  options?: RequestOptions
-): Promise<Paginated<AuditLogItem[]>> {
-  const query = new URLSearchParams();
-  if (params?.eventType && params.eventType !== 'ALL') query.set('eventType', params.eventType);
-  if (params?.action) query.set('action', params.action);
-  if (params?.severity && params.severity !== 'ALL') query.set('severity', params.severity);
-  if (params?.startDate) query.set('startDate', params.startDate);
-  if (params?.endDate) query.set('endDate', params.endDate);
-  if (params?.page) query.set('page', params.page.toString());
-  if (params?.limit) query.set('limit', params.limit.toString());
-
-  const qStr = query.toString();
-  return apiClientEnvelope<AuditLogItem[]>(
-    `/api/v1/admin/audit-logs${qStr ? `?${qStr}` : ''}`,
-    {
-      method: 'GET',
       ...options,
     }
   );

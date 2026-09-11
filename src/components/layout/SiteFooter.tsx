@@ -80,7 +80,7 @@ export function SiteFooter() {
             </ul>
           </nav>
 
-          <div className={styles.col}>
+          <div className={`${styles.col} ${styles.contactCol}`}>
             <h2 id="footer-contact">Contact</h2>
             <ul className={styles.list}>
               <li>

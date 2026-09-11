@@ -72,6 +72,18 @@ export function urlSafeQuotationNumber(quotationNumber: string): string {
 }
 
 /**
+ * The path that serves a quotation's PDF.
+ *
+ * Anything that links to a quotation must build the link here. Templates used to
+ * interpolate the printed number directly — `/estimate/AW/2026/O/0001/pdf` — which
+ * is four path segments, matches no route, and 404s for every customer who clicks
+ * it. Going through `urlSafeQuotationNumber` is the whole point of that function.
+ */
+export function quotationPdfPath(quotationNumber: string): string {
+  return `/api/v1/calculator/estimate/${urlSafeQuotationNumber(quotationNumber)}/pdf`;
+}
+
+/**
  * Every stored key an inbound reference could mean, in priority order.
  * The literal is tried first so an older EST-YYYY-XXXXXX number — which is
  * legitimately dash-separated — is never rewritten into something else.

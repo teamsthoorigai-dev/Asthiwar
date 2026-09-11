@@ -135,7 +135,11 @@ export const createOptionSchema = z.object({
   name: z.string().min(1, 'Option name is required'),
   slug: z.string().min(1).optional(),
   description: z.string().optional(),
-  priceDelta: z.coerce.number().min(0, 'Price delta must be non-negative').optional().default(0),
+  // A delta may be negative: picking standard flush doors over teak is a credit
+  // against the package rate, not an upgrade. The floor here blocked that outright
+  // while the per-package `prices` array below never had one — so the same value
+  // was accepted or rejected depending on which field the admin console used.
+  priceDelta: z.coerce.number().optional().default(0),
   prices: z.array(z.object({
     packageId: z.coerce.number().int().positive('Package ID is required'),
     priceDelta: z.coerce.number().optional().default(0),
@@ -147,7 +151,8 @@ export const updateOptionPriceSchema = z.object({
   name: z.string().min(1).optional(),
   slug: z.string().min(1).optional(),
   description: z.string().nullable().optional(),
-  priceDelta: z.coerce.number().min(0, 'Price delta must be non-negative').optional(),
+  // Negative is a downgrade credit — see createOptionSchema above.
+  priceDelta: z.coerce.number().optional(),
   prices: z.array(z.object({
     packageId: z.coerce.number().int().positive('Package ID is required'),
     priceDelta: z.coerce.number().optional().default(0),

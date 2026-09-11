@@ -22,8 +22,10 @@ import {
   or,
   inArray,
   asc,
+  desc,
 } from '@asthiwar/database';
 import { packageTierApplies, packageTierSpecificity } from '../../services/addon-tiers.js';
+import { isCurrentPrice } from '../../services/pricing-window.js';
 import {
   DRAFT_QUOTATION_NUMBER,
   QUOTATION_CHANNELS,
@@ -39,7 +41,64 @@ import {
   MilestoneStage,
   CustomizationDetail,
   AddonDetail,
+  floorsIncludingGround,
 } from './calculator.types.js';
+
+/** One reason a requested selection could not be turned into a priced line. */
+export interface CalculationIssue {
+  path: string;
+  message: string;
+}
+
+/**
+ * The customer asked for something the catalogue cannot price.
+ *
+ * The engine used to `continue` past an unknown item, option, add-on or variant,
+ * and past a quantity outside the add-on's own limits. The estimate still came
+ * back 200, still called itself authoritative, and was simply missing the scope
+ * the customer selected — or priced a 1-litre sump at ₹26. Silence is the wrong
+ * answer for a quotation: refuse it and say which selections failed.
+ *
+ * 422, not 400: the request is well-formed, the selections just are not priceable.
+ */
+export class CalculationRejectedError extends Error {
+  public readonly statusCode = 422;
+  public readonly code = 'ESTIMATE_NOT_PRICEABLE';
+
+  constructor(public readonly details: CalculationIssue[]) {
+    super(
+      `${details.length} selection${details.length === 1 ? '' : 's'} could not be priced. ` +
+        'Refresh the configurator and try again — the catalogue may have changed.'
+    );
+    this.name = 'CalculationRejectedError';
+  }
+}
+
+/** Every quotation number in this year's run is spoken for. */
+export class QuotationNumberUnavailableError extends Error {
+  public readonly statusCode = 503;
+  public readonly code = 'QUOTATION_NUMBER_UNAVAILABLE';
+
+  constructor(attempts: number) {
+    super(`Could not claim a quotation number after ${attempts} attempts. Please retry.`);
+    this.name = 'QuotationNumberUnavailableError';
+  }
+}
+
+/**
+ * Did this failure mean "that quotation number is already taken"?
+ *
+ * 23505 is Postgres's unique_violation. The estimates table has other unique
+ * columns, so the constraint is checked by name — retrying the number would not
+ * help with any other collision, and looping on one would hide a real fault.
+ */
+function isQuotationNumberCollision(error: unknown): boolean {
+  const pgError = error as { code?: string; constraint?: string; detail?: string } | null;
+  if (!pgError || pgError.code !== '23505') return false;
+  return Boolean(
+    pgError.constraint?.includes('estimate_number') || pgError.detail?.includes('estimate_number')
+  );
+}
 
 // ---------------------------------------------------------------------------
 // Constants & Lookups
@@ -78,7 +137,7 @@ export function getDurationForFloors(floorsAboveGround: number) {
     range: `${min}–${max} Months`,
     min,
     max,
-    floorNumber: floorsAboveGround + 1,
+    floorNumber: floorsIncludingGround(floorsAboveGround),
   };
 }
 
@@ -145,8 +204,15 @@ export async function calculateEstimate(
       volumePricePerSqft: packagePrices.volumePricePerSqft,
     })
     .from(packages)
-    .innerJoin(packagePrices, eq(packagePrices.packageId, packages.id))
+    .innerJoin(
+      packagePrices,
+      and(
+        eq(packagePrices.packageId, packages.id),
+        isCurrentPrice(packagePrices.effectiveTo)
+      )
+    )
     .where(and(eq(packages.slug, input.packageSlug), eq(packages.isActive, true)))
+    .orderBy(desc(packagePrices.effectiveFrom))
     .limit(1);
 
   if (pkgRows.length === 0) {
@@ -195,15 +261,24 @@ export async function calculateEstimate(
   }
 
   const effectiveRatePerSqft = Number((baseRatePerSqft * locationMultiplier).toFixed(2));
-  let baseConstructionCost = Math.round(totalBuiltupAreaSqft * effectiveRatePerSqft);
 
-  // Add Head Room Cost
-  const headRoomCost = Math.round((input.headRoomAreaSqft ?? 0) * Number(pkg.headRoomPricePerSqft));
-  baseConstructionCost += headRoomCost;
+  // `baseConstructionCost` is exactly area × the effective rate, so the line the
+  // customer reads — "N sq.ft @ ₹R/sq.ft" — multiplies out to the figure printed
+  // beside it. Head room is charged at its own rate over its own area, so folding
+  // it in here made that line fail to add up.
+  const baseConstructionCost = Math.round(totalBuiltupAreaSqft * effectiveRatePerSqft);
+
+  const headRoomAreaSqft = Number((input.headRoomAreaSqft ?? 0).toFixed(2));
+  const headRoomRatePerSqft = Number(pkg.headRoomPricePerSqft);
+  const headRoomCost = Math.round(headRoomAreaSqft * headRoomRatePerSqft);
 
   // 4. Customizations & Upgrades Calculation (Batch-optimized for O(1) in-memory lookup)
   const customizationDetails: CustomizationDetail[] = [];
   let upgradesCost = 0;
+
+  // Collected across both loops so the customer is told everything that is wrong
+  // at once, rather than fixing one selection only to be refused on the next.
+  const issues: CalculationIssue[] = [];
 
   if (input.customizations && input.customizations.length > 0) {
     const itemSlugs = input.customizations.map((c) => c.itemSlug);
@@ -230,7 +305,8 @@ export async function calculateEstimate(
           .where(
             and(
               inArray(optionPrices.optionId, optionIds),
-              or(eq(optionPrices.packageId, pkg.id), isNull(optionPrices.packageId))
+              or(eq(optionPrices.packageId, pkg.id), isNull(optionPrices.packageId)),
+              isCurrentPrice(optionPrices.effectiveTo)
             )
           )
       : [];
@@ -250,12 +326,24 @@ export async function calculateEstimate(
       : [];
     const packageItemMap = new Map(fetchedPackageItems.map((pi) => [pi.itemId, pi]));
 
-    for (const cust of input.customizations) {
+    for (const [index, cust] of input.customizations.entries()) {
       const itm = itemMap.get(cust.itemSlug);
-      if (!itm) continue;
+      if (!itm) {
+        issues.push({
+          path: `customizations.${index}.itemSlug`,
+          message: `No component named '${cust.itemSlug}' is in the catalogue.`,
+        });
+        continue;
+      }
 
       const opt = optionMap.get(`${itm.id}:${cust.optionSlug}`);
-      if (!opt) continue;
+      if (!opt) {
+        issues.push({
+          path: `customizations.${index}.optionSlug`,
+          message: `'${cust.optionSlug}' is not an available choice for ${itm.name}.`,
+        });
+        continue;
+      }
 
       const priceRow = priceMap.get(opt.id);
       let unitPriceDelta = 0;
@@ -299,14 +387,20 @@ export async function calculateEstimate(
   let addonsCost = 0;
 
   if (input.addons && input.addons.length > 0) {
-    for (const ad of input.addons) {
+    for (const [index, ad] of input.addons.entries()) {
       const addonRows = await db
         .select()
         .from(addons)
         .where(and(eq(addons.slug, ad.addonSlug), eq(addons.isActive, true)))
         .limit(1);
 
-      if (addonRows.length === 0) continue;
+      if (addonRows.length === 0) {
+        issues.push({
+          path: `addons.${index}.addonSlug`,
+          message: `Add-on '${ad.addonSlug}' is not available.`,
+        });
+        continue;
+      }
       const add = addonRows[0];
 
       const apRows = await db
@@ -315,7 +409,8 @@ export async function calculateEstimate(
         .where(
           and(
             eq(addonPrices.addonId, add.id),
-            eq(addonPrices.variantSlug, ad.variantSlug)
+            eq(addonPrices.variantSlug, ad.variantSlug),
+            isCurrentPrice(addonPrices.effectiveTo)
           )
         );
 
@@ -327,33 +422,74 @@ export async function calculateEstimate(
           .sort(
             (a, b) => packageTierSpecificity(a.packageTier) - packageTierSpecificity(b.packageTier)
           )[0] ?? apRows[0];
-      if (!matchedPriceRow) continue;
+      if (!matchedPriceRow) {
+        issues.push({
+          path: `addons.${index}.variantSlug`,
+          message: `'${ad.variantSlug}' is not an available variant of ${add.name}.`,
+        });
+        continue;
+      }
 
       let unitPrice = Number(matchedPriceRow.price);
       const qty = ad.quantity !== undefined ? ad.quantity : Number(add.defaultQuantity ?? 1);
 
-      // Dynamic rule: Roof Weathering is complimentary in Premium & Luxury, and free for Basic/Standard if terrace > 2000 sq.ft
-      if (add.slug === 'cool_roof_tiles' || add.slug === 'roof_weathering') {
+      // The catalogue's own quantity bounds, enforced. They were read only to
+      // render the spinner's min/max, which a hand-made request never sees — so a
+      // 1-litre sump (minimum 1,000) priced at ₹26 and was accepted as authoritative.
+      const minQty = add.minQuantity !== null ? Number(add.minQuantity) : null;
+      const maxQty = add.maxQuantity !== null ? Number(add.maxQuantity) : null;
+
+      if (minQty !== null && qty < minQty) {
+        issues.push({
+          path: `addons.${index}.quantity`,
+          message: `${add.name} has a minimum of ${minQty} ${add.pricingUnit === 'per_litre' ? 'litres' : 'units'}; ${qty} was requested.`,
+        });
+        continue;
+      }
+
+      if (maxQty !== null && qty > maxQty) {
+        issues.push({
+          path: `addons.${index}.quantity`,
+          message: `${add.name} has a maximum of ${maxQty} ${add.pricingUnit === 'per_litre' ? 'litres' : 'units'}; ${qty} was requested.`,
+        });
+        continue;
+      }
+
+      // Roof weathering is complimentary in Premium and Luxury.
+      //
+      // There was a second branch here making it free for Basic and Standard when
+      // the terrace exceeded 2000 sq.ft. It has been removed because it could never
+      // fire: `cool_roof_tiles` is seeded with maxQuantity 2000, and that maximum is
+      // enforced above, so `qty > 2000` is unreachable. It only ever looked live
+      // because quantity limits went unchecked, and even then only for a request
+      // that bypassed the configurator.
+      //
+      // Deleting it changes nothing about what anyone is charged. Reinstating the
+      // offer is a pricing decision: raise the add-on's maxQuantity above the
+      // threshold, then add the branch back against that threshold. It is not
+      // something to infer from the old code.
+      //
+      // The condition also tested a `roof_weathering` slug, which is not in the
+      // catalogue at all.
+      if (add.slug === 'cool_roof_tiles') {
         if (input.packageSlug === 'premium' || input.packageSlug === 'luxury') {
-          unitPrice = 0;
-        } else if (qty > 2000) {
           unitPrice = 0;
         }
       }
 
-      let totalPrice = 0;
-      switch (add.pricingUnit) {
-        case 'per_litre':
-        case 'per_rft':
-        case 'per_sqft_gate':
-        case 'per_sqft_terrace':
-          totalPrice = Math.round(unitPrice * qty);
-          break;
-        case 'fixed':
-        default:
-          totalPrice = Math.round(unitPrice * (ad.quantity ?? 1));
-          break;
-      }
+      // Every pricing unit is a rate times an amount — 'fixed' simply has an amount
+      // of 1 unless the catalogue or the customer says otherwise, which is exactly
+      // what `qty` already resolves. `qty` is also the figure reported on the line,
+      // so it has to be the figure charged.
+      //
+      // This was a switch listing the measured units, with everything else falling
+      // through to a flat price. Two bugs came out of that shape: 'per_sqft' was
+      // never listed even though the admin console offers it, so a ₹120/sq.ft
+      // ceiling billed as ₹120 flat; and the fallback multiplied by
+      // `ad.quantity ?? 1` instead of `qty`, so an add-on with a catalogue default
+      // quantity reported one amount on the line and charged another. An allow-list
+      // of units fails silently every time a new unit is added — this cannot.
+      const totalPrice = Math.round(unitPrice * qty);
 
       addonsCost += totalPrice;
       addonDetails.push({
@@ -370,11 +506,34 @@ export async function calculateEstimate(
     }
   }
 
+  // Refuse before any total is reported. An estimate that quietly omits what the
+  // customer selected is worse than no estimate — they would sign off on a number
+  // that does not cover the work they asked for.
+  if (issues.length > 0) {
+    throw new CalculationRejectedError(issues);
+  }
+
   // 6. Subtotals & Final Totals
-  const subtotalCost = baseConstructionCost + upgradesCost + addonsCost;
+  const subtotalCost = baseConstructionCost + headRoomCost + upgradesCost + addonsCost;
   const gstPercentage = 0.00; // As standard per civil construction quote estimates
   const gstAmount = Math.round(subtotalCost * (gstPercentage / 100));
   const totalProjectCost = subtotalCost + gstAmount;
+
+  // Downgrade credits are negative deltas, so upgradesCost can legitimately be
+  // below zero — but the quotation as a whole cannot be. A mistyped delta in the
+  // admin console (−5000 where −50 was meant) would otherwise print a negative
+  // total and a milestone schedule of negative instalments. Refuse instead.
+  if (totalProjectCost <= 0) {
+    throw new CalculationRejectedError([
+      {
+        path: 'customizations',
+        message:
+          `The selected combination prices out at ₹${totalProjectCost.toLocaleString('en-IN')}, ` +
+          'which cannot be quoted. A downgrade credit is likely misconfigured.',
+      },
+    ]);
+  }
+
   const effectiveTotalCostPerSqft = totalBuiltupAreaSqft > 0
     ? Number((totalProjectCost / totalBuiltupAreaSqft).toFixed(2))
     : 0;
@@ -418,19 +577,10 @@ export async function calculateEstimate(
 
   // A preview must not consume a sequence number — it would leave gaps for every
   // keystroke the customer makes, and show a number that is never issued.
-  let estimateNumber = DRAFT_QUOTATION_NUMBER;
-  if (optionsConfig.persist) {
-    estimateNumber = await nextQuotationNumber();
-    let retries = 0;
-    while (retries < 10) {
-      const existing = await db.query.estimates.findFirst({
-        where: eq(estimates.estimateNumber, estimateNumber),
-      });
-      if (!existing) break;
-      retries++;
-      estimateNumber = await nextQuotationNumber(QUOTATION_CHANNELS.ONLINE, retries);
-    }
-  }
+  // The real number is claimed at insert time in step 8, because only the unique
+  // index can arbitrate between two requests arriving at once. Reading the highest
+  // number here and checking it was free was a time-of-check/time-of-use race.
+  const estimateNumber = DRAFT_QUOTATION_NUMBER;
 
   const result: CalculationResult = {
     estimateNumber,
@@ -463,6 +613,9 @@ export async function calculateEstimate(
     },
     breakdown: {
       baseConstructionCost,
+      headRoomAreaSqft,
+      headRoomRatePerSqft,
+      headRoomCost,
       upgradesCost,
       addonsCost,
       subtotalCost,
@@ -484,88 +637,122 @@ export async function calculateEstimate(
 
   // 8. Immutable DB Persistence if requested
   if (optionsConfig.persist) {
-    const [insertedEstimate] = await db
-      .insert(estimates)
-      .values({
-        estimateNumber,
-        customerName: input.customerName,
-        customerPhone: input.customerPhone,
-        customerEmail: input.customerEmail ?? '',
-        plotLocation: input.plotLocation,
-        locationId: resolvedLocationId,
-        locationMultiplier: locationMultiplier.toFixed(4),
-        plotAreaSqft: plotAreaSqft.toFixed(2),
-        plotAreaUnit: input.plotAreaUnit ?? 'sqft',
-        builtupAreaPerFloorSqft: builtupPerFloorSqft.toFixed(2),
-        floorCount: input.floorCount === 0 ? 'Ground' : `G+${input.floorCount}`,
-        numberOfFloors: numberOfFloors,
-        floorBreakdownJson: input.floorBreakdown ?? null,
-        carParkingAreaSqft: carParkingAreaSqft.toFixed(2),
-        carCount,
-        totalBuiltupAreaSqft: totalBuiltupAreaSqft.toFixed(2),
-        packageId: pkg.id,
-        packageSlug: pkg.slug,
-        packageRatePerSqft: effectiveRatePerSqft.toFixed(2),
-        baseConstructionCost: baseConstructionCost.toFixed(2),
-        upgradesCost: upgradesCost.toFixed(2),
-        addonsCost: addonsCost.toFixed(2),
-        subtotalCost: subtotalCost.toFixed(2),
-        gstPercentage: gstPercentage.toFixed(2),
-        gstAmount: gstAmount.toFixed(2),
-        totalProjectCost: totalProjectCost.toFixed(2),
-        milestoneBreakdownJson: milestones,
-        fullSnapshotJson: result,
-        status: 'GENERATED',
-      })
-      .returning({ id: estimates.id });
+    // Claim the number by inserting it and let the unique index on
+    // estimates.estimate_number arbitrate. Two concurrent submissions previously
+    // read the same highest number, both found it free, and the second died on an
+    // unhandled 23505 after the customer had already been shown a total. On a
+    // collision we simply take the next number.
+    //
+    // One transaction throughout: an estimate with no line items, or with no CRM
+    // lead attached, is a half-written quotation, and a losing attempt must leave
+    // nothing behind for the retry to trip over.
+    const MAX_NUMBERING_ATTEMPTS = 10;
+    let claimedNumber: string | null = null;
 
-    result.estimateId = insertedEstimate.id;
+    for (let attempt = 0; attempt < MAX_NUMBERING_ATTEMPTS; attempt++) {
+      const candidateNumber = await nextQuotationNumber(QUOTATION_CHANNELS.ONLINE, attempt);
+      // The stored snapshot has to carry the number it was actually issued under.
+      result.estimateNumber = candidateNumber;
 
-    // Insert customization items
-    if (customizationDetails.length > 0) {
-      await db.insert(estimateItems).values(
-        customizationDetails.map((c) => ({
-          estimateId: insertedEstimate.id,
-          itemId: c.itemId,
-          itemSlug: c.itemSlug,
-          itemName: c.itemName,
-          selectedOptionId: c.selectedOptionId,
-          selectedOptionName: c.selectedOptionName,
-          unitPriceDelta: c.unitPriceDelta.toFixed(2),
-          calculatedPrice: c.calculatedPrice.toFixed(2),
-        }))
-      );
+      try {
+        await db.transaction(async (tx) => {
+          const [insertedEstimate] = await tx
+            .insert(estimates)
+            .values({
+              estimateNumber: candidateNumber,
+              customerName: input.customerName,
+              customerPhone: input.customerPhone,
+              customerEmail: input.customerEmail ?? '',
+              plotLocation: input.plotLocation,
+              locationId: resolvedLocationId,
+              locationMultiplier: locationMultiplier.toFixed(4),
+              plotAreaSqft: plotAreaSqft.toFixed(2),
+              plotAreaUnit: input.plotAreaUnit ?? 'sqft',
+              builtupAreaPerFloorSqft: builtupPerFloorSqft.toFixed(2),
+              floorCount: input.floorCount === 0 ? 'Ground' : `G+${input.floorCount}`,
+              numberOfFloors: numberOfFloors,
+              floorBreakdownJson: input.floorBreakdown ?? null,
+              carParkingAreaSqft: carParkingAreaSqft.toFixed(2),
+              carCount,
+              totalBuiltupAreaSqft: totalBuiltupAreaSqft.toFixed(2),
+              packageId: pkg.id,
+              packageSlug: pkg.slug,
+              packageRatePerSqft: effectiveRatePerSqft.toFixed(2),
+              baseConstructionCost: baseConstructionCost.toFixed(2),
+              headRoomAreaSqft: headRoomAreaSqft.toFixed(2),
+              headRoomCost: headRoomCost.toFixed(2),
+              upgradesCost: upgradesCost.toFixed(2),
+              addonsCost: addonsCost.toFixed(2),
+              subtotalCost: subtotalCost.toFixed(2),
+              gstPercentage: gstPercentage.toFixed(2),
+              gstAmount: gstAmount.toFixed(2),
+              totalProjectCost: totalProjectCost.toFixed(2),
+              milestoneBreakdownJson: milestones,
+              fullSnapshotJson: result,
+              status: 'GENERATED',
+            })
+            .returning({ id: estimates.id });
+
+          result.estimateId = insertedEstimate.id;
+
+          // Insert customization items
+          if (customizationDetails.length > 0) {
+            await tx.insert(estimateItems).values(
+              customizationDetails.map((c) => ({
+                estimateId: insertedEstimate.id,
+                itemId: c.itemId,
+                itemSlug: c.itemSlug,
+                itemName: c.itemName,
+                selectedOptionId: c.selectedOptionId,
+                selectedOptionName: c.selectedOptionName,
+                unitPriceDelta: c.unitPriceDelta.toFixed(2),
+                calculatedPrice: c.calculatedPrice.toFixed(2),
+              }))
+            );
+          }
+
+          // Insert addon items
+          if (addonDetails.length > 0) {
+            await tx.insert(estimateAddons).values(
+              addonDetails.map((a) => ({
+                estimateId: insertedEstimate.id,
+                addonId: a.addonId,
+                addonSlug: a.addonSlug,
+                addonName: a.addonName,
+                selectedVariant: a.selectedVariantName,
+                quantity: a.quantity.toFixed(2),
+                unit: a.unit,
+                unitPrice: a.unitPrice.toFixed(2),
+                totalPrice: a.totalPrice.toFixed(2),
+              }))
+            );
+          }
+
+          // Auto-create CRM Lead Enquiry for this authoritative estimate
+          await tx.insert(enquiries).values({
+            estimateId: insertedEstimate.id,
+            estimateNumber: candidateNumber,
+            fullName: input.customerName,
+            phone: input.customerPhone,
+            email: input.customerEmail ?? '',
+            plotLocation: input.plotLocation,
+            preferredContactTime: 'Anytime',
+            requirementNotes: `Generated estimate for ${pkg.name} (${totalBuiltupAreaSqft.toFixed(0)} sq.ft, ${input.floorCount === 0 ? 'Ground Floor' : `G+${input.floorCount}`}) in ${input.plotLocation}. Total: ₹${totalProjectCost.toLocaleString('en-IN')}`,
+            status: 'NEW',
+          });
+        });
+
+        claimedNumber = candidateNumber;
+        break;
+      } catch (error) {
+        if (isQuotationNumberCollision(error)) continue;
+        throw error;
+      }
     }
 
-    // Insert addon items
-    if (addonDetails.length > 0) {
-      await db.insert(estimateAddons).values(
-        addonDetails.map((a) => ({
-          estimateId: insertedEstimate.id,
-          addonId: a.addonId,
-          addonSlug: a.addonSlug,
-          addonName: a.addonName,
-          selectedVariant: a.selectedVariantName,
-          quantity: a.quantity.toFixed(2),
-          unit: a.unit,
-          unitPrice: a.unitPrice.toFixed(2),
-          totalPrice: a.totalPrice.toFixed(2),
-        }))
-      );
+    if (claimedNumber === null) {
+      throw new QuotationNumberUnavailableError(MAX_NUMBERING_ATTEMPTS);
     }
-
-    // Auto-create CRM Lead Enquiry for this authoritative estimate
-    await db.insert(enquiries).values({
-      estimateId: insertedEstimate.id,
-      estimateNumber: estimateNumber,
-      fullName: input.customerName,
-      phone: input.customerPhone,
-      email: input.customerEmail ?? '',
-      plotLocation: input.plotLocation,
-      preferredContactTime: 'Anytime',
-      requirementNotes: `Generated estimate for ${pkg.name} (${totalBuiltupAreaSqft.toFixed(0)} sq.ft, ${input.floorCount === 0 ? 'Ground Floor' : `G+${input.floorCount}`}) in ${input.plotLocation}. Total: ₹${totalProjectCost.toLocaleString('en-IN')}`,
-      status: 'NEW',
-    });
   }
 
   return result;

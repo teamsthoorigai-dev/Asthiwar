@@ -105,7 +105,11 @@ export interface CalculationResult {
     locationName: string;
   };
   breakdown: {
+    /** Exactly totalBuiltupAreaSqft × effectiveRatePerSqft — the printed line multiplies out. */
     baseConstructionCost: number;
+    headRoomAreaSqft: number;
+    headRoomRatePerSqft: number;
+    headRoomCost: number;
     upgradesCost: number;
     addonsCost: number;
     subtotalCost: number;
@@ -123,4 +127,17 @@ export interface CalculationResult {
   addons: AddonDetail[];
   milestones: MilestoneStage[];
   disclaimers: string[];
+}
+
+/**
+ * How many floors a build actually has, counting the ground floor.
+ *
+ * `floorCount` counts floors *above* ground — 0 is Ground only, 3 is G+3 — so a
+ * build always has one more floor than its label. The schema validates a supplied
+ * `floorBreakdown` against this and the engine derives its floor multiplier from
+ * it; if the two ever disagreed, a breakdown could pass validation and then price
+ * a different number of floors than the customer asked for.
+ */
+export function floorsIncludingGround(floorCount: number): number {
+  return floorCount + 1;
 }

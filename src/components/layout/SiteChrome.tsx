@@ -6,6 +6,7 @@ import { SmoothScroll } from './SmoothScroll';
 import { SiteHeader } from './SiteHeader';
 import { SiteFooter } from './SiteFooter';
 import { ArchitecturalCursor } from '@/components/ui/ArchitecturalCursor';
+import { ScrollbarWidth } from './ScrollbarWidth';
 
 /**
  * The marketing chrome — header, footer, architectural cursor, and Lenis smooth scroll.
@@ -18,11 +19,17 @@ export function SiteChrome({ children }: { children: ReactNode }) {
   const isAdmin = pathname?.startsWith('/admin') ?? false;
 
   if (isAdmin) {
-    return <main id="main-content">{children}</main>;
+    return (
+      <>
+        <ScrollbarWidth />
+        <main id="main-content">{children}</main>
+      </>
+    );
   }
 
   return (
     <SmoothScroll>
+      <ScrollbarWidth />
       <ArchitecturalCursor />
       <SiteHeader />
       <main id="main-content">{children}</main>

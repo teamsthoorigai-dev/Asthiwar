@@ -203,7 +203,11 @@ export interface CalculationResult {
     locationName: string;
   };
   breakdown: {
+    /** Exactly totalBuiltupAreaSqft x effectiveRatePerSqft. */
     baseConstructionCost: number;
+    headRoomAreaSqft: number;
+    headRoomRatePerSqft: number;
+    headRoomCost: number;
     upgradesCost: number;
     addonsCost: number;
     subtotalCost: number;

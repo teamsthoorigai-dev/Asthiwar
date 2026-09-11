@@ -44,8 +44,11 @@
   color: var(--on-accent);
 }
 
+/* Forest palette: --accent (#243228) and --ink (#19241D) are three points apart
+   in luminance, so the block that slides up on hover was invisible. The primary
+   button brightens on hover instead of darkening. */
 .primary .block {
-  background: var(--ink);
+  background: var(--accent-bright);
 }
 
 .ghost {

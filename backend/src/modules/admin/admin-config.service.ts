@@ -32,6 +32,11 @@ import { serializePackageTiers } from '../../services/addon-tiers.js';
 
 // A price row is live only while it has not been retired. Retired rows stay in the table as
 // history — every read that means "the current price" has to exclude them.
+//
+// This has to agree with services/pricing-window.ts, which is what the calculator
+// charges from — otherwise the operator is shown one rate while customers are
+// quoted another. Both now mean exactly "effective_to is null", which is also the
+// condition the database's partial unique indexes enforce.
 const isActivePrice = (p: { effectiveTo: Date | null }) => p.effectiveTo === null;
 
 /**
@@ -203,18 +208,62 @@ export async function updateAdminPackagePrice(packageIdOrSlug: number | string, 
     throw new AdminServiceError(404, 'PACKAGE_NOT_FOUND', `Package '${packageIdOrSlug}' not found`);
   }
 
-  const [newPrice] = await db
-    .update(schema.packagePrices)
-    .set({
-      pricePerSqft: dto.pricePerSqft.toFixed(2),
-      volumePricePerSqft: dto.volumePricePerSqft.toFixed(2),
-      volumeDiscountThresholdSqft: dto.volumeDiscountThresholdSqft,
-      ...(dto.headRoomPricePerSqft !== undefined && { headRoomPricePerSqft: dto.headRoomPricePerSqft.toFixed(2) }),
-    })
-    .where(eq(schema.packagePrices.packageId, pkg.id))
-    .returning();
+  // Version on write: retire the row in force and insert its replacement, rather
+  // than editing the live row in place. `package_prices` is the rate history for a
+  // package — this table holds 17 rows for Basic alone — and an UPDATE scoped only
+  // by package_id restated every one of them, rewriting the rates that past
+  // quotations were issued under.
+  //
+  // Order matters: `package_prices_active_unique` is a unique index over
+  // (package_id) WHERE effective_to IS NULL, so the outgoing row has to be retired
+  // before its replacement is inserted. Both run in one transaction, so a failure
+  // can never leave a package with no price in force.
+  return db.transaction(async (tx) => {
+    const [current] = await tx
+      .select()
+      .from(schema.packagePrices)
+      .where(
+        and(
+          eq(schema.packagePrices.packageId, pkg.id),
+          isNull(schema.packagePrices.effectiveTo)
+        )
+      )
+      .limit(1);
 
-  return newPrice;
+    if (!current) {
+      throw new AdminServiceError(
+        409,
+        'NO_ACTIVE_PACKAGE_PRICE',
+        `'${pkg.name}' has no price row in force. Seed or restore one before repricing.`
+      );
+    }
+
+    const now = new Date();
+
+    await tx
+      .update(schema.packagePrices)
+      .set({ effectiveTo: now })
+      .where(eq(schema.packagePrices.id, current.id));
+
+    // A new row has to be complete, so anything the caller left out carries over
+    // from the row being replaced rather than silently reverting to a default.
+    const [created] = await tx
+      .insert(schema.packagePrices)
+      .values({
+        packageId: pkg.id,
+        pricePerSqft: dto.pricePerSqft.toFixed(2),
+        volumePricePerSqft: dto.volumePricePerSqft.toFixed(2),
+        volumeDiscountThresholdSqft: dto.volumeDiscountThresholdSqft,
+        headRoomPricePerSqft:
+          dto.headRoomPricePerSqft !== undefined
+            ? dto.headRoomPricePerSqft.toFixed(2)
+            : current.headRoomPricePerSqft,
+        effectiveFrom: now,
+      })
+      .returning();
+
+    return created;
+  });
 }
 
 export async function updateAdminPackageMetadata(packageId: number, dto: UpdatePackageMetadataDto) {
@@ -263,6 +312,22 @@ export async function createAdminLocation(dto: CreateLocationDto) {
 
   if (existing) {
     throw new AdminServiceError(409, 'LOCATION_ALREADY_EXISTS', `Location slug '${dto.slug}' already exists`);
+  }
+
+  // `locations.name` is unique too. Only the slug was checked, so a duplicate name
+  // reached the driver and came back as a raw 23505 inside an HTTP 500 — an
+  // operator retyping an existing city saw a server error rather than being told
+  // the city already exists.
+  const existingName = await db.query.locations.findFirst({
+    where: eq(schema.locations.name, dto.name),
+  });
+
+  if (existingName) {
+    throw new AdminServiceError(
+      409,
+      'LOCATION_NAME_ALREADY_EXISTS',
+      `A location named '${dto.name}' already exists (slug '${existingName.slug}')`
+    );
   }
 
   const [created] = await db
@@ -356,7 +421,10 @@ export async function updateAdminAddonPrice(addonIdOrSlug: number | string, dto:
     throw new AdminServiceError(404, 'ADDON_NOT_FOUND', `Addon '${addonIdOrSlug}' not found`);
   }
 
-  // Update in-place!
+  // Only the row in force is repriced. `addon_prices` has no unique key on
+  // (addon_id, variant_slug), so retired rows for this variant can sit alongside
+  // the live one — an unscoped UPDATE rewrote those too, silently restating the
+  // rates that historical quotations were issued under.
   const [updatedPrice] = await db
     .update(schema.addonPrices)
     .set({
@@ -365,7 +433,8 @@ export async function updateAdminAddonPrice(addonIdOrSlug: number | string, dto:
     .where(
       and(
         eq(schema.addonPrices.addonId, addon.id),
-        eq(schema.addonPrices.variantSlug, dto.variantSlug)
+        eq(schema.addonPrices.variantSlug, dto.variantSlug),
+        isNull(schema.addonPrices.effectiveTo)
       )
     )
     .returning();
@@ -1034,8 +1103,16 @@ export async function updateAdminOptionPrice(optionId: number, dto: UpdateOption
   let newPrices: any[] = [];
 
   if (dto.prices && dto.prices.length > 0) {
-    // Delete existing prices
-    await db.delete(schema.optionPrices).where(eq(schema.optionPrices.optionId, optionId));
+    // Replace the live price set only. Retired rows are the record of what past
+    // quotations were issued under and must survive a reprice.
+    await db
+      .delete(schema.optionPrices)
+      .where(
+        and(
+          eq(schema.optionPrices.optionId, optionId),
+          isNull(schema.optionPrices.effectiveTo)
+        )
+      );
 
     // Deduplicate by packageId
     const priceMap = new Map();
@@ -1056,14 +1133,56 @@ export async function updateAdminOptionPrice(optionId: number, dto: UpdateOption
 
     newPrices = await db.insert(schema.optionPrices).values(inserts).returning();
   } else if (dto.priceDelta !== undefined) {
-    const updated = await db
-      .update(schema.optionPrices)
-      .set({
-        priceDelta: dto.priceDelta.toFixed(2),
+    // A bare delta names no tier, and the specifications view it is sent from has
+    // no package in scope — so it can only mean the universal row (package_id IS
+    // NULL). It previously updated every row for the option: an edit intended for
+    // Basic silently restated Standard, Premium and Luxury too, and rewrote
+    // retired rows alongside the live one.
+    const liveRows = await db
+      .select({
+        id: schema.optionPrices.id,
+        packageId: schema.optionPrices.packageId,
       })
-      .where(eq(schema.optionPrices.optionId, optionId))
-      .returning();
-    newPrices = updated;
+      .from(schema.optionPrices)
+      .where(
+        and(
+          eq(schema.optionPrices.optionId, optionId),
+          isNull(schema.optionPrices.effectiveTo)
+        )
+      );
+
+    if (liveRows.length === 0) {
+      // Nothing priced yet — a bare delta establishes the universal rate.
+      newPrices = await db
+        .insert(schema.optionPrices)
+        .values({
+          optionId,
+          packageId: null,
+          priceDelta: dto.priceDelta.toFixed(2),
+          priceType: itemPriceType,
+        })
+        .returning();
+    } else if (!liveRows.some((p) => p.packageId === null)) {
+      throw new AdminServiceError(
+        409,
+        'OPTION_PRICED_PER_PACKAGE',
+        `'${option.brandName}' is priced per package tier. Use the per-package price editor so the change lands on the tier you intend.`
+      );
+    } else {
+      newPrices = await db
+        .update(schema.optionPrices)
+        .set({
+          priceDelta: dto.priceDelta.toFixed(2),
+        })
+        .where(
+          and(
+            eq(schema.optionPrices.optionId, optionId),
+            isNull(schema.optionPrices.packageId),
+            isNull(schema.optionPrices.effectiveTo)
+          )
+        )
+        .returning();
+    }
   }
 
   return { id: optionId, name: dto.name || option.brandName, newPrice: newPrices[0] || null, prices: newPrices };

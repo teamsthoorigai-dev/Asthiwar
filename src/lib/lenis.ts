@@ -13,6 +13,10 @@ export function registerLenis(next: Lenis | null) {
   instance = next;
 }
 
+export function getLenis(): Lenis | null {
+  return instance;
+}
+
 export function lockScroll() {
   instance?.stop();
   document.body.dataset.scrollLocked = 'true';

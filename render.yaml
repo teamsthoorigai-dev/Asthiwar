@@ -21,7 +21,17 @@ services:
     # `build:backend` chains the database build via backend's prebuild hook.
     # The root `build` script is deliberately avoided: it also runs `next build`,
     # which this service does not serve.
-    buildCommand: npm ci && npm run build:backend
+    #
+    # Migrations run here rather than in a preDeployCommand, which Render only
+    # offers on paid instance types. Failing the build leaves the previous
+    # version serving, which is the behaviour we want. Drizzle records applied
+    # migrations in __drizzle_migrations, so a deploy that adds none is a no-op.
+    #
+    # Seeding is deliberately NOT run here. database/src/seeds/seed.ts UPDATEs
+    # existing package/option/addon price rows, so an automatic re-seed on every
+    # deploy would silently revert whatever prices an admin had edited. Seed by
+    # hand, once, per docs/DEPLOYMENT.md.
+    buildCommand: npm ci && npm run build:backend && npm run db:migrate
 
     # NOT `npm start` — that is `next start`, the frontend.
     startCommand: npm --workspace=backend run start
@@ -35,8 +45,9 @@ services:
     autoDeploy: true
 
     envVars:
-      # Pinned deliberately: nothing in the repo declares `engines` or .nvmrc,
-      # so Render would otherwise pick its own default.
+      # Pinned deliberately. package.json now declares engines.node as 22.x,
+      # which Render also honours, but the explicit pin keeps the patch level
+      # identical to the version the lockfile was resolved against.
       - key: NODE_VERSION
         value: 22.17.0
 
@@ -56,5 +67,10 @@ services:
 
       # Comma-separated browser origins. Now genuinely enforced — an origin that
       # is not listed gets a 403. Set this to the real frontend domain(s).
+      #
+      # Note that the primary traffic path does not exercise this: Vercel's
+      # rewrite proxies /api/* server-to-server, and those requests carry no
+      # Origin header, which app.ts admits unconditionally. This governs direct
+      # browser calls to the Render URL.
       - key: CORS_ORIGIN
         sync: false

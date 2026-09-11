@@ -1,10 +1,7 @@
 import type { Metadata } from 'next';
-import { MapReveal } from '@/components/contact/MapReveal';
 import { EnquiryForm } from '@/components/home/EnquiryForm';
-import { Faq } from '@/components/home/Faq';
-import { ServiceRadiusMap } from '@/components/contact/ServiceRadiusMap';
 import { contactPage } from '@/data/contact';
-import { enquiryForm, faqContent } from '@/data/home';
+import { enquiryForm } from '@/data/home';
 import styles from './contact.module.css';
 
 export const metadata: Metadata = {
@@ -51,20 +48,7 @@ export default function ContactPage() {
           </div>
         </div>
       </section>
-
-      <section className={styles.radiusSection} aria-label="Operational territory" style={{ paddingBlock: 'var(--section-y-sm)', borderBlockStart: '1px solid var(--hairline)' }}>
-        <div className={styles.inner}>
-          <ServiceRadiusMap />
-        </div>
-      </section>
-
-      <Faq content={faqContent} />
-
-      <section className={styles.mapSection} aria-label="Coimbatore studio location">
-        <div className={styles.inner}>
-          <MapReveal {...contactPage.map} />
-        </div>
-      </section>
     </div>
   );
 }
+

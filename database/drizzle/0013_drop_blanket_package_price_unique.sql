@@ -1,0 +1,17 @@
+-- 0006 added a blanket UNIQUE on package_prices(package_id): one price row per
+-- package, for all time. 0010 then added a PARTIAL unique index on the same
+-- column WHERE effective_to IS NULL: one *live* row per package, with retired
+-- rows kept as history. Both cannot hold, and the blanket constraint wins,
+-- making the effective_from/effective_to columns useless and repricing a
+-- destructive UPDATE over the historical record.
+--
+-- 0010 is the design the rest of the system is built on: the calculator reads
+-- through backend/src/services/pricing-window.ts, quotations are explained
+-- against the rate they were issued under, and admin-config.test.ts asserts that
+-- repricing creates a new row and keeps the old one. So the blanket constraint
+-- from 0006 goes.
+--
+-- Dropped IF EXISTS: the live database never actually had this constraint —
+-- 0006 is recorded as applied there but the constraint is absent — so this is a
+-- no-op there and a real fix on any database built from these migrations.
+ALTER TABLE "package_prices" DROP CONSTRAINT IF EXISTS "package_prices_package_id_unique";

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { floorsIncludingGround } from './calculator.types.js';
 
 export const AreaUnitEnum = z.enum(['sqft', 'sqyards', 'cents', 'sqm']);
 export const FloorCountEnum = z.number().int().min(0).max(10);
@@ -37,7 +38,12 @@ export const calculateEstimateSchema = z.object({
 
   // Floors
   floorCount: FloorCountEnum,
-  floorBreakdown: z.array(z.number()).optional(),
+  // Per-floor areas, when the customer sizes each floor separately. The engine
+  // sums these *instead of* multiplying the per-floor area by the floor count, so
+  // an unchecked array silently overrides the floor count: `[500]` on a G+3 build
+  // priced the whole house as a single 500 sq.ft slab. Length and positivity are
+  // enforced in the superRefine below.
+  floorBreakdown: z.array(z.number().positive('Each floor area must be greater than 0')).optional(),
   headRoomAreaSqft: z.number().min(0, 'Head room area cannot be negative').default(0),
 
   // Package Selection
@@ -46,6 +52,20 @@ export const calculateEstimateSchema = z.object({
   // Optional Customizations & Add-Ons
   customizations: z.array(customizationItemSchema).default([]),
   addons: z.array(addonItemSchema).default([]),
+}).superRefine((data, ctx) => {
+  if (!data.floorBreakdown || data.floorBreakdown.length === 0) return;
+
+  const expected = floorsIncludingGround(data.floorCount);
+  if (data.floorBreakdown.length !== expected) {
+    const label = data.floorCount === 0 ? 'Ground' : `G+${data.floorCount}`;
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['floorBreakdown'],
+      message: `floorBreakdown must give one area per floor — ${label} needs ${expected} ${
+        expected === 1 ? 'entry' : 'entries'
+      }, received ${data.floorBreakdown.length}`,
+    });
+  }
 });
 
 export type CalculateEstimateDto = z.infer<typeof calculateEstimateSchema>;

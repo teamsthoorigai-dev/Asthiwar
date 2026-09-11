@@ -1,5 +1,16 @@
 @import "tailwindcss";
 
+/* Width of the vertical scrollbar, measured and written by ScrollbarWidth.
+   100vw includes the scrollbar; percentage-based containers do not. Anything
+   that insets itself from the viewport with a vw calc therefore lands half a
+   scrollbar to the right of everything inside a normal container. This cannot
+   be derived in CSS — calc(100vw - 100%) is re-resolved against whatever element
+   reads it, and a registered <length> property rejects the percentage outright.
+   Falls back to 0px, which is correct for overlay-scrollbar platforms. */
+:root {
+  --scrollbar: 0px;
+}
+
 /* ------------------------------------------------------------------
    ASTHIWAR design tokens — single source of truth.
    Never write a raw hex value outside this file.
@@ -7,16 +18,28 @@
    ------------------------------------------------------------------ */
 
 :root {
-  /* colour — Option B, ASTHIWAR warm */
-  --bg:            #FAF8F5;
-  --ink:           #1A1A18;
-  --body:          #666666;
-  --muted:         #696966;
-  --hairline:      #D6D2CA;
-  --accent:        #B64B19;
-  --accent-bright: #ED7336;
-  --surface:       #EFEAE1;
-  --on-accent:     #FFFFFF;
+  /* colour — ASTHIWAR forest. Ported from asthiwar-v1 (web/src/app/globals.css). */
+  --bg:            #EFEAE3;  /* v1 --paper */
+  --ink:           #19241D;  /* v1 --forest-deep */
+  --body:          #526057;  /* v1 --muted-ink */
+  --muted:         #5E6A62;  /* v1 --concrete, darkened: #8B9189 is 2.7:1 on paper */
+  --hairline:      #D1CAC0;  /* v1 --line */
+  --accent:        #243228;  /* v1 --carbon */
+  --accent-bright: #1F5C24;  /* v1 hover green (#2E7D32) darkened: it was 3.0:1
+                                 on the band and 4.3:1 under button labels */
+  --surface:       #E4E1DA;  /* v1 --mineral */
+  --clay:          #DDD6C9;  /* v1 --clay — the cost band ground */
+  --stone:         #C7C7C5;  /* v1 principle-band ground — a light concrete, cooler than clay */
+  --oxide:         #B8854F;  /* v1 --oxide — the one chromatic accent left */
+  --oxide-deep:    #76522F;
+  --on-accent:     #EFEAE3;  /* paper, not pure white — v1 button label */
+
+  /* Social dock — translucent chrome that has to hold over photography as well
+     as over flat ground, hence the alpha rather than a solid. */
+  --dock-bg:       rgb(25 36 29 / 0.46);
+  --dock-border:   rgb(239 234 227 / 0.28);
+  --dock-item-bg:  rgb(9 13 10 / 0.74);
+  --dock-item-ink: rgb(239 234 227 / 0.92);
 
   /* type scale — desktop values from Novascape */
   --fs-h1: clamp(2.5rem, 1.2rem + 4.2vw, 5rem);
@@ -57,8 +80,14 @@
   --section-y: clamp(3rem, 1.5rem + 3vw, 5.5rem);
   --section-y-sm: clamp(2rem, 1rem + 2vw, 3.5rem);
 
-  /* containers */
-  --container: 78rem;
+  /* containers.
+     One content width, and it is the one the header and footer already used.
+     --container was 78rem, which stepped every default <Section> and the about /
+     contact / insights / sustainable page shells in by 96px against the chrome
+     above and below them. It is now an alias of --container-large; both are kept
+     so the ~20 call sites keep reading in the register they were written in, and
+     so a narrower content width can be reintroduced from one place. */
+  --container: 90rem;
   --container-large: 90rem;
   --container-small: 64rem;
   --gutter: clamp(1.25rem, 0.5rem + 3vw, 3rem);
@@ -73,16 +102,16 @@
   --radius: 4px;
 
   /* Architectural drawing & drafting tokens — ink-on-paper drafting */
-  --drafting-ink:          #1A1A18;
-  --drafting-graphite:     #555550;
-  --drafting-muted:        #8A8882;
-  --drafting-paper:        #FAF8F5;
-  --drafting-surface:      #EFEAE1;
-  --drafting-surface-tint: #E7E1D6;
-  --drafting-grid:         rgba(26, 26, 24, 0.05);
-  --drafting-grid-major:   rgba(26, 26, 24, 0.12);
-  --drafting-hatch:        rgba(26, 26, 24, 0.08);
-  --drafting-poché:        rgba(26, 26, 24, 0.15);
+  --drafting-ink:          #19241D;
+  --drafting-graphite:     #526057;
+  --drafting-muted:        #8B9189;
+  --drafting-paper:        #EFEAE3;
+  --drafting-surface:      #E4E1DA;
+  --drafting-surface-tint: #DDD6C9;
+  --drafting-grid:         rgba(25, 36, 29, 0.06);
+  --drafting-grid-major:   rgba(25, 36, 29, 0.13);
+  --drafting-hatch:        rgba(25, 36, 29, 0.09);
+  --drafting-poché:        rgba(25, 36, 29, 0.16);
 
   /* Drafting line weights per IS / architectural drawing standards */
   --stroke-cut:     0.7px;
@@ -95,10 +124,10 @@
   --film-scrim-top:        rgba(22, 28, 24, 0.75);
   --film-scrim-bottom:     rgba(22, 28, 24, 0.92);
   --film-scrim-side:       rgba(22, 28, 24, 0.60);
-  --film-text:             #FAF8F5;
-  --film-text-muted:       rgba(250, 248, 245, 0.65);
-  --film-text-faint:       rgba(250, 248, 245, 0.40);
-  --film-border:           rgba(250, 248, 245, 0.18);
+  --film-text:             #EFEAE3;
+  --film-text-muted:       rgba(239, 234, 227, 0.65);
+  --film-text-faint:       rgba(239, 234, 227, 0.40);
+  --film-border:           rgba(239, 234, 227, 0.18);
   --film-card-bg:          rgba(22, 28, 24, 0.85);
 
   /* Package Comparison Matrix & Tier Brand Tokens */
@@ -131,6 +160,10 @@
   --color-accent: var(--accent);
   --color-accent-bright: var(--accent-bright);
   --color-surface: var(--surface);
+  --color-clay: var(--clay);
+  --color-stone: var(--stone);
+  --color-oxide: var(--oxide);
+  --color-oxide-deep: var(--oxide-deep);
   --color-surface-active: var(--hairline);
   --color-on-accent: var(--on-accent);
   /* `primary` is referenced by the admin console (save affordances, the
@@ -306,3 +339,24 @@ body[data-scroll-locked] {
     scroll-behavior: auto !important;
   }
 }
+
+/* ------------------------------------------------------------------
+   Architectural cursor scoped overrides
+   Only hide default cursor on fine-pointer devices when custom cursor is active.
+   Form inputs, textareas, and coarse pointers retain native cursors.
+   ------------------------------------------------------------------ */
+
+@media (pointer: fine) {
+  html[data-custom-cursor="active"],
+  html[data-custom-cursor="active"] * {
+    cursor: none;
+  }
+
+  html[data-custom-cursor="active"] input,
+  html[data-custom-cursor="active"] textarea,
+  html[data-custom-cursor="active"] select,
+  html[data-custom-cursor="active"] [contenteditable="true"] {
+    cursor: text !important;
+  }
+}
+

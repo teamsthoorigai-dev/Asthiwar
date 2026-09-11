@@ -43,22 +43,31 @@ export const logoReveal = {
 export type HomePrincipleIcon =
   | 'cooling'
   | 'lowCement'
-  | 'structure'
-  | 'coordination'
-  | 'cost';
+  | 'wellbeing'
+  | 'environment';
 
+/**
+ * The four sustainability principles, as approved in v1. `lines` is the break
+ * the band renders — the labels are set two-up under the mark, so the break is
+ * authored here rather than left to the wrap.
+ */
 export const homePrinciples = [
-  { label: 'Natural Cooling', icon: 'cooling' },
-  { label: 'Low-Cement Building', icon: 'lowCement' },
-  { label: 'Structural Clarity', icon: 'structure' },
-  { label: 'Coordinated Delivery', icon: 'coordination' },
-  { label: 'Transparent Cost', icon: 'cost' },
+  { label: 'Natural Cooling', lines: ['Natural Cooling'], icon: 'cooling' },
+  { label: 'Low Cement / Cement Free', lines: ['Low Cement /', 'Cement Free'], icon: 'lowCement' },
+  { label: 'Long-term Well-being', lines: ['Long-term', 'Well-being'], icon: 'wellbeing' },
+  {
+    label: 'Environmental Responsibility',
+    lines: ['Environmental', 'Responsibility'],
+    icon: 'environment',
+  },
 ] as const satisfies ReadonlyArray<{
   label: string;
+  lines: readonly string[];
   icon: HomePrincipleIcon;
 }>;
 
-export const homePrinciplesLabel = 'ASTHIWAR building principles';
+export const homePrinciplesLabel =
+  'Sustainable design principles. The marks move continuously; hover or focus to pause.';
 
 /* ---- Section 03 · PhilosophyCounters ---- */
 
@@ -79,20 +88,30 @@ export const philosophy = {
   counters: ReadonlyArray<{ value: number; label: string; sublabel?: string }>;
 };
 
-/* ---- Section 04 · CostTeaser ---- */
+/* ---- Section 04 · EstimateBand ---- */
 
-export const costTeaser = {
-  title: 'Indicative build cost',
-  body: 'Rates are per square foot of built-up area. Final cost depends on design, specification, site conditions and materials.',
-  smallPrint: [
-    'Indicative only. Not a quotation. Rates subject to change.',
-    'Government charges, statutory approvals and taxes as applicable.',
+/**
+ * A preview of what the full calculator asks for. The rows are not inputs —
+ * every one of them opens /cost-calculator, where the real wizard collects the
+ * answer. The figure stays an em dash until it does.
+ */
+export const estimateBand = {
+  eyebrow: 'Cost calculator',
+  title: 'Understand your budget before you design.',
+  fields: [
+    { label: 'Location', action: 'Select' },
+    { label: 'Built-up area', action: 'Enter area' },
+    { label: 'Construction quality', action: 'Select' },
   ],
-  cta: { label: 'Get your estimate', href: '/cost-calculator' },
+  figureLabel: 'Estimated project cost',
+  note: 'Estimated cost only. Final project cost depends on design, specifications, site conditions, materials and project requirements.',
+  cta: { label: 'Calculate your cost', href: '/cost-calculator' },
 } as const satisfies {
+  eyebrow: string;
   title: string;
-  body: string;
-  smallPrint: readonly string[];
+  fields: ReadonlyArray<{ label: string; action: string }>;
+  figureLabel: string;
+  note: string;
   cta: { label: string; href: string };
 };
 

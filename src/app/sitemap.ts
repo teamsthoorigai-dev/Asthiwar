@@ -5,6 +5,7 @@ const SITE_URL = 'https://asthiwar.com';
 
 const publicPaths = [
   '/',
+  '/studio',
   '/about',
   '/contact',
   '/cost-calculator',

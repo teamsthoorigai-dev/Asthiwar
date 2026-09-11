@@ -33,7 +33,12 @@ export const estimates = pgTable('estimates', {
   packageRatePerSqft: numeric('package_rate_per_sqft', { precision: 10, scale: 2 }).notNull(),
 
   // Cost Breakdown Totals
+  // Exactly total_builtup_area_sqft × package_rate_per_sqft. Head room is priced
+  // at its own rate over its own area and is held separately below, so the base
+  // line on the quotation multiplies out to the amount printed beside it.
   baseConstructionCost: numeric('base_construction_cost', { precision: 12, scale: 2 }).notNull(),
+  headRoomAreaSqft: numeric('head_room_area_sqft', { precision: 10, scale: 2 }).default('0.00').notNull(),
+  headRoomCost: numeric('head_room_cost', { precision: 12, scale: 2 }).default('0.00').notNull(),
   upgradesCost: numeric('upgrades_cost', { precision: 12, scale: 2 }).default('0.00').notNull(),
   addonsCost: numeric('addons_cost', { precision: 12, scale: 2 }).default('0.00').notNull(),
   subtotalCost: numeric('subtotal_cost', { precision: 12, scale: 2 }).notNull(),

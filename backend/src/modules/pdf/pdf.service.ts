@@ -282,6 +282,16 @@ export async function generateEstimatePdf(estimateNumberOrId: string): Promise<B
           amount: money(estimate.baseConstructionCost),
         },
       ];
+      // Head room is charged at its own rate over its own area. It used to be
+      // folded into base_construction_cost, so the base row's "N sq.ft @ Rs.R"
+      // did not multiply out to the amount printed beside it.
+      if (Number(estimate.headRoomCost) > 0) {
+        summaryRows.push({
+          particular: 'Head room',
+          detail: `${num(estimate.headRoomAreaSqft)} sq.ft`,
+          amount: money(estimate.headRoomCost),
+        });
+      }
       if (Number(estimate.upgradesCost) > 0) {
         summaryRows.push({
           particular: 'Specification upgrades',

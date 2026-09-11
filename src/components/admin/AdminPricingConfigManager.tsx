@@ -232,6 +232,15 @@ function slugify(value: string): string {
     .replace(/^_+|_+$/g, '');
 }
 
+/**
+ * A rate delta carries its own sign: +₹45 is an upgrade, −₹50 a downgrade credit.
+ * Labels used to hardcode a '+' prefix, which rendered a credit as "+₹-50".
+ */
+function formatDelta(value: number | string): string {
+  const n = Number(value) || 0;
+  return `${n < 0 ? '−' : '+'}₹${Math.abs(n).toLocaleString('en-IN')}`;
+}
+
 function toOptionalNumber(value: string): number | undefined {
   const trimmed = value.trim();
   if (!trimmed) return undefined;
@@ -907,16 +916,18 @@ export function AdminPricingConfigManager() {
     brandName: string,
     priceDelta: number
   ) => {
-    if (!Number.isFinite(priceDelta) || priceDelta < 0) {
-      pushToast('error', `${brandName}: rate delta must be a valid non-negative number.`);
+    // Negative deltas are legitimate: a downgrade (standard flush doors instead of
+    // teak) is a credit against the package rate. Only a non-numeric value is wrong.
+    if (!Number.isFinite(priceDelta)) {
+      pushToast('error', `${brandName}: rate delta must be a valid number.`);
       return;
     }
-    const safeDelta = Math.max(0, priceDelta);
+    const safeDelta = priceDelta;
     await runAction(
       `opt:${optionId}`,
       () => updateOptionPricing(optionId, { priceDelta: safeDelta, name: brandName }),
       {
-        success: `${brandName} rate delta set to +₹${safeDelta}/sq.ft.`,
+        success: `${brandName} rate delta set to ${formatDelta(safeDelta)}/sq.ft.`,
         failure: `Failed to update the ${brandName} rate delta.`,
       }
     );
@@ -944,7 +955,7 @@ export function AdminPricingConfigManager() {
     const slug = slugify(optionForm.slug);
     if (!name || !slug) return;
 
-    const delta = Math.max(0, Number(optionForm.priceDelta) || 0);
+    const delta = Number(optionForm.priceDelta) || 0;
     const description = optionForm.description.trim();
     setCreatingOption(true);
 
@@ -1987,6 +1998,22 @@ export function AdminPricingConfigManager() {
                           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                             {item.options.map((opt) => {
                               const busy = isBusy(`opt:${opt.id}`);
+                              // This view has no package tier in scope, so a single
+                              // delta box can only speak for the universal rate. An
+                              // option priced per tier has to be edited in the
+                              // per-package dialog, or one tier's edit would be
+                              // applied to all four.
+                              const livePrices = (opt.prices ?? []).filter(
+                                (p) =>
+                                  !p.effectiveTo ||
+                                  new Date(p.effectiveTo).getTime() > Date.now()
+                              );
+                              const universalPrice =
+                                livePrices.find((p) => p.packageId === null) ?? null;
+                              const perTierPrices = livePrices.filter(
+                                (p) => p.packageId !== null
+                              );
+                              const isPerTierPriced = !universalPrice && perTierPrices.length > 0;
                               return (
                                 <div
                                   key={opt.id}
@@ -2031,29 +2058,49 @@ export function AdminPricingConfigManager() {
                                     </p>
                                   )}
 
+                                  {isPerTierPriced ? (
+                                  <div className="pt-2 border-t border-border space-y-1.5">
+                                    <div className="flex flex-wrap gap-1">
+                                      {perTierPrices.map((p) => {
+                                        const tier = packages?.find((pk) => pk.id === p.packageId);
+                                        return (
+                                          <span
+                                            key={p.id}
+                                            className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-surface border border-border text-muted"
+                                          >
+                                            {tier?.name ?? `Package ${p.packageId}`}:{' '}
+                                            {formatDelta(p.priceDelta)}
+                                          </span>
+                                        );
+                                      })}
+                                    </div>
+                                    <button
+                                      type="button"
+                                      onClick={() => openEditOption(opt, item.name)}
+                                      className="button button--ghost text-[11px] py-1 px-2.5 w-full"
+                                    >
+                                      Edit per-package rates
+                                    </button>
+                                  </div>
+                                  ) : (
                                   <div className="pt-2 border-t border-border flex items-center justify-between gap-2">
                                     <div className="relative flex-1">
                                       <span className="absolute left-2 top-1/2 -translate-y-1/2 text-muted text-[11px] pointer-events-none">
-                                        +₹
+                                        ₹
                                       </span>
                                       <input
                                         type="number"
                                         step="0.01"
-                                        min="0"
-                                        defaultValue={opt.activePrice?.priceDelta || 0}
+                                        defaultValue={universalPrice?.priceDelta || 0}
                                         id={`opt-delta-${opt.id}`}
                                         aria-label={`Rate delta for ${opt.brandName}`}
                                         className="form-input text-xs pl-6 py-1 font-mono font-bold w-full"
                                         placeholder="0.00"
                                         onKeyDown={(e) => {
-                                          if (e.key === '-' || e.key === 'e') {
+                                          // '-' is allowed now: a negative delta is a
+                                          // downgrade credit. 'e' still is not.
+                                          if (e.key === 'e') {
                                             e.preventDefault();
-                                          }
-                                        }}
-                                        onInput={(e) => {
-                                          const val = parseFloat(e.currentTarget.value);
-                                          if (!isNaN(val) && val < 0) {
-                                            e.currentTarget.value = '0';
                                           }
                                         }}
                                       />
@@ -2067,7 +2114,7 @@ export function AdminPricingConfigManager() {
                                             `opt-delta-${opt.id}`
                                           ) as HTMLInputElement
                                         )?.value;
-                                        const delta = Math.max(0, Number(rawVal) || 0);
+                                        const delta = Number(rawVal) || 0;
                                         handleUpdateOptionPriceDelta(opt.id, opt.brandName, delta);
                                       }}
                                       className="button button--ghost text-[11px] py-1 px-2.5 shrink-0 disabled:opacity-50"
@@ -2079,6 +2126,7 @@ export function AdminPricingConfigManager() {
                                       )}
                                     </button>
                                   </div>
+                                  )}
                                 </div>
                               );
                             })}
@@ -2790,7 +2838,7 @@ export function AdminPricingConfigManager() {
                   const val = parseFloat(e.target.value);
                   setOptionForm((prev) => ({
                     ...prev,
-                    priceDelta: isNaN(val) ? 0 : Math.max(0, val),
+                    priceDelta: isNaN(val) ? 0 : val,
                   }));
                 }}
                 onKeyDown={(e) => {

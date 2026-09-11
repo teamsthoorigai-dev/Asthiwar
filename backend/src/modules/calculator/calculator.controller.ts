@@ -18,9 +18,9 @@ import {
   desc,
   isNull,
   or,
-  sql,
 } from '@asthiwar/database';
 import { packageTierApplies, packageTierSpecificity } from '../../services/addon-tiers.js';
+import { isCurrentPrice } from '../../services/pricing-window.js';
 import { estimateRefCandidates } from './quotation.js';
 import { calculateEstimate } from './calculator.service.js';
 import { CalculatorInput } from './calculator.types.js';
@@ -127,7 +127,7 @@ export async function getPackages(req: Request, res: Response, next: NextFunctio
         packagePrices,
         and(
           eq(packagePrices.packageId, packages.id),
-          or(isNull(packagePrices.effectiveTo), sql`${packagePrices.effectiveTo} > NOW()`)
+          isCurrentPrice(packagePrices.effectiveTo)
         )
       )
       .where(
@@ -249,11 +249,25 @@ export async function getPackageConfig(req: Request, res: Response, next: NextFu
         optionPrices,
         and(
           eq(optionPrices.optionId, options.id),
-          eq(optionPrices.packageId, pkg.id)
+          // Universal rows (package_id IS NULL) price an option in every tier.
+          // The engine honours them; omitting them here showed a +₹0 delta on an
+          // option that then billed at the universal rate.
+          or(eq(optionPrices.packageId, pkg.id), isNull(optionPrices.packageId)),
+          isCurrentPrice(optionPrices.effectiveTo)
         )
       );
 
-    const deduplicatedOptRows = optRows;
+    // Widening the join can return both a package row and a universal row for one
+    // option. The narrower one wins — the same precedence calculator.service.ts
+    // applies, so the quoted delta is the delta that gets charged.
+    const bestOptionPriceRow = new Map<number, (typeof optRows)[number]>();
+    for (const row of optRows) {
+      const existing = bestOptionPriceRow.get(row.id);
+      if (!existing || (row.packageId !== null && existing.packageId === null)) {
+        bestOptionPriceRow.set(row.id, row);
+      }
+    }
+    const deduplicatedOptRows = Array.from(bestOptionPriceRow.values());
 
     // Deduplicate itemRows by itemId to guarantee no duplicate specification rows
     const seenItemIds = new Set<number>();
@@ -319,7 +333,7 @@ export async function getPackageConfig(req: Request, res: Response, next: NextFu
     const addonPriceRows = await db
       .select()
       .from(addonPrices)
-      .where(or(isNull(addonPrices.effectiveTo), sql`${addonPrices.effectiveTo} > NOW()`));
+      .where(isCurrentPrice(addonPrices.effectiveTo));
 
     const addonsData = addonRows.map((ad) => {
       const matchingPrices = addonPriceRows

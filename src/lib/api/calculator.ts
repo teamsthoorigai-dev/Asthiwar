@@ -112,11 +112,23 @@ export async function getEstimateByNumber(
 }
 
 /**
+ * The URL-safe spelling of a quotation number: AW/2026/O/0001 -> AW-2026-O-0001.
+ *
+ * Mirrors urlSafeQuotationNumber in backend/src/modules/calculator/quotation.ts;
+ * the lookup there resolves either spelling back to the stored value. Percent
+ * encoding also works, but a quotation link gets pasted into WhatsApp, email and
+ * address bars, where %2F is fragile and unreadable — so links use the dash form.
+ */
+export function urlSafeEstimateNumber(estimateNumber: string): string {
+  return estimateNumber.replace(/\//g, '-');
+}
+
+/**
  * Generates direct download / streaming URL for estimate PDF
  */
 export function getEstimatePdfUrl(estimateNumber: string): string {
   const baseUrl = getApiBaseUrl();
-  return `${baseUrl}/api/v1/calculator/estimate/${encodeURIComponent(estimateNumber)}/pdf`;
+  return `${baseUrl}/api/v1/calculator/estimate/${urlSafeEstimateNumber(estimateNumber)}/pdf`;
 }
 
 /**

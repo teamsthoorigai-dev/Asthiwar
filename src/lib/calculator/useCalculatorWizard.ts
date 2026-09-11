@@ -18,12 +18,29 @@ import type {
   CalculationResult,
   CalculatorInput,
 } from './types';
+import { ApiError } from '@/lib/api/client';
+import type { ApiFieldError } from '@/lib/api/types';
 import { INITIAL_FORM_STATE } from './index';
 import {
   dimensionsStepSchema,
   packageStepSchema,
   leadCaptureStepSchema,
 } from './schema';
+
+/**
+ * The engine refuses an estimate it cannot price in full rather than quietly
+ * dropping the selection, and names each one. Show those reasons — "Underground
+ * Sump has a minimum of 1000 litres" is actionable where "calculation error" is not.
+ */
+function describeCalculationError(err: unknown, fallback: string): string {
+  if (err instanceof ApiError && err.code === 'ESTIMATE_NOT_PRICEABLE' && Array.isArray(err.details)) {
+    const reasons = (err.details as ApiFieldError[])
+      .map((d) => d?.message)
+      .filter((m): m is string => Boolean(m));
+    if (reasons.length > 0) return reasons.join(' ');
+  }
+  return err instanceof Error ? err.message : fallback;
+}
 
 /** Step 0 dimensions → 1 package → 2 customise → 3 add-ons → 4 contact details. */
 export const LAST_FORM_STEP = 4;
@@ -171,7 +188,7 @@ export function useCalculatorWizard() {
           return;
         }
         console.warn('Preview estimate error:', err);
-        setPreviewError('Unable to update live running preview.');
+        setPreviewError(describeCalculationError(err, 'Unable to update live running preview.'));
       } finally {
         setPreviewLoading(false);
       }
@@ -228,11 +245,13 @@ export function useCalculatorWizard() {
     return true;
   }, [currentStep, formData]);
 
-  const nextStep = useCallback(() => {
+  const nextStep = useCallback((): boolean => {
     if (validateCurrentStep()) {
       setCurrentStep((prev) => Math.min(LAST_FORM_STEP, prev + 1));
       setError(null);
+      return true;
     }
+    return false;
   }, [validateCurrentStep]);
 
   const prevStep = useCallback(() => {
@@ -259,8 +278,7 @@ export function useCalculatorWizard() {
       setEstimateResult(result);
       setCalculating(false);
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Calculation error occurred.';
-      setError(message);
+      setError(describeCalculationError(err, 'Calculation error occurred.'));
       setCalculating(false);
     }
   }, [formData, validateCurrentStep]);

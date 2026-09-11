@@ -1,10 +1,13 @@
 import { Request, Response, NextFunction } from 'express';
-import { AnyZodObject, ZodError } from 'zod';
+import { ZodError, ZodTypeAny } from 'zod';
 
+// ZodTypeAny rather than AnyZodObject: a schema carrying a cross-field
+// `.refine()`/`.superRefine()` is a ZodEffects, not a ZodObject, and those are
+// exactly the schemas that check one field against another.
 export function validateRequest(schema: {
-  body?: AnyZodObject;
-  query?: AnyZodObject;
-  params?: AnyZodObject;
+  body?: ZodTypeAny;
+  query?: ZodTypeAny;
+  params?: ZodTypeAny;
 }) {
   return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {

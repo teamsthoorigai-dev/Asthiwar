@@ -3,8 +3,8 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
+import { ArrowUpRight } from 'lucide-react';
 import { AsthiwarWordmark } from '@/components/brand/AsthiwarWordmark';
-import { Button } from '@/components/ui/Button';
 import { primaryNav } from '@/data/nav';
 import { MenuOverlay } from './MenuOverlay';
 import styles from './SiteHeader.module.css';
@@ -96,14 +96,20 @@ export function SiteHeader() {
           </Link>
 
           <div className={styles.right}>
-            <Button
+            <Link
               href="/contact"
-              variant={isDarkHero && !solid ? 'white' : 'primary'}
               className={styles.ctaButton}
             >
-              <span className={styles.ctaFull}>Book Consultation ↗</span>
-              <span className={styles.ctaShort}>Consult ↗</span>
-            </Button>
+              <span className={styles.ctaLabel}>
+                <span className={styles.ctaFull}>
+                  BOOK CONSULTATION <ArrowUpRight size={14} strokeWidth={2.2} className={styles.ctaArrow} aria-hidden="true" />
+                </span>
+                <span className={styles.ctaShort}>
+                  CONSULT <ArrowUpRight size={13} strokeWidth={2.2} className={styles.ctaArrow} aria-hidden="true" />
+                </span>
+              </span>
+              <span className={styles.ctaBlock} aria-hidden="true" />
+            </Link>
           </div>
         </div>
 

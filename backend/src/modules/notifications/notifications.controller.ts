@@ -2,8 +2,6 @@ import { Request, Response, NextFunction } from 'express';
 import {
   sendEstimateQuotationNotification,
   sendAdminNewLeadAlert,
-  getNotificationLogs,
-  resendNotification,
   NotificationError,
 } from './notifications.service.js';
 
@@ -14,7 +12,8 @@ export async function sendEstimateNotificationController(req: Request, res: Resp
     const results = await sendEstimateQuotationNotification(id, channels);
     res.json({
       success: true,
-      message: 'Estimate quotation dispatched successfully',
+      // Queued, not sent: there is no transport wired up. See notifications.service.ts.
+      message: 'Estimate quotation queued for dispatch',
       data: results,
     });
   } catch (error) {
@@ -35,49 +34,7 @@ export async function sendLeadNotificationController(req: Request, res: Response
     const result = await sendAdminNewLeadAlert(id);
     res.json({
       success: true,
-      message: 'Admin lead alert dispatched successfully',
-      data: result,
-    });
-  } catch (error) {
-    if (error instanceof NotificationError) {
-      res.status(error.statusCode).json({
-        success: false,
-        error: { code: error.code, message: error.message },
-      });
-      return;
-    }
-    next(error);
-  }
-}
-
-export async function getNotificationLogsController(req: Request, res: Response, next: NextFunction): Promise<void> {
-  try {
-    const query = {
-      page: req.query.page ? parseInt(req.query.page as string, 10) : 1,
-      limit: req.query.limit ? parseInt(req.query.limit as string, 10) : 10,
-      channel: req.query.channel as any,
-      template: req.query.template as any,
-      estimateId: req.query.estimateId as string,
-      enquiryId: req.query.enquiryId as string,
-    };
-    const result = await getNotificationLogs(query);
-    res.json({
-      success: true,
-      data: result.items,
-      pagination: result.pagination,
-    });
-  } catch (error) {
-    next(error);
-  }
-}
-
-export async function resendNotificationController(req: Request, res: Response, next: NextFunction): Promise<void> {
-  try {
-    const id = req.params.id as string;
-    const result = await resendNotification(id);
-    res.json({
-      success: true,
-      message: 'Notification resent successfully',
+      message: 'Admin lead alert queued for dispatch',
       data: result,
     });
   } catch (error) {

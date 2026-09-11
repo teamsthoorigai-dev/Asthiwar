@@ -1,20 +1,23 @@
 /* ASTHIWAR Cost Calculator Styles */
 
+/* The calculator was written against v1's token names. They now resolve to the
+   site palette in globals.css instead of restating it in hex — this block used
+   to hold the previous terracotta values, which both left the whole calculator
+   off-palette and, being :root, silently overrode --oxide site-wide on any page
+   that loaded this stylesheet. --clay, --oxide and --oxide-deep are gone from
+   here entirely; globals.css owns them. */
 :root {
-  --carbon: #243228;
+  --carbon: var(--accent);
   --carbon-raised: #304238;
-  --mineral: #e4e1da;
-  --paper: #FAF8F5;
-  --clay: #ddd6c9;
-  --oxide: #B64B19;
-  --oxide-deep: #8E3A13;
-  --forest: #243228;
-  --forest-deep: #19241d;
-  --concrete: #8b9189;
-  --muted-ink: #696966;
-  --line: #D6D2CA;
-  --surface-active: #D6D2CA;
-  --border: #D6D2CA;
+  --mineral: var(--surface);
+  --paper: var(--bg);
+  --forest: var(--accent);
+  --forest-deep: var(--ink);
+  --concrete: var(--muted);
+  --muted-ink: var(--body);
+  --line: var(--hairline);
+  --surface-active: var(--hairline);
+  --border: var(--hairline);
   --ease-state: cubic-bezier(0.25, 1, 0.5, 1);
   --ease-cinematic: cubic-bezier(0.16, 1, 0.3, 1);
 }

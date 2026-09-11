@@ -6,6 +6,7 @@ import {
   updateEnquirySchema,
   estimatesQuerySchema,
   updateEstimateSchema,
+  auditLogsQuerySchema,
 } from '../modules/admin/admin.schema.js';
 import {
   getEnquiriesController,
@@ -15,6 +16,8 @@ import {
   getEstimateByIdController,
   updateEstimateController,
   getDashboardAnalyticsController,
+  getAuditLogsController,
+  getAuditLogByIdController,
 } from '../modules/admin/admin.controller.js';
 
 const router = Router();
@@ -25,8 +28,6 @@ router.use(requireAdminAuth);
 import {
   sendEstimateNotificationController,
   sendLeadNotificationController,
-  getNotificationLogsController,
-  resendNotificationController,
 } from '../modules/notifications/notifications.controller.js';
 
 // ----------------------------------------------------
@@ -72,17 +73,21 @@ router.patch(
 );
 
 // ----------------------------------------------------
-// NOTIFICATION LOGS & RESEND (/api/v1/admin/notifications)
-// ----------------------------------------------------
-router.get('/notifications', getNotificationLogsController);
-router.post('/notifications/:id/resend', resendNotificationController);
-
-// ----------------------------------------------------
-// ANALYTICS & AUDIT LOGS ROUTES
+// ANALYTICS ROUTES
 // ----------------------------------------------------
 router.get('/analytics/dashboard', getDashboardAnalyticsController);
 
-import { getAuditLogsController } from '../modules/admin/admin.controller.js';
-router.get('/audit-logs', getAuditLogsController);
+// ----------------------------------------------------
+// AUDIT LOG ROUTES (/api/v1/admin/audit-logs)
+// ----------------------------------------------------
+// The write side has existed since the table was created; this is the first way
+// to read any of it back. Admin-only, like every route in this file.
+router.get(
+  '/audit-logs',
+  validateRequest({ query: auditLogsQuerySchema }),
+  getAuditLogsController
+);
+
+router.get('/audit-logs/:id', getAuditLogByIdController);
 
 export default router;

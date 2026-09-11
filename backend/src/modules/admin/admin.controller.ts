@@ -8,12 +8,15 @@ import {
   updateAdminEstimate,
   getAdminDashboardAnalytics,
   AdminServiceError,
+  getAdminAuditLogs,
+  getAdminAuditLogById,
 } from './admin.service.js';
 import {
   EnquiriesQuery,
   UpdateEnquiryDto,
   EstimatesQuery,
   UpdateEstimateDto,
+  AuditLogsQuery,
 } from './admin.schema.js';
 
 // ----------------------------------------------------
@@ -148,36 +151,40 @@ export async function getDashboardAnalyticsController(req: Request, res: Respons
   }
 }
 
-// ----------------------------------------------------
-// AUDIT LOGS CONTROLLER
-// ----------------------------------------------------
-
-import { queryAuditLogs } from '../../services/audit.service.js';
-
 export async function getAuditLogsController(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const filters = {
-      eventType: req.query.eventType as string | undefined,
-      action: req.query.action as string | undefined,
-      severity: req.query.severity as string | undefined,
-      startDate: req.query.startDate as string | undefined,
-      endDate: req.query.endDate as string | undefined,
-      page: req.query.page ? parseInt(req.query.page as string, 10) : undefined,
-      limit: req.query.limit ? parseInt(req.query.limit as string, 10) : undefined,
-    };
-
-    const result = await queryAuditLogs(filters);
+    const query = req.query as unknown as AuditLogsQuery;
+    const result = await getAdminAuditLogs(query);
     res.json({
       success: true,
       data: result.items,
-      pagination: {
-        page: result.page,
-        limit: result.limit,
-        total: result.total,
-        totalPages: result.totalPages,
-      },
+      pagination: result.pagination,
     });
   } catch (error) {
+    next(error);
+  }
+}
+
+export async function getAuditLogByIdController(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id) || id <= 0) {
+      res.status(400).json({
+        success: false,
+        error: { code: 'INVALID_AUDIT_LOG_ID', message: 'Audit log id must be a positive integer' },
+      });
+      return;
+    }
+    const log = await getAdminAuditLogById(id);
+    res.json({ success: true, data: log });
+  } catch (error) {
+    if (error instanceof AdminServiceError) {
+      res.status(error.statusCode).json({
+        success: false,
+        error: { code: error.code, message: error.message },
+      });
+      return;
+    }
     next(error);
   }
 }

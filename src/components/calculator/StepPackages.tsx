@@ -549,98 +549,48 @@ export function StepPackages({
     return fallback || '';
   };
 
-  // Ensure 4 tiers are always present in the standard order
+  // Only the tiers the backend actually returned.
+  //
+  // A missing tier used to be synthesised here with rates hardcoded in this file —
+  // a second copy of the rate card that goes stale the moment anyone reprices in
+  // the admin console, and that would quote a customer a number the backend would
+  // never produce. If a tier is not in the catalogue, it is not offered.
   const uniquePackages: PackageItem[] = useMemo(() => {
     const order: PackageSlug[] = ['basic', 'standard', 'premium', 'luxury'];
     return order
-      .map((slug, idx) => {
-        const found = pkgMap.get(slug);
-        if (found) {
-          return {
-            ...found,
-            tagline: getTagline(slug, found.tagline),
-          };
-        }
-        const std =
-          slug === 'basic'
-            ? 2099
-            : slug === 'standard'
-            ? 2468
-            : slug === 'premium'
-            ? 2899
-            : 3250;
-        const vol =
-          slug === 'basic'
-            ? 1999
-            : slug === 'standard'
-            ? 2357
-            : slug === 'premium'
-            ? 2799
-            : 3200;
-        return {
-          id: idx + 1,
-          slug,
-          name:
-            slug === 'basic'
-              ? 'Basic Package'
-              : slug === 'standard'
-              ? 'Standard Package'
-              : slug === 'premium'
-              ? 'Premium Package'
-              : 'Luxury Package',
-          tagline: getTagline(slug),
-          description: null,
-          colorTheme: null,
-          sortOrder: idx + 1,
-          standardPricePerSqft: std,
-          volumePricePerSqft: vol,
-          volumeDiscountThresholdSqft: 3500,
-          pricing: {
-            standardRatePerSqft: std,
-            volumeRatePerSqft: vol,
-            volumeDiscountThresholdSqft: 3500,
-          },
-          highlights: PACKAGE_HIGHLIGHTS[slug] || [],
-          isRecommended: slug === 'premium',
-        } as PackageItem;
-      })
-      .filter(Boolean);
+      .map((slug) => pkgMap.get(slug))
+      .filter((pkg): pkg is PackageItem => Boolean(pkg))
+      .map((pkg) => ({ ...pkg, tagline: getTagline(pkg.slug, pkg.tagline) }));
   }, [pkgMap]);
 
-  // Pricing calculations: Active rate and Strikethrough higher rate
+  // Pricing calculations: active rate, and the genuine rate to strike through.
+  // Returns null when the catalogue has no rate for the tier — the caller shows
+  // that honestly rather than falling back to a number written in this file.
   const getPackageRates = (slug: PackageSlug) => {
     const pkg = pkgMap.get(slug);
-    const defaults: Record<PackageSlug, { std: number; vol: number }> = {
-      basic: { std: 2099, vol: 1999 },
-      standard: { std: 2468, vol: 2357 },
-      premium: { std: 2899, vol: 2799 },
-      luxury: { std: 3250, vol: 3200 },
-    };
+    if (!pkg) return null;
 
-    const std = Number(
-      pkg?.standardPricePerSqft ??
-        pkg?.pricing?.standardRatePerSqft ??
-        defaults[slug].std
-    );
-    const vol = Number(
-      pkg?.volumePricePerSqft ??
-        pkg?.pricing?.volumeRatePerSqft ??
-        defaults[slug].vol
-    );
+    const std = Number(pkg.standardPricePerSqft ?? pkg.pricing?.standardRatePerSqft);
+    const vol = Number(pkg.volumePricePerSqft ?? pkg.pricing?.volumeRatePerSqft);
+    if (!Number.isFinite(std) || !Number.isFinite(vol)) return null;
+
     const threshold =
-      pkg?.volumeDiscountThresholdSqft ??
-      pkg?.pricing?.volumeDiscountThresholdSqft ??
-      3500;
+      pkg.volumeDiscountThresholdSqft ?? pkg.pricing?.volumeDiscountThresholdSqft ?? 3500;
 
     const isVolume = totalBuiltup > threshold;
     const activeRate = isVolume ? vol : std;
 
-    // The higher rate that must be striked out:
-    // If volume discount applies, higher rate is standard rate.
-    // If standard rate applies, higher rate is regular market list price (~12% markup).
-    const higherRate = isVolume
-      ? std
-      : Math.round((std * 1.12) / 10) * 10 - 1;
+    // Only a rate the customer would genuinely otherwise pay may be struck out,
+    // and exactly one exists: above the volume threshold the standard rate is the
+    // real "before" price, so striking it shows a saving that is actually being
+    // given. Below the threshold the standard rate IS the price — there is nothing
+    // to strike.
+    //
+    // This used to invent one: `Math.round((std * 1.12) / 10) * 10 - 1`, a 12%
+    // markup rounded to a psychological ₹…9 ending, presented as a market list
+    // price. No such rate exists in the catalogue or anywhere else, so every
+    // visitor was shown a fictional discount against a fictional original.
+    const higherRate = isVolume ? std : null;
 
     return {
       activeRate,
@@ -766,12 +716,22 @@ export function StepPackages({
                             </div>
                           </div>
                           <div className="pkg-matrix-header-card__rates">
-                            <span className="pkg-matrix-header-card__rate-strikethrough">
-                              ₹{rates.higherRate.toLocaleString('en-IN')}
-                            </span>
-                            <span className="pkg-matrix-header-card__rate-tag">
-                              ₹{rates.activeRate.toLocaleString('en-IN')}/sq.ft
-                            </span>
+                            {rates === null ? (
+                              <span className="pkg-matrix-header-card__rate-tag">
+                                Rate unavailable
+                              </span>
+                            ) : (
+                              <>
+                                {rates.higherRate !== null && (
+                                  <span className="pkg-matrix-header-card__rate-strikethrough">
+                                    ₹{rates.higherRate.toLocaleString('en-IN')}
+                                  </span>
+                                )}
+                                <span className="pkg-matrix-header-card__rate-tag">
+                                  ₹{rates.activeRate.toLocaleString('en-IN')}/sq.ft
+                                </span>
+                              </>
+                            )}
                           </div>
                         </div>
                       </th>
@@ -805,12 +765,22 @@ export function StepPackages({
                             </div>
                           </div>
                           <div className="pkg-matrix-header-card__rates">
-                            <span className="pkg-matrix-header-card__rate-strikethrough">
-                              ₹{rates.higherRate.toLocaleString('en-IN')}
-                            </span>
-                            <span className="pkg-matrix-header-card__rate-tag">
-                              ₹{rates.activeRate.toLocaleString('en-IN')}/sq.ft
-                            </span>
+                            {rates === null ? (
+                              <span className="pkg-matrix-header-card__rate-tag">
+                                Rate unavailable
+                              </span>
+                            ) : (
+                              <>
+                                {rates.higherRate !== null && (
+                                  <span className="pkg-matrix-header-card__rate-strikethrough">
+                                    ₹{rates.higherRate.toLocaleString('en-IN')}
+                                  </span>
+                                )}
+                                <span className="pkg-matrix-header-card__rate-tag">
+                                  ₹{rates.activeRate.toLocaleString('en-IN')}/sq.ft
+                                </span>
+                              </>
+                            )}
                           </div>
                         </div>
                       </th>
@@ -844,12 +814,22 @@ export function StepPackages({
                             </div>
                           </div>
                           <div className="pkg-matrix-header-card__rates">
-                            <span className="pkg-matrix-header-card__rate-strikethrough">
-                              ₹{rates.higherRate.toLocaleString('en-IN')}
-                            </span>
-                            <span className="pkg-matrix-header-card__rate-tag">
-                              ₹{rates.activeRate.toLocaleString('en-IN')}/sq.ft
-                            </span>
+                            {rates === null ? (
+                              <span className="pkg-matrix-header-card__rate-tag">
+                                Rate unavailable
+                              </span>
+                            ) : (
+                              <>
+                                {rates.higherRate !== null && (
+                                  <span className="pkg-matrix-header-card__rate-strikethrough">
+                                    ₹{rates.higherRate.toLocaleString('en-IN')}
+                                  </span>
+                                )}
+                                <span className="pkg-matrix-header-card__rate-tag">
+                                  ₹{rates.activeRate.toLocaleString('en-IN')}/sq.ft
+                                </span>
+                              </>
+                            )}
                           </div>
                         </div>
                       </th>
@@ -883,12 +863,22 @@ export function StepPackages({
                             </div>
                           </div>
                           <div className="pkg-matrix-header-card__rates">
-                            <span className="pkg-matrix-header-card__rate-strikethrough">
-                              ₹{rates.higherRate.toLocaleString('en-IN')}
-                            </span>
-                            <span className="pkg-matrix-header-card__rate-tag">
-                              ₹{rates.activeRate.toLocaleString('en-IN')}/sq.ft
-                            </span>
+                            {rates === null ? (
+                              <span className="pkg-matrix-header-card__rate-tag">
+                                Rate unavailable
+                              </span>
+                            ) : (
+                              <>
+                                {rates.higherRate !== null && (
+                                  <span className="pkg-matrix-header-card__rate-strikethrough">
+                                    ₹{rates.higherRate.toLocaleString('en-IN')}
+                                  </span>
+                                )}
+                                <span className="pkg-matrix-header-card__rate-tag">
+                                  ₹{rates.activeRate.toLocaleString('en-IN')}/sq.ft
+                                </span>
+                              </>
+                            )}
                           </div>
                         </div>
                       </th>
@@ -1046,20 +1036,30 @@ export function StepPackages({
                     </p>
 
                     <div className={`calculator-choice__inset p-3 rounded-lg border mb-4 ${isSelected ? 'bg-white/10 border-white/15' : 'bg-gray-50 border-gray-200'}`}>
-                      <div className="flex items-baseline justify-center gap-2">
-                        <span className={`text-xs line-through font-medium ${isSelected ? 'text-gray-400' : 'text-gray-400'}`}>
-                          ₹{rates.higherRate.toLocaleString('en-IN')}
-                        </span>
-                        <span className={`text-xs ${isSelected ? 'text-gray-300' : 'text-gray-500'}`}>₹</span>
-                        <span className={`text-2xl font-bold tabular-nums ${isSelected ? 'text-white' : 'text-gray-900'}`}>
-                          {rates.activeRate.toLocaleString('en-IN')}
-                        </span>
-                        <span className={`text-xs ${isSelected ? 'text-gray-300' : 'text-gray-500'}`}>/ sq.ft</span>
-                      </div>
-                      {rates.isVolume && (
-                        <div className={`calculator-volume-note text-center mt-1 text-xs font-semibold ${isSelected ? 'text-emerald-300' : 'text-green-700'}`}>
-                          Volume Discount Applied (&gt;{rates.threshold.toLocaleString('en-IN')} sqft)
+                      {rates === null ? (
+                        <div className={`text-center text-xs font-medium ${isSelected ? 'text-gray-300' : 'text-gray-500'}`}>
+                          Rate unavailable
                         </div>
+                      ) : (
+                        <>
+                          <div className="flex items-baseline justify-center gap-2">
+                            {rates.higherRate !== null && (
+                              <span className={`text-xs line-through font-medium ${isSelected ? 'text-gray-400' : 'text-gray-400'}`}>
+                                ₹{rates.higherRate.toLocaleString('en-IN')}
+                              </span>
+                            )}
+                            <span className={`text-xs ${isSelected ? 'text-gray-300' : 'text-gray-500'}`}>₹</span>
+                            <span className={`text-2xl font-bold tabular-nums ${isSelected ? 'text-white' : 'text-gray-900'}`}>
+                              {rates.activeRate.toLocaleString('en-IN')}
+                            </span>
+                            <span className={`text-xs ${isSelected ? 'text-gray-300' : 'text-gray-500'}`}>/ sq.ft</span>
+                          </div>
+                          {rates.isVolume && (
+                            <div className={`calculator-volume-note text-center mt-1 text-xs font-semibold ${isSelected ? 'text-emerald-300' : 'text-green-700'}`}>
+                              Volume Discount Applied (&gt;{rates.threshold.toLocaleString('en-IN')} sqft)
+                            </div>
+                          )}
+                        </>
                       )}
                     </div>
 

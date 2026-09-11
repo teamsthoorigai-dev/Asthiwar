@@ -4,11 +4,10 @@ import {
   loginController,
   logoutController,
   meController,
-  changePasswordController,
 } from '../modules/auth/auth.controller.js';
 import { validateRequest } from '../middleware/validate.js';
 import { requireAdminAuth } from '../middleware/auth.js';
-import { loginSchema, changePasswordSchema } from '../modules/auth/auth.schema.js';
+import { loginSchema } from '../modules/auth/auth.schema.js';
 
 const router = Router();
 
@@ -72,13 +71,5 @@ router.post('/logout', requireAdminAuth, logoutController);
 
 // GET /api/v1/admin/auth/me — Verify active session and return profile
 router.get('/me', requireAdminAuth, meController);
-
-// POST /api/v1/admin/auth/change-password — Update password and invalidate all sessions
-router.post(
-  '/change-password',
-  requireAdminAuth,
-  validateRequest({ body: changePasswordSchema }),
-  changePasswordController
-);
 
 export default router;

@@ -2,7 +2,7 @@
 
 // Rule #5: no money is computed here. All figures come from the backend.
 
-import React from 'react';
+import React, { useEffect, useRef, useCallback } from 'react';
 import {
   Ruler,
   Package as PackageIcon,
@@ -13,6 +13,7 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { useCalculatorWizard, LAST_FORM_STEP } from '@/lib/calculator/useCalculatorWizard';
+import { getLenis } from '@/lib/lenis';
 import { StepDimensions } from './StepDimensions';
 import { StepPackages } from './StepPackages';
 import { StepCustomizations } from './StepCustomizations';
@@ -30,6 +31,9 @@ const STEP_TABS = [
 ];
 
 export function CalculatorWizard() {
+  const wizardRef = useRef<HTMLDivElement>(null);
+  const isFirstRender = useRef(true);
+
   const {
     currentStep,
     formData,
@@ -53,6 +57,65 @@ export function CalculatorWizard() {
     reset,
   } = useCalculatorWizard();
 
+  const scrollToWizardTop = useCallback((immediate = true) => {
+    const el = wizardRef.current || document.getElementById('cost-calculator');
+    if (!el) {
+      window.scrollTo({ top: 0, behavior: immediate ? 'instant' : 'smooth' });
+      return;
+    }
+
+    const rect = el.getBoundingClientRect();
+    const currentY = window.scrollY || window.pageYOffset || document.documentElement.scrollTop || 0;
+    const targetY = Math.max(0, rect.top + currentY - 90);
+
+    const lenis = getLenis();
+    if (lenis) {
+      lenis.resize();
+      lenis.scrollTo(targetY, { immediate, force: true });
+    }
+    window.scrollTo({
+      top: targetY,
+      behavior: immediate ? 'instant' : 'smooth',
+    });
+  }, []);
+
+  const handleNextStep = useCallback(() => {
+    const ok = nextStep();
+    if (ok) {
+      scrollToWizardTop(true);
+    }
+  }, [nextStep, scrollToWizardTop]);
+
+  const handlePrevStep = useCallback(() => {
+    prevStep();
+    scrollToWizardTop(true);
+  }, [prevStep, scrollToWizardTop]);
+
+  const handleGoToStep = useCallback((step: number) => {
+    goToStep(step);
+    scrollToWizardTop(true);
+  }, [goToStep, scrollToWizardTop]);
+
+  const handleReset = useCallback(() => {
+    reset();
+    scrollToWizardTop(true);
+  }, [reset, scrollToWizardTop]);
+
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+
+    scrollToWizardTop(true);
+
+    const rafId = requestAnimationFrame(() => {
+      scrollToWizardTop(true);
+    });
+
+    return () => cancelAnimationFrame(rafId);
+  }, [currentStep, estimateResult, scrollToWizardTop]);
+
   if (loading) {
     return (
       <div className="py-24 text-center">
@@ -66,7 +129,7 @@ export function CalculatorWizard() {
   }
 
   return (
-    <div className="calculator-wizard max-w-5xl mx-auto py-8 px-4 sm:px-6">
+    <div ref={wizardRef} className="calculator-wizard max-w-5xl mx-auto py-8 px-4 sm:px-6">
       {/* Stepper Progress Tabs */}
       {!estimateResult && (
         <div className="max-w-2xl mx-auto mb-8">
@@ -81,7 +144,7 @@ export function CalculatorWizard() {
                   key={s.step}
                   type="button"
                   onClick={() => {
-                    if (isCompleted) goToStep(s.step);
+                    if (isCompleted) handleGoToStep(s.step);
                   }}
                   disabled={!isCompleted && !isActive}
                   className="calculator-step-tab flex flex-col items-center group cursor-pointer disabled:cursor-not-allowed transition-all min-w-0"
@@ -143,7 +206,7 @@ export function CalculatorWizard() {
           formData={formData}
           stepErrors={stepErrors}
           onChange={updateForm}
-          onNext={nextStep}
+          onNext={handleNextStep}
         />
       )}
 
@@ -153,8 +216,8 @@ export function CalculatorWizard() {
           packages={packages}
           previewResult={previewResult}
           onChange={updateForm}
-          onNext={nextStep}
-          onBack={prevStep}
+          onNext={handleNextStep}
+          onBack={handlePrevStep}
         />
       )}
 
@@ -167,8 +230,8 @@ export function CalculatorWizard() {
           previewLoading={previewLoading}
           previewError={previewError}
           onChange={updateForm}
-          onNext={nextStep}
-          onBack={prevStep}
+          onNext={handleNextStep}
+          onBack={handlePrevStep}
         />
       )}
 
@@ -180,8 +243,8 @@ export function CalculatorWizard() {
           previewResult={previewResult}
           previewLoading={previewLoading}
           onChange={updateForm}
-          onNext={nextStep}
-          onBack={prevStep}
+          onNext={handleNextStep}
+          onBack={handlePrevStep}
         />
       )}
 
@@ -194,12 +257,12 @@ export function CalculatorWizard() {
           error={error}
           onChange={updateForm}
           onSubmit={calculate}
-          onBack={prevStep}
+          onBack={handlePrevStep}
         />
       )}
 
       {estimateResult && (
-        <StepEstimateReport result={estimateResult} onReset={reset} />
+        <StepEstimateReport result={estimateResult} onReset={handleReset} />
       )}
     </div>
   );

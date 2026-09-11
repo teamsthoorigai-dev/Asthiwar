@@ -173,8 +173,17 @@
   display: grid;
   grid-template-columns: 1.15fr 0.85fr;
   align-items: center;
-  padding-inline-start: max(var(--gutter), calc((100vw - var(--container-large)) / 2 + var(--gutter)));
-  padding-inline-end: max(var(--gutter), calc((100vw - var(--container-large)) / 2));
+  /* --scrollbar is subtracted so the panel copy lands on the same left edge as
+     every container-bound section on every other page; without it the vw term
+     is a scrollbar too wide and the copy sits 7px right of the site's margin. */
+  padding-inline-start: max(
+    var(--gutter),
+    calc((100vw - var(--scrollbar) - var(--container-large)) / 2 + var(--gutter))
+  );
+  padding-inline-end: max(
+    var(--gutter),
+    calc((100vw - var(--scrollbar) - var(--container-large)) / 2)
+  );
   padding-block: var(--s-4);
   gap: clamp(2rem, 5vw, 6rem);
   border-inline-end: 1px solid var(--hairline);

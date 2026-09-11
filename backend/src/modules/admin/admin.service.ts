@@ -9,13 +9,17 @@ import {
   asc,
   count,
   sql,
+  gte,
+  lte,
 } from '@asthiwar/database';
 import {
   EnquiriesQuery,
   UpdateEnquiryDto,
   EstimatesQuery,
   UpdateEstimateDto,
+  AuditLogsQuery,
 } from './admin.schema.js';
+import { estimateRefCandidates } from '../calculator/quotation.js';
 
 export class AdminServiceError extends Error {
   constructor(
@@ -271,11 +275,25 @@ export async function getAdminEstimates(query: EstimatesQuery) {
 export async function getAdminEstimateById(idOrEstimateNumber: string) {
   const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(idOrEstimateNumber);
 
-  const estimate = await db.query.estimates.findFirst({
-    where: isUuid
-      ? eq(schema.estimates.id, idOrEstimateNumber)
-      : eq(schema.estimates.estimateNumber, idOrEstimateNumber),
-  });
+  let estimate = isUuid
+    ? await db.query.estimates.findFirst({
+        where: eq(schema.estimates.id, idOrEstimateNumber),
+      })
+    : undefined;
+
+  if (!isUuid) {
+    // A quotation number reaches a URL in its dash form (AW-2026-O-0018) because
+    // the printed slashes cannot survive an Express path segment. Matching the
+    // stored value exactly meant the admin console could not open an estimate by
+    // the number on the customer's own PDF. The public endpoint already resolves
+    // both spellings through estimateRefCandidates; this is the same lookup.
+    for (const candidate of estimateRefCandidates(idOrEstimateNumber.toUpperCase())) {
+      estimate = await db.query.estimates.findFirst({
+        where: eq(schema.estimates.estimateNumber, candidate),
+      });
+      if (estimate) break;
+    }
+  }
 
   if (!estimate) {
     throw new AdminServiceError(404, 'ESTIMATE_NOT_FOUND', `Estimate ${idOrEstimateNumber} not found`);
@@ -360,14 +378,27 @@ export async function getAdminDashboardAnalytics() {
     .groupBy(schema.estimates.packageSlug);
 
   // 4. Estimates breakdown by Location
+  //
+  // Grouped by the location the estimate actually resolved to, not by the raw text
+  // the customer typed. `plot_location` is free text, so grouping on it split one
+  // city across several bars — "Chennai", "chennai" and " Chennai " counted as
+  // three separate markets, understating every one of them.
+  //
+  // Rows whose location never resolved to a catalogue entry (location_id is null,
+  // or the city was later deleted) still have to appear, so they fall back to a
+  // case- and whitespace-normalised form of what was typed.
+  const locationLabel = sql<string>`COALESCE(${schema.locations.name}, initcap(btrim(${schema.estimates.plotLocation})))`;
+
   const estimatesByLocation = await db
     .select({
-      plotLocation: schema.estimates.plotLocation,
+      plotLocation: locationLabel,
       count: count(),
       totalValue: sql<string>`COALESCE(SUM(CAST(${schema.estimates.totalProjectCost} AS NUMERIC)), 0)`,
     })
     .from(schema.estimates)
-    .groupBy(schema.estimates.plotLocation);
+    .leftJoin(schema.locations, eq(schema.locations.id, schema.estimates.locationId))
+    .groupBy(locationLabel)
+    .orderBy(desc(count()));
 
   // 5. Recent 5 estimates
   const recentEstimates = await db
@@ -441,4 +472,109 @@ export async function getAdminDashboardAnalytics() {
     recentEstimates,
     recentEnquiries,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Audit Logs
+// ---------------------------------------------------------------------------
+
+/**
+ * Read the audit trail.
+ *
+ * Three call sites write to `audit_logs` — the global error handler, the admin
+ * config controller and the calculator controller — and until now nothing read
+ * it. A compliance table nobody can query is not a compliance measure, it is
+ * storage.
+ *
+ * `errorStack` is deliberately not selected: stack traces are for the server log,
+ * not a console list, and they dominate the payload. Fetch a single row for that.
+ */
+export async function getAdminAuditLogs(query: AuditLogsQuery) {
+  const page = query.page || 1;
+  const limit = query.limit || 10;
+  const offset = (page - 1) * limit;
+
+  const conditions = [];
+
+  if (query.eventType) conditions.push(eq(schema.auditLogs.eventType, query.eventType));
+  if (query.severity) conditions.push(eq(schema.auditLogs.severity, query.severity));
+  if (query.actorType) conditions.push(eq(schema.auditLogs.actorType, query.actorType));
+  if (query.action) conditions.push(eq(schema.auditLogs.action, query.action));
+  if (query.from) conditions.push(gte(schema.auditLogs.createdAt, query.from));
+  if (query.to) conditions.push(lte(schema.auditLogs.createdAt, query.to));
+
+  if (query.search) {
+    const searchPattern = `%${query.search}%`;
+    conditions.push(
+      or(
+        ilike(schema.auditLogs.action, searchPattern),
+        ilike(schema.auditLogs.endpoint, searchPattern),
+        ilike(schema.auditLogs.errorMessage, searchPattern),
+        ilike(schema.auditLogs.actorId, searchPattern)
+      )
+    );
+  }
+
+  const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+  const totalCountResult = await db
+    .select({ count: count() })
+    .from(schema.auditLogs)
+    .where(whereClause);
+
+  const total = Number(totalCountResult[0]?.count || 0);
+
+  const sortColumns: Record<string, any> = {
+    createdAt: schema.auditLogs.createdAt,
+    severity: schema.auditLogs.severity,
+    eventType: schema.auditLogs.eventType,
+    statusCode: schema.auditLogs.statusCode,
+  };
+  const sortCol = sortColumns[query.sortBy || 'createdAt'] || schema.auditLogs.createdAt;
+  const orderByClause = query.sortOrder === 'asc' ? asc(sortCol) : desc(sortCol);
+
+  const rows = await db
+    .select({
+      id: schema.auditLogs.id,
+      eventType: schema.auditLogs.eventType,
+      action: schema.auditLogs.action,
+      severity: schema.auditLogs.severity,
+      actorType: schema.auditLogs.actorType,
+      actorId: schema.auditLogs.actorId,
+      endpoint: schema.auditLogs.endpoint,
+      httpMethod: schema.auditLogs.httpMethod,
+      statusCode: schema.auditLogs.statusCode,
+      errorMessage: schema.auditLogs.errorMessage,
+      ipAddress: schema.auditLogs.ipAddress,
+      userAgent: schema.auditLogs.userAgent,
+      createdAt: schema.auditLogs.createdAt,
+    })
+    .from(schema.auditLogs)
+    .where(whereClause)
+    .orderBy(orderByClause)
+    .limit(limit)
+    .offset(offset);
+
+  return {
+    items: rows,
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit) || 0,
+    },
+  };
+}
+
+/** One audit entry in full, including the stack trace the list omits. */
+export async function getAdminAuditLogById(id: number) {
+  const row = await db.query.auditLogs.findFirst({
+    where: eq(schema.auditLogs.id, id),
+  });
+
+  if (!row) {
+    throw new AdminServiceError(404, 'AUDIT_LOG_NOT_FOUND', `Audit log ${id} not found`);
+  }
+
+  return row;
 }

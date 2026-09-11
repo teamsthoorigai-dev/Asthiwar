@@ -26,10 +26,25 @@ interface StepAddonsProps {
 /** Quantity captions per pricing unit — the unit itself is backend data. */
 const QUANTITY_LABELS: Record<string, string> = {
   per_litre: 'Capacity (Litres)',
+  per_sqft: 'Area (Sq.Ft)',
   per_sqft_terrace: 'Terrace Area (Sq.Ft)',
   per_sqft_gate: 'Gate Area (Sq.Ft)',
   per_rft: 'Running Feet (R.Ft)',
 };
+
+/**
+ * Anything that is not a fixed price is charged per unit, so anything that is not
+ * a fixed price needs a quantity from the customer.
+ *
+ * Deriving it that way rather than from the caption map matters: the map only
+ * supplies nicer wording, and a unit it has not caught up with still gets an
+ * input. 'per_sqft' was missing from the map, so the box never rendered, no
+ * quantity was ever sent, and the add-on was priced as a single unit.
+ */
+function quantityCaption(pricingUnit: string): string | null {
+  if (pricingUnit === 'fixed') return null;
+  return QUANTITY_LABELS[pricingUnit] ?? 'Quantity';
+}
 
 function unitBadgeLabel(pricingUnit: string): string {
   return pricingUnit.replace(/_/g, ' ').toUpperCase();
@@ -64,7 +79,13 @@ export function StepAddons({
       return;
     }
 
-    const quantity = Number(addon.defaultQuantity ?? 1);
+    // Never start below the add-on's minimum. Every seeded default already clears
+    // its minimum, but an add-on configured with a minimum and no default would
+    // otherwise open at 1 and be refused by the backend the moment it is selected.
+    const quantity = Math.max(
+      Number(addon.defaultQuantity ?? 1),
+      addon.minQuantity != null ? Number(addon.minQuantity) : 1
+    );
     const kept = addon.allowsMultiple
       ? formData.addons
       : formData.addons.filter((a) => a.addonSlug !== addon.slug);
@@ -72,10 +93,23 @@ export function StepAddons({
     onChange({ addons: [...kept, { addonSlug: addon.slug, variantSlug, quantity }] });
   };
 
-  const updateAddonQty = (addonSlug: string, qty: number) => {
+  /**
+   * Clamp to the add-on's own limits, not to 1.
+   *
+   * The backend enforces minQuantity/maxQuantity now, so a value outside them is
+   * refused rather than quietly priced — clamping only at 1 meant typing into a
+   * sump box (minimum 1,000 L) produced a rejected estimate instead of a usable
+   * number. The `min`/`max` on the input only constrain the spinner arrows;
+   * typed and pasted values land here.
+   */
+  const updateAddonQty = (addon: AddonItem, qty: number) => {
+    const min = addon.minQuantity != null ? Number(addon.minQuantity) : 1;
+    const max = addon.maxQuantity != null ? Number(addon.maxQuantity) : Number.POSITIVE_INFINITY;
+    const clamped = Math.min(Math.max(qty, min), max);
+
     onChange({
       addons: formData.addons.map((a) =>
-        a.addonSlug === addonSlug ? { ...a, quantity: Math.max(1, qty) } : a
+        a.addonSlug === addon.slug ? { ...a, quantity: clamped } : a
       ),
     });
   };
@@ -145,8 +179,8 @@ export function StepAddons({
         {packageConfig?.addons.map((addon: AddonItem) => {
           const selections = formData.addons.filter((a) => a.addonSlug === addon.slug);
           const isChecked = selections.length > 0;
-          const quantityLabel = QUANTITY_LABELS[addon.pricingUnit];
-          const showQuantity = isChecked && Boolean(quantityLabel);
+          const quantityLabel = quantityCaption(addon.pricingUnit);
+          const showQuantity = isChecked && quantityLabel !== null;
 
           return (
             <div
@@ -227,7 +261,7 @@ export function StepAddons({
                       className="form-input calculator-addon-qty__input"
                       value={selections[0]?.quantity ?? Number(addon.defaultQuantity ?? 1)}
                       onChange={(e) =>
-                        updateAddonQty(addon.slug, parseFloat(e.target.value) || 0)
+                        updateAddonQty(addon, parseFloat(e.target.value) || 0)
                       }
                     />
                   </div>

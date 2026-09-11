@@ -1,0 +1,67 @@
+.dock {
+  position: fixed;
+  z-index: 90;
+  right: max(clamp(1rem, 2.2vw, 2rem), env(safe-area-inset-right));
+  bottom: max(clamp(1rem, 2.2vw, 2rem), env(safe-area-inset-bottom));
+  padding: 0.45rem;
+  border: 1px solid var(--dock-border);
+  border-radius: 999px;
+  background: var(--dock-bg);
+  -webkit-backdrop-filter: blur(18px) saturate(135%);
+  backdrop-filter: blur(18px) saturate(135%);
+  color: var(--on-accent);
+  user-select: none;
+}
+
+.list {
+  display: flex;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.item {
+  display: grid;
+  width: 2.75rem;
+  height: 2.75rem;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--dock-item-bg);
+  color: var(--dock-item-ink);
+  transition:
+    background-color var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out);
+}
+
+/* Only the anchors respond — an unconfirmed channel is inert and says so. */
+a.item:hover,
+a.item:focus-visible {
+  background: var(--oxide-deep);
+  color: var(--on-accent);
+  transform: translateY(-2px);
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* The dock sits over content on small screens where there is no margin to spare;
+   shrink it rather than let it cover a third of the viewport. */
+@media (max-width: 30rem) {
+  .item {
+    width: 2.25rem;
+    height: 2.25rem;
+  }
+
+  .item svg {
+    width: 17px;
+    height: 17px;
+  }
+}

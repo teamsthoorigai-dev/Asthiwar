@@ -1,4 +1,6 @@
+/* Full-bleed: the band runs edge to edge, with no container and no gutter. It
+   carries its own ground and its own ink, and the marks inside inherit both. */
 .section {
-  position: relative;
-  background: var(--bg);
+  background: var(--stone);
+  color: var(--ink);
 }

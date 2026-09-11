@@ -34,6 +34,28 @@ export function createApp(): Express {
         if (allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
           return callback(null, true);
         }
+
+        // In development, automatically allow VS Code Dev Tunnels, Localtunnel, Ngrok, and localhost variants
+        if (env.NODE_ENV !== 'production') {
+          try {
+            const parsed = new URL(origin);
+            const host = parsed.hostname.toLowerCase();
+            if (
+              host === 'localhost' ||
+              host === '127.0.0.1' ||
+              host.endsWith('.devtunnels.ms') ||
+              host.endsWith('.loca.lt') ||
+              host.endsWith('.ngrok-free.app') ||
+              host.endsWith('.ngrok.io') ||
+              host.endsWith('.ngrok.app')
+            ) {
+              return callback(null, true);
+            }
+          } catch {
+            // Invalid origin URL format, fall through to rejection
+          }
+        }
+
         // A disallowed origin is a client error, not a server fault. Tag it so the
         // shared error handler answers 403 instead of recording a CRITICAL 500.
         const rejection: AppError = new Error(`Origin ${origin} is not allowed by CORS`);

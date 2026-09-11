@@ -48,3 +48,22 @@ export type EnquiriesQuery = z.infer<typeof enquiriesQuerySchema>;
 export type UpdateEnquiryDto = z.infer<typeof updateEnquirySchema>;
 export type EstimatesQuery = z.infer<typeof estimatesQuerySchema>;
 export type UpdateEstimateDto = z.infer<typeof updateEstimateSchema>;
+
+/**
+ * Audit log filters.
+ *
+ * `audit_logs` had three writers and no reader — every API error, admin mutation
+ * and calculator submission has been recorded since the table was created, and
+ * none of it could be retrieved through the product. This is the read side.
+ */
+export const auditLogsQuerySchema = paginationQuerySchema.extend({
+  eventType: z.string().optional(),
+  severity: z.string().optional(),
+  actorType: z.string().optional(),
+  action: z.string().optional(),
+  /** ISO date-times bounding `created_at`. */
+  from: z.coerce.date().optional(),
+  to: z.coerce.date().optional(),
+});
+
+export type AuditLogsQuery = z.infer<typeof auditLogsQuerySchema>;

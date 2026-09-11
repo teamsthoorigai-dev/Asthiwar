@@ -11,6 +11,9 @@ const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   DATABASE_URL: z.string().min(1, 'DATABASE_URL is required'),
   CORS_ORIGIN: z.string().default('http://localhost:3000,http://localhost:5173'),
+  // Where a customer reaches this deployment. Notification templates build
+  // quotation links against it, so a wrong value sends dead links to customers.
+  PUBLIC_BASE_URL: z.string().url().default('http://localhost:3000'),
   SESSION_SECRET: z.string().min(32, 'SESSION_SECRET must be at least 32 characters'),
 });
 

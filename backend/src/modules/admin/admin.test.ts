@@ -1,5 +1,6 @@
 import http from 'http';
 import { createApp } from '../../app.js';
+import { urlSafeQuotationNumber } from '../calculator/quotation.js';
 import { pool } from '@asthiwar/database';
 
 // Helper to make HTTP requests against local Express test instance
@@ -158,12 +159,14 @@ async function runAdminTests() {
         plotArea: 2400,
         plotAreaUnit: 'sqft',
         builtupAreaPerFloor: 1500,
-        floorCount: 'G+1',
+        // floorCount is floors *above* ground, as a number. 'G+1' is the display
+        // form the estimates table stores, never an accepted input.
+        floorCount: 1,
         carParkingAreaSqft: 200,
         carCount: 1,
         packageSlug: 'premium',
         customizations: [
-          { itemSlug: 'masonry_work', optionSlug: 'red_brick' },
+          { itemSlug: 'masonry_work', optionSlug: 'red_bricks' },
         ],
         addons: [
           { addonSlug: 'underground_sump', variantSlug: 'flyash', quantity: 5000 },
@@ -188,7 +191,10 @@ async function runAdminTests() {
         requirementNotes: 'Need turnkey construction within 8 months',
       },
     });
-    assert(createEnquiryRes.status === 201, 'Public enquiry created with 201 Created');
+    // 200: persisting the estimate above already auto-created its CRM enquiry, so
+    // posting the same estimateNumber folds into that row instead of opening a
+    // second lead for one quotation.
+    assert(createEnquiryRes.status === 200, `Public enquiry folded into the estimate enquiry (got ${createEnquiryRes.status})`);
     testEnquiryId = createEnquiryRes.body.data.id;
     assert(!!testEnquiryId, `Created test enquiry ID: ${testEnquiryId}`);
 
@@ -268,10 +274,15 @@ async function runAdminTests() {
     assert(Array.isArray(estimateDetailRes.body.data.addons), 'Returns addons array');
     assert(estimateDetailRes.body.data.addons.length >= 1, 'Includes saved addon items');
 
-    // Lookup by Estimate Number
+    // Lookup by Estimate Number.
+    //
+    // Quotation numbers carry slashes (AW/2026/O/0001) and an Express :param stops
+    // at the first one, so putting the raw number in a path is always a 404 — the
+    // lookup never runs. Callers must use the dash form; estimateRefCandidates
+    // resolves it back to the stored value. See urlSafeQuotationNumber.
     const estimateByNumRes = await makeRequest(server, {
       method: 'GET',
-      path: `/api/v1/admin/estimates/${testEstimateNumber}`,
+      path: `/api/v1/admin/estimates/${urlSafeQuotationNumber(testEstimateNumber)}`,
       headers: { Cookie: sessionCookie },
     });
     assert(estimateByNumRes.status === 200, 'GET /admin/estimates/:estimateNumber returns 200 OK');

@@ -130,7 +130,7 @@
 }
 
 .tableRow:hover {
-  background: rgba(217, 119, 87, 0.05);
+  background: rgba(184, 133, 79, 0.05);
 }
 
 .tableCell {
@@ -152,7 +152,7 @@
   font-family: var(--font-mono, monospace);
   color: var(--accent);
   padding: 0.15rem 0.5rem;
-  border: 1px solid rgba(217, 119, 87, 0.3);
+  border: 1px solid rgba(184, 133, 79, 0.3);
   border-radius: 0;
 }
 

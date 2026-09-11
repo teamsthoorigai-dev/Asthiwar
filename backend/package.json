@@ -11,7 +11,8 @@
     "build": "tsc",
     "check-types": "tsc --noEmit",
     "test:pdf": "tsx src/scripts/test_pdf.ts",
-    "start": "node dist/server.js"
+    "start": "node dist/server.js",
+    "test": "node scripts/run-tests.mjs"
   },
   "dependencies": {
     "@asthiwar/database": "*",

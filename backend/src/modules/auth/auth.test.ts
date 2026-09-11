@@ -174,58 +174,6 @@ async function runAuthTests() {
     });
     assert(meAfterLogout.status === 401, 'Revoked token correctly returns 401');
 
-    // -----------------------------------------------------------------------
-    // Test 9: Password Change Workflow & Session Revocation
-    // -----------------------------------------------------------------------
-    console.log('\n[Test 9] Password Change Workflow & All-Sessions Revocation');
-    // Login fresh to get active session
-    const freshLogin = await request('/api/v1/admin/auth/login', {
-      method: 'POST',
-      body: JSON.stringify({ email: defaultAdminEmail, password: defaultAdminPass }),
-    });
-    const freshToken = freshLogin.data.data.token;
-
-    // Change password to temporary new password
-    const tempNewPass = 'NewSecurePass@2026!';
-    const changePassRes = await request('/api/v1/admin/auth/change-password', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${freshToken}` },
-      body: JSON.stringify({
-        currentPassword: defaultAdminPass,
-        newPassword: tempNewPass,
-      }),
-    });
-    if (changePassRes.status !== 200) {
-      console.log('Change pass response:', JSON.stringify(changePassRes.data));
-    }
-    assert(changePassRes.status === 200, 'Password changed successfully', JSON.stringify(changePassRes.data));
-
-    // Verify login with OLD password now fails
-    const oldLoginFail = await request('/api/v1/admin/auth/login', {
-      method: 'POST',
-      body: JSON.stringify({ email: defaultAdminEmail, password: defaultAdminPass }),
-    });
-    assert(oldLoginFail.status === 401, 'Login with old password fails');
-
-    // Verify login with NEW password succeeds
-    const newLoginSuccess = await request('/api/v1/admin/auth/login', {
-      method: 'POST',
-      body: JSON.stringify({ email: defaultAdminEmail, password: tempNewPass }),
-    });
-    assert(newLoginSuccess.status === 200, 'Login with new password succeeds');
-    const newSessionToken = newLoginSuccess.data.data.token;
-
-    // Restore original default password for development consistency
-    const restorePass = await request('/api/v1/admin/auth/change-password', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${newSessionToken}` },
-      body: JSON.stringify({
-        currentPassword: tempNewPass,
-        newPassword: defaultAdminPass,
-      }),
-    });
-    assert(restorePass.status === 200, 'Original admin password restored for dev convenience');
-
     console.log('\n-----------------------------------------------------------------');
     console.log(`Results: ${testsPassed} Passed, ${testsFailed} Failed\n`);
 

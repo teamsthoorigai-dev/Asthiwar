@@ -9,6 +9,7 @@ export function ArchitecturalCursor() {
   const [cursorLabel, setCursorLabel] = useState<string>('');
   const [cursorMode, setCursorMode] = useState<'default' | 'hover' | 'expanded'>('default');
   const [isVisible, setIsVisible] = useState(false);
+  const [isTextInput, setIsTextInput] = useState(false);
 
   const pos = useRef({ x: -100, y: -100 });
   const target = useRef({ x: -100, y: -100 });
@@ -16,9 +17,12 @@ export function ArchitecturalCursor() {
 
   useEffect(() => {
     // Only activate on pointer fine devices (desktops/laptops)
-    if (window.matchMedia('(pointer: coarse)').matches) {
+    if (!window.matchMedia('(pointer: fine)').matches) {
       return;
     }
+
+    // Activates scoped CSS in globals.css to hide the default browser arrow
+    document.documentElement.setAttribute('data-custom-cursor', 'active');
 
     const onMouseMove = (e: MouseEvent) => {
       target.current.x = e.clientX;
@@ -26,14 +30,25 @@ export function ArchitecturalCursor() {
 
       if (!isVisible) setIsVisible(true);
 
-      // Instantly position center dot
+      // Instantly position center dot with zero latency
       if (dotRef.current) {
         dotRef.current.style.transform = `translate3d(${e.clientX}px, ${e.clientY}px, 0) translate(-50%, -50%)`;
       }
     };
 
     const onMouseOver = (e: MouseEvent) => {
-      const el = (e.target as HTMLElement)?.closest<HTMLElement>(
+      const targetEl = e.target as HTMLElement | null;
+      if (!targetEl) return;
+
+      // Yield immediately to native cursor when hovering text fields
+      const inputEl = targetEl.closest('input, textarea, select, [contenteditable="true"]');
+      if (inputEl) {
+        setIsTextInput(true);
+        return;
+      }
+      setIsTextInput(false);
+
+      const el = targetEl.closest<HTMLElement>(
         '[data-cursor], a, button, [role="button"], [role="slider"]',
       );
 
@@ -59,8 +74,12 @@ export function ArchitecturalCursor() {
       setIsVisible(false);
     };
 
+    const onMouseEnter = () => {
+      setIsVisible(true);
+    };
+
     const render = () => {
-      // Smooth inertial interpolation for outer ring
+      // Smooth inertial interpolation for outer ring (lerp 0.2)
       pos.current.x += (target.current.x - pos.current.x) * 0.2;
       pos.current.y += (target.current.y - pos.current.y) * 0.2;
 
@@ -74,22 +93,27 @@ export function ArchitecturalCursor() {
     window.addEventListener('mousemove', onMouseMove, { passive: true });
     window.addEventListener('mouseover', onMouseOver, { passive: true });
     document.documentElement.addEventListener('mouseleave', onMouseLeave);
+    document.documentElement.addEventListener('mouseenter', onMouseEnter);
 
     rafId.current = requestAnimationFrame(render);
 
     return () => {
+      document.documentElement.removeAttribute('data-custom-cursor');
       window.removeEventListener('mousemove', onMouseMove);
       window.removeEventListener('mouseover', onMouseOver);
       document.documentElement.removeEventListener('mouseleave', onMouseLeave);
+      document.documentElement.removeEventListener('mouseenter', onMouseEnter);
       if (rafId.current) cancelAnimationFrame(rafId.current);
     };
   }, [isVisible]);
+
+  const isHidden = !isVisible || isTextInput;
 
   return (
     <>
       <div
         ref={dotRef}
-        className={[styles.cursorDot, !isVisible && styles.hidden].filter(Boolean).join(' ')}
+        className={[styles.cursorDot, isHidden && styles.hidden].filter(Boolean).join(' ')}
         aria-hidden="true"
       />
       <div
@@ -98,7 +122,7 @@ export function ArchitecturalCursor() {
           styles.cursorRing,
           cursorMode === 'hover' && styles.cursorHoverRing,
           cursorMode === 'expanded' && styles.cursorExpandedRing,
-          !isVisible && styles.hidden,
+          isHidden && styles.hidden,
         ]
           .filter(Boolean)
           .join(' ')}

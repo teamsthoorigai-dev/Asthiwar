@@ -1,5 +1,5 @@
 .footer {
-  background: var(--ink);
+  background: var(--accent);
   color: rgb(255 255 255 / 0.72);
 }
 
@@ -88,7 +88,10 @@
 
   .ctaRight {
     flex: 0 0 320px;
-    margin-top: 0.35rem;
+    /* Line the body copy up with the headline rather than the eyebrow: clear the
+       eyebrow's own line box plus the gap under it, so the two columns start on
+       the same line however the eyebrow is set. */
+    margin-top: calc(var(--fs-xs) * var(--lh-body) + var(--s-3));
   }
 }
 
@@ -96,17 +99,22 @@
 
 .grid {
   display: grid;
-  grid-template-columns: 1fr;
-  gap: var(--s-5);
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--s-5) var(--s-3);
   padding-block: var(--s-6);
   border-bottom: 1px solid rgb(255 255 255 / 0.15);
 }
 
 .brandCol {
+  grid-column: 1 / -1;
   display: flex;
   flex-direction: column;
   gap: var(--s-2);
   align-items: flex-start;
+}
+
+.contactCol {
+  grid-column: 1 / -1;
 }
 
 .logo {
@@ -182,6 +190,15 @@
 @media (min-width: 640px) {
   .grid {
     grid-template-columns: repeat(2, 1fr);
+    gap: var(--s-5);
+  }
+
+  .brandCol {
+    grid-column: auto;
+  }
+
+  .contactCol {
+    grid-column: auto;
   }
 }
 

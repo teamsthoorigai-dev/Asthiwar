@@ -23,9 +23,14 @@ export interface RequestOptions extends Omit<RequestInit, 'body'> {
 }
 
 export function getApiBaseUrl(): string {
-  return typeof window === 'undefined'
-    ? env.API_BASE_URL_INTERNAL
-    : env.NEXT_PUBLIC_API_BASE_URL;
+  // In the browser, always use relative path '' so requests are same-origin
+  // (e.g. localhost:3000, devtunnels, or custom production domains) and get proxied
+  // seamlessly by Next.js rewrites in next.config.ts. This eliminates CORS, Mixed Content,
+  // and cross-origin cookie loss.
+  if (typeof window !== 'undefined') {
+    return '';
+  }
+  return env.API_BASE_URL_INTERNAL;
 }
 
 /**

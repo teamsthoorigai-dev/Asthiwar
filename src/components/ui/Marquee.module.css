@@ -1,7 +1,10 @@
 .marquee {
   overflow: hidden;
-  border-block: 1px solid var(--hairline);
-  padding-block: var(--s-4);
+}
+
+.marquee:focus-visible {
+  outline: 2px solid var(--oxide);
+  outline-offset: -3px;
 }
 
 .track {
@@ -11,42 +14,105 @@
 }
 
 .set {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* ---- inline: one row, mark beside label ---- */
+
+.inline {
+  border-block: 1px solid var(--hairline);
+  padding-block: var(--s-4);
+}
+
+.inline .set {
   display: flex;
   align-items: center;
   gap: var(--s-6);
   padding-right: var(--s-6);
-  margin: 0;
-  list-style: none;
 }
 
-.item {
+.inline .item {
   display: flex;
   align-items: center;
   gap: var(--s-2);
   white-space: nowrap;
 }
 
+.inline .icon {
+  width: 20px;
+  height: 20px;
+}
+
+.inline .label {
+  font-size: var(--fs-md);
+}
+
+/* ---- band: full-width four-up, mark above label ----
+
+   Each set is its own viewport-wide grid, so exactly four marks are on screen at
+   rest and the seam between the two sets falls at the track's -50%. The 64rem
+   floor stops the columns stretching past a comfortable measure on wide screens
+   — below that width the set simply runs wider than the viewport and scrolls. */
+
+.band .set {
+  display: grid;
+  flex: 0 0 max(100vw, 64rem);
+  width: max(100vw, 64rem);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.band .item {
+  display: grid;
+  min-height: clamp(8.5rem, 11vw, 10.25rem);
+  /* A fixed first row keeps the four labels on one baseline, however tall each
+     mark's own artwork happens to be. */
+  grid-template-rows: 3.9rem auto;
+  place-items: center;
+  align-content: center;
+  gap: 0.35rem;
+  padding: 0.8rem 1rem 0.9rem;
+  text-align: center;
+}
+
+.band .icon {
+  width: 3.75rem;
+  height: 3.75rem;
+}
+
+.band .label {
+  display: grid;
+  font-size: clamp(0.82rem, 1vw, 0.96rem);
+  line-height: 1.15;
+}
+
+/* ---- shared item parts ---- */
+
 .icon {
   display: grid;
   place-items: center;
-  width: 20px;
-  height: 20px;
   flex: none;
-  color: var(--accent);
+  color: currentColor;
+  transition: color var(--dur-fast) var(--ease-out);
 }
 
 .icon svg {
   width: 100%;
   height: 100%;
+  object-fit: contain;
+}
+
+.inline .icon svg {
   stroke: currentColor;
   fill: none;
 }
 
 .label {
-  color: var(--ink);
-  font-size: var(--fs-md);
+  color: currentColor;
   font-weight: var(--fw-medium);
   line-height: var(--lh-head);
+  transition: color var(--dur-fast) var(--ease-out);
 }
 
 .dot {
@@ -54,4 +120,11 @@
   height: 4px;
   flex: none;
   background: var(--hairline);
+}
+
+@media (hover: hover) {
+  .band .item:hover .icon,
+  .band .item:hover .label {
+    color: var(--accent-bright);
+  }
 }

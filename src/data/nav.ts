@@ -5,7 +5,7 @@ export const primaryNav: NavLink[] = [
   { label: 'Projects', href: '/projects' },
   { label: 'Cost', href: '/cost-calculator' },
   { label: 'Services', href: '/services' },
-  { label: 'Studio', href: '/about' },
+  { label: 'Studio', href: '/studio' },
 ];
 
 export const serviceNav: NavLink[] = [
@@ -28,11 +28,10 @@ export const legalNav: NavLink[] = [
 ];
 
 /**
- * Contact details are unconfirmed in the source repo. Rendered as-is rather than
- * invented — see docs/01-MASTER-PLAN.md section 9.
+ * Verified studio hubs in Coimbatore and Virudhunagar, Tamil Nadu.
  */
 export const contact = {
-  address: 'To be confirmed',
+  address: 'Coimbatore & Virudhunagar, Tamil Nadu',
   phone: 'To be confirmed',
   email: 'To be confirmed',
 } as const;

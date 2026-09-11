@@ -2,14 +2,30 @@ import {
   db,
   schema,
   eq,
-  desc,
-  and,
-  count,
 } from '@asthiwar/database';
 import {
   NotificationChannel,
-  NotificationTemplate,
 } from './notifications.types.js';
+import { env } from '../../config/env.js';
+import { estimateRefCandidates, quotationPdfPath } from '../calculator/quotation.js';
+
+/**
+ * Nothing in this service transmits anything.
+ *
+ * There is no mail or WhatsApp transport in the dependency tree, so every
+ * function here composes a message and records it. Rows are therefore written
+ * PENDING — an outbox for a dispatcher that does not exist yet. They were
+ * previously written `SENT` with a `sentAt` timestamp, which told operators in
+ * the admin console that a customer had been contacted when nobody had.
+ *
+ * When a real transport is added, send here and set SENT/FAILED on the result.
+ */
+const NOTHING_IS_DISPATCHED_YET = 'PENDING' as const;
+
+/** A link a customer can actually open. */
+function publicQuotationPdfUrl(quotationNumber: string): string {
+  return `${env.PUBLIC_BASE_URL}${quotationPdfPath(quotationNumber)}`;
+}
 
 export class NotificationError extends Error {
   constructor(
@@ -35,15 +51,27 @@ function formatINR(amount: number | string): string {
 export async function sendEstimateQuotationNotification(estimateIdOrNumber: string, channels: NotificationChannel[] = ['EMAIL', 'WHATSAPP']) {
   const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(estimateIdOrNumber);
 
-  const estimate = await db.query.estimates.findFirst({
-    where: isUuid
-      ? eq(schema.estimates.id, estimateIdOrNumber)
-      : eq(schema.estimates.estimateNumber, estimateIdOrNumber),
-  });
+  let estimate = isUuid
+    ? await db.query.estimates.findFirst({
+        where: eq(schema.estimates.id, estimateIdOrNumber),
+      })
+    : undefined;
+
+  if (!isUuid) {
+    // Accept the dash spelling a link would carry as well as the printed number.
+    for (const candidate of estimateRefCandidates(estimateIdOrNumber.toUpperCase())) {
+      estimate = await db.query.estimates.findFirst({
+        where: eq(schema.estimates.estimateNumber, candidate),
+      });
+      if (estimate) break;
+    }
+  }
 
   if (!estimate) {
     throw new NotificationError(404, 'ESTIMATE_NOT_FOUND', `Estimate ${estimateIdOrNumber} not found`);
   }
+
+  const pdfUrl = publicQuotationPdfUrl(estimate.estimateNumber);
 
   const results = [];
 
@@ -70,7 +98,7 @@ export async function sendEstimateQuotationNotification(estimateIdOrNumber: stri
           <p style="font-size: 13px; color: #64748b;">Includes 10-stage milestone schedule, brand-name materials, structural engineering, and daily site supervisor updates.</p>
           
           <div style="text-align: center; margin: 25px 0;">
-            <a href="https://asthiwar.com/estimate/${estimate.estimateNumber}/pdf" style="background-color: #0f766e; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold;">
+            <a href="${pdfUrl}" style="background-color: #0f766e; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold;">
               Download Official Quotation PDF
             </a>
           </div>
@@ -92,8 +120,8 @@ export async function sendEstimateQuotationNotification(estimateIdOrNumber: stri
         template: 'ESTIMATE_QUOTATION',
         subject,
         payload: { html, customerName: estimate.customerName, estimateNumber: estimate.estimateNumber },
-        status: 'SENT',
-        sentAt: new Date(),
+        status: NOTHING_IS_DISPATCHED_YET,
+        sentAt: null,
       })
       .returning();
 
@@ -102,7 +130,7 @@ export async function sendEstimateQuotationNotification(estimateIdOrNumber: stri
 
   // 2. WhatsApp Channel
   if (channels.includes('WHATSAPP')) {
-    const message = `🏗️ *ASTHIWAR DESIGN & BUILD*\n\nHello *${estimate.customerName}*,\n\nYour turnkey residential construction estimate is ready!\n\n📋 *Estimate #:* ${estimate.estimateNumber}\n📦 *Package:* ${estimate.packageSlug.toUpperCase()}\n📐 *Built-up Area:* ${estimate.totalBuiltupAreaSqft} sq.ft\n📍 *Location:* ${estimate.plotLocation}\n💰 *Total Cost:* ${formatINR(estimate.totalProjectCost)}\n\n📄 *Download Detailed Quotation & 10-Stage Milestone Schedule:*\nhttps://asthiwar.com/estimate/${estimate.estimateNumber}/pdf\n\nOur team is ready to assist with plot assessment and floor plan design. Reply to this message to connect with our senior architect.`;
+    const message = `🏗️ *ASTHIWAR DESIGN & BUILD*\n\nHello *${estimate.customerName}*,\n\nYour turnkey residential construction estimate is ready!\n\n📋 *Estimate #:* ${estimate.estimateNumber}\n📦 *Package:* ${estimate.packageSlug.toUpperCase()}\n📐 *Built-up Area:* ${estimate.totalBuiltupAreaSqft} sq.ft\n📍 *Location:* ${estimate.plotLocation}\n💰 *Total Cost:* ${formatINR(estimate.totalProjectCost)}\n\n📄 *Download Detailed Quotation & 10-Stage Milestone Schedule:*\n${pdfUrl}\n\nOur team is ready to assist with plot assessment and floor plan design. Reply to this message to connect with our senior architect.`;
 
     const [waRecord] = await db
       .insert(schema.notifications)
@@ -113,8 +141,8 @@ export async function sendEstimateQuotationNotification(estimateIdOrNumber: stri
         template: 'ESTIMATE_QUOTATION',
         subject: 'WhatsApp Quotation Dispatch',
         payload: { message, customerPhone: estimate.customerPhone, estimateNumber: estimate.estimateNumber },
-        status: 'SENT',
-        sentAt: new Date(),
+        status: NOTHING_IS_DISPATCHED_YET,
+        sentAt: null,
       })
       .returning();
 
@@ -154,81 +182,10 @@ export async function sendAdminNewLeadAlert(enquiryId: string) {
       template: 'NEW_LEAD_ALERT',
       subject,
       payload: { message, enquiryDetails: enquiry },
-      status: 'SENT',
-      sentAt: new Date(),
+      status: NOTHING_IS_DISPATCHED_YET,
+      sentAt: null,
     })
     .returning();
 
   return record;
-}
-
-// ----------------------------------------------------
-// 3. NOTIFICATION LOGS & HISTORY
-// ----------------------------------------------------
-
-export async function getNotificationLogs(query: {
-  page?: number;
-  limit?: number;
-  channel?: NotificationChannel;
-  template?: NotificationTemplate;
-  estimateId?: string;
-  enquiryId?: string;
-}) {
-  const page = query.page || 1;
-  const limit = query.limit || 10;
-  const offset = (page - 1) * limit;
-
-  const conditions = [];
-  if (query.channel) conditions.push(eq(schema.notifications.channel, query.channel));
-  if (query.template) conditions.push(eq(schema.notifications.template, query.template));
-  if (query.estimateId) conditions.push(eq(schema.notifications.estimateId, query.estimateId));
-  if (query.enquiryId) conditions.push(eq(schema.notifications.enquiryId, query.enquiryId));
-
-  const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
-
-  const totalResult = await db
-    .select({ count: count() })
-    .from(schema.notifications)
-    .where(whereClause);
-
-  const total = Number(totalResult[0]?.count || 0);
-
-  const items = await db
-    .select()
-    .from(schema.notifications)
-    .where(whereClause)
-    .orderBy(desc(schema.notifications.createdAt))
-    .limit(limit)
-    .offset(offset);
-
-  return {
-    items,
-    pagination: {
-      page,
-      limit,
-      total,
-      totalPages: Math.ceil(total / limit),
-    },
-  };
-}
-
-export async function resendNotification(notificationId: string) {
-  const record = await db.query.notifications.findFirst({
-    where: eq(schema.notifications.id, notificationId),
-  });
-
-  if (!record) {
-    throw new NotificationError(404, 'NOTIFICATION_NOT_FOUND', `Notification ${notificationId} not found`);
-  }
-
-  const [updated] = await db
-    .update(schema.notifications)
-    .set({
-      status: 'SENT',
-      sentAt: new Date(),
-    })
-    .where(eq(schema.notifications.id, notificationId))
-    .returning();
-
-  return updated;
 }
