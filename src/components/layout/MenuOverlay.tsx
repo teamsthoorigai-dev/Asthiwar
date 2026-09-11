@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useEffect, useRef, type RefObject } from 'react';
 import { gsap, REDUCED } from '@/lib/gsap';
 import { lockScroll, unlockScroll } from '@/lib/lenis';
-import { contact, primaryNav, serviceNav } from '@/data/nav';
+import { contact, primaryNav } from '@/data/nav';
 import styles from './MenuOverlay.module.css';
 
 const FOCUSABLE = 'a[href], button:not([disabled])';
@@ -18,7 +18,10 @@ type Props = {
 
 export function MenuOverlay({ open, onClose, returnFocusTo }: Props) {
   const ref = useRef<HTMLDivElement>(null);
-  const links = [...primaryNav, ...serviceNav];
+  // Services are not listed individually here. Every one of them was a link to
+  // an anchor on /services, which the Services entry already reaches, so the
+  // menu was five rows longer for nothing. The footer still lists them.
+  const links = primaryNav;
 
   // Scroll lock, focus management and Escape.
   useEffect(() => {

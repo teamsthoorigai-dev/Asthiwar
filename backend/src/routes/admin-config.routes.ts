@@ -10,6 +10,7 @@ import {
   updateAddonMetadataSchema,
   createAddonSchema,
   createAddonVariantSchema,
+  updateAddonVariantSchema,
   createCategorySchema,
   updateCategorySchema,
   createItemSchema,
@@ -33,6 +34,7 @@ import {
   updateAddonPriceController,
   updateAddonMetadataController,
   createAddonVariantController,
+  updateAddonVariantController,
   deleteAddonVariantController,
   getSpecificationsController,
   createCategoryController,
@@ -130,6 +132,12 @@ router.post(
   canWritePricing,
   validateRequest({ body: createAddonVariantSchema }),
   createAddonVariantController
+);
+router.patch(
+  '/addons/:id/variants/:variantId',
+  canWritePricing,
+  validateRequest({ body: updateAddonVariantSchema }),
+  updateAddonVariantController
 );
 router.delete('/addons/:id/variants/:variantId', canDeleteCatalogue, deleteAddonVariantController);
 

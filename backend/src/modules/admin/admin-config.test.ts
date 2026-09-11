@@ -276,6 +276,63 @@ async function runAdminConfigTests() {
       headers: { Cookie: sessionCookie },
     });
 
+    // Test creating, renaming via PATCH, repricing, and deleting an add-on variant
+    const tempVariantStamp = Date.now();
+    const tempVariantSlug = `test_var_${tempVariantStamp}`;
+    const createVarRes = await makeRequest(server, {
+      method: 'POST',
+      path: `/api/v1/admin/config/addons/${sumpAddon.id}/variants`,
+      body: {
+        variantName: 'Temporary Test Variant',
+        variantSlug: tempVariantSlug,
+        price: 35,
+        packageTiers: ['basic', 'standard'],
+      },
+      headers: { Cookie: sessionCookie },
+    });
+    assert(createVarRes.status === 201, 'POST /admin/config/addons/:id/variants returns 201 Created');
+    const createdVarId = createVarRes.body.data.id;
+
+    // 1. Rename variant in-place without price change
+    const renameVarRes = await makeRequest(server, {
+      method: 'PATCH',
+      path: `/api/v1/admin/config/addons/${sumpAddon.id}/variants/${createdVarId}`,
+      body: {
+        variantName: 'Renamed Test Variant',
+        packageTiers: ['premium'],
+      },
+      headers: { Cookie: sessionCookie },
+    });
+    assert(renameVarRes.status === 200, 'PATCH /admin/config/addons/:id/variants/:variantId renames variant');
+    assert(renameVarRes.body.data.variantName === 'Renamed Test Variant', 'Variant name successfully renamed without recreation');
+
+    // 2. Update price with versioning
+    const priceVarRes = await makeRequest(server, {
+      method: 'PATCH',
+      path: `/api/v1/admin/config/addons/${sumpAddon.id}/variants/${createdVarId}`,
+      body: {
+        price: 45,
+      },
+      headers: { Cookie: sessionCookie },
+    });
+    assert(priceVarRes.status === 200, 'PATCH /admin/config/addons/:id/variants/:variantId versions price');
+    assert(priceVarRes.body.data.price === '45.00', 'Variant price updated to 45.00');
+
+    // Clean up temporary variant rows
+    const finalVarId = priceVarRes.body.data.id;
+    await makeRequest(server, {
+      method: 'DELETE',
+      path: `/api/v1/admin/config/addons/${sumpAddon.id}/variants/${finalVarId}`,
+      headers: { Cookie: sessionCookie },
+    });
+    if (finalVarId !== createdVarId) {
+      await makeRequest(server, {
+        method: 'DELETE',
+        path: `/api/v1/admin/config/addons/${sumpAddon.id}/variants/${createdVarId}`,
+        headers: { Cookie: sessionCookie },
+      });
+    }
+
     // -----------------------------------------------------------------
     // [Test 6] Specifications & Matrix Config
     // -----------------------------------------------------------------

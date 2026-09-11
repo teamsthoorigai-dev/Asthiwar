@@ -127,173 +127,241 @@ export function ProjectsHeroSequence() {
       return;
     }
 
-    const mm = gsap.matchMedia();
+    const ctx2d = canvas.getContext('2d', { alpha: false });
+    if (!ctx2d) return;
 
-    mm.add('(min-width: 768px)', () => {
-      const ctx2d = canvas.getContext('2d', { alpha: false });
-      if (!ctx2d) return;
+    const images: HTMLImageElement[] = new Array(FRAME_COUNT);
+    const loaded: boolean[] = new Array(FRAME_COUNT).fill(false);
+    let currentFrame = -1;
+    let targetFrame = 0;
+    let cancelled = false;
 
-      const images: HTMLImageElement[] = new Array(FRAME_COUNT);
-      const loaded: boolean[] = new Array(FRAME_COUNT).fill(false);
-      let currentFrame = -1;
-      let cancelled = false;
+    const sizeCanvas = () => {
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const w = Math.round(canvas.clientWidth * dpr);
+      const h = Math.round(canvas.clientHeight * dpr);
+      if (w > 0 && h > 0 && (canvas.width !== w || canvas.height !== h)) {
+        canvas.width = w;
+        canvas.height = h;
+      }
+    };
 
-      const sizeCanvas = () => {
-        const dpr = Math.min(window.devicePixelRatio || 1, 2);
-        const w = Math.round(canvas.clientWidth * dpr);
-        const h = Math.round(canvas.clientHeight * dpr);
-        if (canvas.width !== w || canvas.height !== h) {
-          canvas.width = w;
-          canvas.height = h;
-        }
-      };
+    const paint = (img: HTMLImageElement) => {
+      if (!img || !img.complete || img.naturalWidth === 0) return;
+      sizeCanvas();
+      if (canvas.width === 0 || canvas.height === 0) return;
+      // Fit the frame's full width and take only the height the box asks for,
+      // instead of covering the box with the whole frame. Where the box is
+      // wider than the frame — the phone band — this keeps every pixel of
+      // width and trims off the bottom, which is foreground dirt or paving.
+      // Where the box is taller, the clamp leaves the old cover behaviour
+      // exactly as it was. Trimming from the bottom is also what keeps the
+      // frames' bottom-right watermark out of the band; see the band's
+      // aspect-ratio in the stylesheet.
+      const sw = img.naturalWidth;
+      const sh = Math.min(
+        img.naturalHeight,
+        Math.round((img.naturalWidth * canvas.height) / canvas.width)
+      );
+      const scale = Math.max(canvas.width / sw, canvas.height / sh);
+      const dw = sw * scale;
+      const dh = sh * scale;
+      ctx2d.drawImage(
+        img,
+        0,
+        0,
+        sw,
+        sh,
+        (canvas.width - dw) / 2,
+        (canvas.height - dh) / 2,
+        dw,
+        dh
+      );
+    };
 
-      const paint = (img: HTMLImageElement) => {
-        sizeCanvas();
-        const scale = Math.max(
-          canvas.width / img.naturalWidth,
-          canvas.height / img.naturalHeight
-        );
-        const dw = img.naturalWidth * scale;
-        const dh = img.naturalHeight * scale;
-        ctx2d.drawImage(img, (canvas.width - dw) / 2, (canvas.height - dh) / 2, dw, dh);
-      };
+    const nearestLoaded = (index: number) => {
+      if (loaded[index]) return index;
+      for (let d = 1; d < FRAME_COUNT; d += 1) {
+        if (index - d >= 0 && loaded[index - d]) return index - d;
+        if (index + d < FRAME_COUNT && loaded[index + d]) return index + d;
+      }
+      return -1;
+    };
 
-      const nearestLoaded = (index: number) => {
-        if (loaded[index]) return index;
-        for (let d = 1; d < FRAME_COUNT; d += 1) {
-          if (index - d >= 0 && loaded[index - d]) return index - d;
-          if (index + d < FRAME_COUNT && loaded[index + d]) return index + d;
-        }
-        return -1;
-      };
+    const render = (index: number) => {
+      targetFrame = index;
+      const use = nearestLoaded(index);
+      if (use === -1) return;
+      currentFrame = use;
+      paint(images[use]);
+    };
 
-      const render = (index: number) => {
-        const use = nearestLoaded(index);
-        if (use === -1 || use === currentFrame) return;
-        currentFrame = use;
-        paint(images[use]);
-      };
-
-      const load = (index: number) =>
-        new Promise<void>((resolve) => {
-          const img = new Image();
-          img.decoding = 'async';
-          img.src = `/frames/frame-${String(index + 1).padStart(3, '0')}.webp`;
-          images[index] = img;
-          img.onload = () => {
-            loaded[index] = true;
-            resolve();
-          };
-          img.onerror = () => resolve();
-        });
-
-      // Load first frame immediately
-      load(0).then(() => {
-        if (cancelled) return;
-        setCanvasReady(true);
-        render(0);
-
-        // Progressively fetch sparse frames first, then all remaining
-        const priorityQueue = getSparsePriorityList(FRAME_COUNT);
-        let queueIdx = 0;
-
-        const worker = async (): Promise<void> => {
-          while (!cancelled && queueIdx < priorityQueue.length) {
-            const nextFrame = priorityQueue[queueIdx];
-            queueIdx += 1;
-            if (!loaded[nextFrame]) {
-              await load(nextFrame);
+    const load = (index: number): Promise<void> => {
+      if (index < 0 || index >= FRAME_COUNT) return Promise.resolve();
+      if (loaded[index] && images[index]) return Promise.resolve();
+      return new Promise<void>((resolve) => {
+        const img = new Image();
+        img.decoding = 'async';
+        img.src = `/frames/frame-${String(index + 1).padStart(3, '0')}.webp`;
+        images[index] = img;
+        img.onload = () => {
+          loaded[index] = true;
+          if (!cancelled) {
+            const curDist = currentFrame === -1 ? Infinity : Math.abs(currentFrame - targetFrame);
+            const newDist = Math.abs(index - targetFrame);
+            if (newDist <= curDist) {
+              render(targetFrame);
             }
           }
+          resolve();
         };
-
-        void Promise.all(Array.from({ length: CONCURRENCY }, worker));
+        img.onerror = () => resolve();
       });
+    };
 
-      const trigger = ScrollTrigger.create({
-        trigger: track,
-        start: 'top top',
-        end: 'bottom bottom',
-        scrub: true,
-        invalidateOnRefresh: true,
-        onUpdate: (self) => {
-          const progress = self.progress;
-          const frameIndex = Math.min(
-            FRAME_COUNT - 1,
-            Math.max(0, Math.round(progress * (FRAME_COUNT - 1)))
-          );
-          render(frameIndex);
+    // Load first frame immediately for initial paint
+    load(0).then(() => {
+      if (cancelled) return;
+      setCanvasReady(true);
+      render(0);
+      ScrollTrigger.refresh();
 
-          // Update Counter HUD
-          if (counterNumberRef.current) {
-            counterNumberRef.current.textContent = String(frameIndex + 1).padStart(3, '0');
+      // Progressively fetch sparse frames first across the full sequence, then remaining
+      const priorityQueue = getSparsePriorityList(FRAME_COUNT);
+      let queueIdx = 0;
+
+      const worker = async (): Promise<void> => {
+        while (!cancelled && queueIdx < priorityQueue.length) {
+          const nextFrame = priorityQueue[queueIdx];
+          queueIdx += 1;
+          if (!loaded[nextFrame]) {
+            await load(nextFrame);
           }
-          if (progressLineRef.current) {
-            progressLineRef.current.style.transform = `scaleX(${progress})`;
-          }
-
-          // Intro fade out
-          const introOpacity =
-            progress <= 0.03 ? 1 : progress >= 0.15 ? 0 : 1 - (progress - 0.03) / 0.12;
-          if (introRef.current) {
-            introRef.current.style.opacity = String(introOpacity);
-            introRef.current.style.pointerEvents = introOpacity < 0.1 ? 'none' : 'auto';
-          }
-
-          // Stage Copy fade in
-          const stageCopyOpacity =
-            progress <= 0.08
-              ? 0
-              : progress <= 0.16
-              ? (progress - 0.08) / 0.08
-              : progress >= 0.94
-              ? Math.max(0, 1 - (progress - 0.94) / 0.06)
-              : 1;
-          if (stageCopyRef.current) {
-            stageCopyRef.current.style.opacity = String(stageCopyOpacity);
-          }
-
-          // Stage active calculation
-          const sIdx = getStageIndex(progress);
-          setActiveStageIdx(sIdx);
-          setCurrentStageData(stages[sIdx]);
-
-          // Update rail items active state directly for responsiveness
-          if (railRef.current) {
-            const items = railRef.current.querySelectorAll('li');
-            items.forEach((item, idx) => {
-              if (idx === sIdx && progress > 0.04) {
-                item.setAttribute('data-active', 'true');
-              } else {
-                item.removeAttribute('data-active');
-              }
-            });
-          }
-        },
-      });
-
-      const onResize = () => {
-        currentFrame = -1;
-        render(Math.min(FRAME_COUNT - 1, Math.round((trigger.progress || 0) * (FRAME_COUNT - 1))));
+        }
       };
-      window.addEventListener('resize', onResize);
 
-      return () => {
-        cancelled = true;
-        window.removeEventListener('resize', onResize);
-        trigger.kill();
-        images.forEach((img) => {
-          if (img) {
-            img.onload = null;
-            img.onerror = null;
-            if (!img.complete) img.src = '';
-          }
-        });
-      };
+      void Promise.all(Array.from({ length: CONCURRENCY }, worker));
     });
 
-    return () => mm.revert();
+    const trigger = ScrollTrigger.create({
+      trigger: track,
+      start: 'top top',
+      end: 'bottom bottom',
+      scrub: 0.5,
+      invalidateOnRefresh: true,
+      onUpdate: (self) => {
+        const progress = self.progress;
+        const frameIndex = Math.min(
+          FRAME_COUNT - 1,
+          Math.max(0, Math.round(progress * (FRAME_COUNT - 1)))
+        );
+        targetFrame = frameIndex;
+        render(frameIndex);
+
+        // Actively prioritize loading frames surrounding the user's current scroll point
+        if (!loaded[frameIndex]) {
+          void load(frameIndex);
+        }
+        for (let offset = 1; offset <= 3; offset += 1) {
+          if (frameIndex + offset < FRAME_COUNT && !loaded[frameIndex + offset]) {
+            void load(frameIndex + offset);
+          }
+          if (frameIndex - offset >= 0 && !loaded[frameIndex - offset]) {
+            void load(frameIndex - offset);
+          }
+        }
+
+        // Update Counter HUD
+        if (counterNumberRef.current) {
+          counterNumberRef.current.textContent = String(frameIndex + 1).padStart(3, '0');
+        }
+        if (progressLineRef.current) {
+          progressLineRef.current.style.transform = `scaleX(${progress})`;
+        }
+
+        // Intro fade out
+        const introOpacity =
+          progress <= 0.03 ? 1 : progress >= 0.15 ? 0 : 1 - (progress - 0.03) / 0.12;
+        if (introRef.current) {
+          introRef.current.style.opacity = String(introOpacity);
+          introRef.current.style.pointerEvents = introOpacity < 0.1 ? 'none' : 'auto';
+        }
+
+        // Stage Copy fade in
+        const stageCopyOpacity =
+          progress <= 0.08
+            ? 0
+            : progress <= 0.16
+            ? (progress - 0.08) / 0.08
+            : progress >= 0.94
+            ? Math.max(0, 1 - (progress - 0.94) / 0.06)
+            : 1;
+        if (stageCopyRef.current) {
+          stageCopyRef.current.style.opacity = String(stageCopyOpacity);
+        }
+
+        // Stage active calculation
+        const sIdx = getStageIndex(progress);
+        setActiveStageIdx(sIdx);
+        setCurrentStageData(stages[sIdx]);
+
+        // Update rail items active state directly
+        if (railRef.current) {
+          const items = railRef.current.querySelectorAll('li');
+          items.forEach((item, idx) => {
+            if (idx === sIdx && progress > 0.04) {
+              item.setAttribute('data-active', 'true');
+            } else {
+              item.removeAttribute('data-active');
+            }
+          });
+        }
+      },
+    });
+
+    const onResize = () => {
+      currentFrame = -1;
+      sizeCanvas();
+      render(Math.min(FRAME_COUNT - 1, Math.round((trigger.progress || 0) * (FRAME_COUNT - 1))));
+      ScrollTrigger.refresh();
+    };
+    window.addEventListener('resize', onResize);
+
+    // On phones the canvas box is a 16:9 aspect-ratio band, so its height is
+    // derived from its width and can change without the window resizing — a
+    // scrollbar appearing, the address bar collapsing, a font landing. A stale
+    // bitmap then gets a cover fit against the wrong box and crops again, which
+    // is the bug this box exists to prevent. Repaint on the box, not the window.
+    const boxObserver =
+      typeof ResizeObserver === 'undefined'
+        ? null
+        : new ResizeObserver(() => {
+            currentFrame = -1;
+            sizeCanvas();
+            render(
+              Math.min(FRAME_COUNT - 1, Math.round((trigger.progress || 0) * (FRAME_COUNT - 1)))
+            );
+          });
+    boxObserver?.observe(canvas);
+
+    const refreshTimer = setTimeout(() => {
+      ScrollTrigger.refresh();
+    }, 250);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(refreshTimer);
+      boxObserver?.disconnect();
+      window.removeEventListener('resize', onResize);
+      trigger.kill();
+      images.forEach((img) => {
+        if (img) {
+          img.onload = null;
+          img.onerror = null;
+          if (!img.complete) img.src = '';
+        }
+      });
+    };
   }, []);
 
   return (

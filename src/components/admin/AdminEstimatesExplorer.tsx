@@ -618,10 +618,21 @@ export function AdminEstimatesExplorer() {
                       <span className="text-muted">Subtotal:</span>
                       <span className="font-bold text-foreground">{formatINR(estimateDetail.subtotalCost)}</span>
                     </div>
-                    <div className="flex justify-between text-muted text-[11px]">
-                      <span>GST ({estimateDetail.gstPercentage || 0}%):</span>
-                      <span>+{formatINR(estimateDetail.gstAmount || 0)}</span>
-                    </div>
+                    {/* Only when there is one to show.
+                        The engine issues civil construction quotes exclusive of
+                        GST (calculator.service.ts holds the rate at 0.00), so
+                        this rendered a permanent "GST (0%): +Rs 0" line. That is
+                        a control the operator does not have: there is no settings
+                        table and no admin field behind it, and an operator who
+                        saw the row reasonably expected to be able to change it.
+                        The customer-facing report already hides it the same way
+                        (StepEstimateReport.tsx). */}
+                    {Number(estimateDetail.gstPercentage ?? 0) > 0 && (
+                      <div className="flex justify-between text-muted text-[11px]">
+                        <span>GST ({estimateDetail.gstPercentage}%):</span>
+                        <span>+{formatINR(estimateDetail.gstAmount || 0)}</span>
+                      </div>
+                    )}
                     <div className="flex justify-between pt-2 border-t border-border text-sm font-extrabold text-foreground">
                       <span>Total Project Cost:</span>
                       <span className="text-primary">{formatINR(estimateDetail.totalProjectCost)}</span>

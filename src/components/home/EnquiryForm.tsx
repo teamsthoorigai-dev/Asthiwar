@@ -4,7 +4,6 @@ import type { ChangeEvent, FocusEvent, FormEvent, ReactNode } from 'react';
 import { useId, useState } from 'react';
 import { ApiError } from '@/lib/api/client';
 import { submitEnquiry } from '@/lib/api/enquiries';
-import { LOCATIONS } from '@/data/pricing';
 import { Button } from '@/components/ui/Button';
 import { Section } from '@/components/ui/Section';
 import { SplitHeading } from '@/components/ui/SplitHeading';
@@ -53,6 +52,13 @@ export type EnquiryFormVariant = 'home' | 'page';
 type EnquiryFormProps = {
   content: EnquiryFormContent;
   variant?: EnquiryFormVariant;
+  /**
+   * Cities offered in the location dropdown, read from the catalogue and passed
+   * in by a server component. A hand-written list used to live in
+   * src/data/pricing.ts and had drifted from the database: it offered Salem,
+   * which the calculator cannot price, and omitted two cities that it serves.
+   */
+  locations?: ReadonlyArray<{ slug: string; name: string }>;
 };
 
 type FieldShellProps = {
@@ -146,7 +152,7 @@ function FieldShell({ children, error, helper, id, label }: FieldShellProps) {
  * its editorial introduction; inner pages can reuse the same fields and
  * validation without nesting another full section inside their layout.
  */
-export function EnquiryForm({ content, variant = 'home' }: EnquiryFormProps) {
+export function EnquiryForm({ content, variant = 'home', locations = [] }: EnquiryFormProps) {
   const formId = useId();
   const [values, setValues] = useState<EnquiryValues>(INITIAL_VALUES);
   const [touched, setTouched] = useState<TouchedFields>({});
@@ -347,7 +353,7 @@ export function EnquiryForm({ content, variant = 'home' }: EnquiryFormProps) {
             <option disabled value="">
               {content.placeholders.location}
             </option>
-            {LOCATIONS.map((location) => (
+            {locations.map((location) => (
               <option key={location.slug} value={location.name}>
                 {location.name}
               </option>

@@ -12,6 +12,12 @@ export const metadata: Metadata = {
   },
   description:
     'A building practice, not a relay race. Architecture, engineering and construction in Coimbatore, coordinated through one process.',
+  icons: {
+    icon: [
+      { url: '/favicon.svg', type: 'image/svg+xml' },
+    ],
+    shortcut: '/favicon.svg',
+  },
   openGraph: {
     type: 'website',
     siteName: 'ASTHIWAR Design & Build',

@@ -26,15 +26,23 @@ export function SiteHeader() {
   useEffect(() => {
     const onScroll = () => {
       const y = window.scrollY;
-      setSolid(y > SOLID_AFTER);
+      const isSolid = y > SOLID_AFTER;
+      const isHidden = !menuOpen && y > SOLID_AFTER * 2 && y > lastY.current;
+      setSolid(isSolid);
       // Never hide while the menu is open, or near the very top.
-      setHidden(!menuOpen && y > SOLID_AFTER * 2 && y > lastY.current);
+      setHidden(isHidden);
+      document.body.dataset.headerHidden = String(isHidden);
+      document.body.dataset.headerSolid = String(isSolid);
       lastY.current = y;
     };
 
     onScroll();
     window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      delete document.body.dataset.headerHidden;
+      delete document.body.dataset.headerSolid;
+    };
   }, [menuOpen]);
 
   const isDarkHero = pathname === '/projects' || pathname === '/cost-calculator';

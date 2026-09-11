@@ -24,8 +24,9 @@ const channels: ReadonlyArray<{ label: string; Icon: ComponentType<{ size?: numb
 /**
  * The four channel marks, docked bottom-right.
  *
- * Automatically hides when the user scrolls down to the footer (which already
- * presents full social channel links), and reappears when scrolling back up.
+ * Appears ONLY after the visitor has scrolled past the homepage cost calculator
+ * section, and disappears automatically when scrolling back up to the top or
+ * reaching the footer.
  *
  * The URLs are still unconfirmed (`socials` in data/nav.ts is empty), so each
  * mark renders as an inert, non-focusable label rather than a link to nowhere.
@@ -33,31 +34,38 @@ const channels: ReadonlyArray<{ label: string; Icon: ComponentType<{ size?: numb
  * a real anchor — no change needed here.
  */
 export function SocialDock() {
-  const [hidden, setHidden] = useState(false);
+  const [visible, setVisible] = useState(false);
 
   useEffect(() => {
+    const calcSection = document.getElementById('cost-calculator-section');
     const footer = document.querySelector('footer');
-    if (!footer) return;
 
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        setHidden(entry.isIntersecting);
-      },
-      {
-        root: null,
-        threshold: 0,
-      }
-    );
+    const updateVisibility = () => {
+      const calcRect = calcSection?.getBoundingClientRect();
+      const footerRect = footer?.getBoundingClientRect();
 
-    observer.observe(footer);
-    return () => observer.disconnect();
+      // Appears only after the cost calculator section's bottom has scrolled above the viewport
+      const isPastCalculator = calcRect ? calcRect.bottom <= 60 : true;
+      const isFooterVisible = footerRect ? footerRect.top <= window.innerHeight : false;
+
+      setVisible(isPastCalculator && !isFooterVisible);
+    };
+
+    window.addEventListener('scroll', updateVisibility, { passive: true });
+    window.addEventListener('resize', updateVisibility, { passive: true });
+    updateVisibility();
+
+    return () => {
+      window.removeEventListener('scroll', updateVisibility);
+      window.removeEventListener('resize', updateVisibility);
+    };
   }, []);
 
   return (
     <nav
-      className={`${styles.dock} ${hidden ? styles.dockHidden : ''}`}
+      className={`${styles.dock} ${!visible ? styles.dockHidden : ''}`}
       aria-label="Social media"
-      aria-hidden={hidden}
+      aria-hidden={!visible}
     >
       <ul className={styles.list}>
         {channels.map(({ label, Icon }) => {

@@ -28,6 +28,22 @@ function formatINR(amount: number): string {
   return `₹${amount.toLocaleString('en-IN')}`;
 }
 
+/**
+ * Price a difference the way the catalogue prices it.
+ *
+ * The suffix used to be a hard-coded "/sq.ft" on every option, while the API has
+ * always sent `priceType` per option. A lump-sum brand — any component whose unit
+ * is 'fixed', 'item' or 'allowance' — therefore read as "+₹25,000/sq.ft", which a
+ * customer looking at a 1,700 sq.ft house reasonably takes to mean ₹4.25 crore.
+ * The engine charges ₹25,000.
+ */
+function formatDelta(amount: number, priceType: string): string {
+  const sign = amount > 0 ? '+' : '−';
+  const magnitude = Math.abs(amount).toLocaleString('en-IN');
+  const suffix = priceType === 'per_sqft' ? '/sq.ft' : ' total';
+  return `${sign}₹${magnitude}${suffix}`;
+}
+
 export function StepCustomizations({
   formData,
   packageConfig,
@@ -179,10 +195,8 @@ export function StepCustomizations({
                             ? opt.isPackageDefault
                               ? 'Included with your package'
                               : 'Current selection'
-                            : priceChange > 0
-                            ? `+₹${priceChange.toLocaleString('en-IN')}/sq.ft`
-                            : priceChange < 0
-                            ? `-₹${Math.abs(priceChange).toLocaleString('en-IN')}/sq.ft`
+                            : priceChange !== 0
+                            ? formatDelta(priceChange, opt.priceType)
                             : 'Same price'}
                         </div>
                       </button>

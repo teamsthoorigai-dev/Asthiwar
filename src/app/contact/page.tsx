@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { EnquiryForm } from '@/components/home/EnquiryForm';
+import { getLocationsForSite } from '@/lib/api/locations';
 import { contactPage } from '@/data/contact';
 import { enquiryForm } from '@/data/home';
 import styles from './contact.module.css';
@@ -19,7 +20,12 @@ export const metadata: Metadata = {
   },
 };
 
-export default function ContactPage() {
+export default async function ContactPage() {
+  // Read from the catalogue rather than a hand-written duplicate: the dropdown
+  // used to offer Salem, which the calculator cannot price, and omitted two
+  // cities that it can.
+  const locations = await getLocationsForSite();
+
   return (
     <div className={styles.page}>
       <section className={styles.contactSection} aria-labelledby="contact-title">
@@ -43,7 +49,7 @@ export default function ContactPage() {
             </div>
 
             <div className={styles.form}>
-              <EnquiryForm content={enquiryForm} variant="page" />
+              <EnquiryForm content={enquiryForm} variant="page" locations={locations} />
             </div>
           </div>
         </div>

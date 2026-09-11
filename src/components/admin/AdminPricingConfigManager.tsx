@@ -26,7 +26,9 @@ import {
   Circle,
   Pencil,
   FolderPlus,
+  Check,
 } from 'lucide-react';
+import { ApiError } from '@/lib/api/client';
 import {
   getAdminPricingConfig,
   updatePackagePricing,
@@ -39,6 +41,7 @@ import {
   createAddon,
   deleteAddon,
   createAddonVariant,
+  updateAddonVariant,
   deleteAddonVariant,
   updateOptionPricing,
   updatePackageItem,
@@ -250,6 +253,30 @@ function slugify(value: string): string {
 function formatDelta(value: number | string): string {
   const n = Number(value) || 0;
   return `${n < 0 ? '−' : '+'}₹${Math.abs(n).toLocaleString('en-IN')}`;
+}
+
+/**
+ * What a package tier charges for a brand, resolved the way the engine resolves it.
+ *
+ * option_prices rows are effective-dated and may be per-package or universal
+ * (package_id IS NULL). The engine takes the package-specific row when there is
+ * one and falls back to the universal row, so the matrix has to do the same or
+ * the figure on screen is not the figure on the quotation. `inherited` marks the
+ * fallback, because that rate is shared: moving it moves every tier at once.
+ */
+function resolveLiveDelta(
+  opt: BrandOption,
+  packageId: number
+): { amount: number; inherited: boolean } {
+  const now = Date.now();
+  const live = (opt.prices ?? []).filter(
+    (pr) => !pr.effectiveTo || new Date(pr.effectiveTo).getTime() > now
+  );
+  const specific = live.find((pr) => pr.packageId === packageId);
+  if (specific) return { amount: Number(specific.priceDelta) || 0, inherited: false };
+  const universal = live.find((pr) => pr.packageId === null);
+  if (universal) return { amount: Number(universal.priceDelta) || 0, inherited: true };
+  return { amount: 0, inherited: false };
 }
 
 function toOptionalNumber(value: string): number | undefined {
@@ -482,7 +509,11 @@ export function AdminPricingConfigManager() {
   ]);
   const [savingAddon, setSavingAddon] = useState<boolean>(false);
 
-  const [variantDialog, setVariantDialog] = useState<{ addon: AdminAddon } | null>(null);
+  const [variantDialog, setVariantDialog] = useState<{
+    mode: 'create' | 'edit';
+    addon: AdminAddon;
+    variant?: AdminAddon['activePrices'][number];
+  } | null>(null);
   const [variantForm, setVariantForm] = useState<VariantForm>(EMPTY_VARIANT_FORM);
   const [savingVariant, setSavingVariant] = useState<boolean>(false);
 
@@ -506,8 +537,29 @@ export function AdminPricingConfigManager() {
     [dismissToast]
   );
 
-  const toMessage = (err: unknown, fallback: string) =>
-    err instanceof Error && err.message ? err.message : fallback;
+  const toMessage = (err: unknown, fallback: string) => {
+    if (err instanceof ApiError) {
+      if (err.code === 'REFERENCED_BY_ESTIMATES') {
+        return 'Cannot delete this item because existing estimates are using it.';
+      }
+      if (err.code === 'LAST_VARIANT') {
+        return 'An add-on must keep at least one price variant. Delete the whole add-on instead.';
+      }
+      if (err.code === 'INCLUDED_OPTION_IS_NOT_FREE') {
+        return 'The default included brand for a package cannot charge an upgrade fee (delta must be ₹0).';
+      }
+      if (err.message && err.message !== 'Internal Server Error') {
+        return err.message;
+      }
+      if (err.details && typeof err.details === 'string') {
+        return err.details;
+      }
+    }
+    if (err instanceof Error && err.message && err.message !== 'Internal Server Error') {
+      return err.message;
+    }
+    return fallback;
+  };
 
   /**
    * Refetch the matrix. `showSkeleton` is only for the first load — a refresh
@@ -895,7 +947,18 @@ export function AdminPricingConfigManager() {
 
   const openCreateVariant = (addon: AdminAddon) => {
     setVariantForm({ ...EMPTY_VARIANT_FORM, packageTiers: [...allPackageSlugs] });
-    setVariantDialog({ addon });
+    setVariantDialog({ mode: 'create', addon });
+  };
+
+  const openEditVariant = (addon: AdminAddon, variant: AdminAddon['activePrices'][number]) => {
+    const tiers = expandPackageTier(variant.packageTier, allPackageSlugs);
+    setVariantForm({
+      variantName: variant.variantName,
+      variantSlug: variant.variantSlug,
+      price: Number(variant.price) || 0,
+      packageTiers: tiers,
+    });
+    setVariantDialog({ mode: 'edit', addon, variant });
   };
 
   const handleSubmitVariant = async (e: React.FormEvent) => {
@@ -913,20 +976,39 @@ export function AdminPricingConfigManager() {
     }
 
     setSavingVariant(true);
-    const ok = await runAction(
-      `addon:${variantDialog.addon.id}:variant:create`,
-      () =>
-        createAddonVariant(variantDialog.addon.id, {
-          variantName,
-          variantSlug,
-          price: Math.max(0, Number(variantForm.price) || 0),
-          packageTiers: variantForm.packageTiers,
-        }),
-      {
-        success: `Variant '${variantName}' added to ${variantDialog.addon.name}.`,
-        failure: 'Failed to add the price variant.',
-      }
-    );
+    const priceVal = Math.max(0, Number(variantForm.price) || 0);
+
+    const ok =
+      variantDialog.mode === 'create'
+        ? await runAction(
+            `addon:${variantDialog.addon.id}:variant:create`,
+            () =>
+              createAddonVariant(variantDialog.addon.id, {
+                variantName,
+                variantSlug,
+                price: priceVal,
+                packageTiers: variantForm.packageTiers,
+              }),
+            {
+              success: `Variant '${variantName}' added to ${variantDialog.addon.name}.`,
+              failure: 'Failed to add the price variant.',
+            }
+          )
+        : await runAction(
+            `addon:${variantDialog.addon.id}:variant:${variantDialog.variant!.id}`,
+            () =>
+              updateAddonVariant(variantDialog.addon.id, variantDialog.variant!.id, {
+                variantName,
+                variantSlug,
+                price: priceVal,
+                packageTiers: variantForm.packageTiers,
+              }),
+            {
+              success: `Variant '${variantName}' updated on ${variantDialog.addon.name}.`,
+              failure: `Failed to update '${variantName}'.`,
+            }
+          );
+
     setSavingVariant(false);
     if (ok) setVariantDialog(null);
   };
@@ -945,28 +1027,6 @@ export function AdminPricingConfigManager() {
   };
 
   // Specifications Handlers
-  const handleUpdateOptionPriceDelta = async (
-    optionId: number,
-    brandName: string,
-    priceDelta: number
-  ) => {
-    // Negative deltas are legitimate: a downgrade (standard flush doors instead of
-    // teak) is a credit against the package rate. Only a non-numeric value is wrong.
-    if (!Number.isFinite(priceDelta)) {
-      pushToast('error', `${brandName}: rate delta must be a valid number.`);
-      return;
-    }
-    const safeDelta = priceDelta;
-    await runAction(
-      `opt:${optionId}`,
-      () => updateOptionPricing(optionId, { priceDelta: safeDelta, name: brandName }),
-      {
-        success: `${brandName} rate delta set to ${formatDelta(safeDelta)}/sq.ft.`,
-        failure: `Failed to update the ${brandName} rate delta.`,
-      }
-    );
-  };
-
   /** Every active package starts at 0.00 so the dialog always shows a full grid. */
   const blankPackageDeltas = useCallback((): Record<number, string> => {
     const deltas: Record<number, string> = {};
@@ -1100,6 +1160,88 @@ export function AdminPricingConfigManager() {
       }
     );
   };
+
+  /**
+   * Set a brand as the default included brand for a package tier.
+   * If the chosen brand currently has an upgrade delta, prompt the operator to
+   * zero the delta so the write succeeds and pricing remains consistent.
+   */
+  const handleSelectDefaultBrand = async (
+    mapping: { id: number; packageId: number; defaultOptionId: number | null },
+    item: AdminSpecificationItem,
+    pkg: { id: number; name: string },
+    newOptionId: number | null
+  ) => {
+    if (newOptionId === null) {
+      await handleUpdatePackageItem(mapping.id, item.name, pkg.name, { defaultOptionId: null });
+      return;
+    }
+
+    const selectedOpt = item.options.find((o) => o.id === newOptionId);
+    if (!selectedOpt) return;
+
+    const { amount } = resolveLiveDelta(selectedOpt, pkg.id);
+    if (amount !== 0) {
+      setConfirm({
+        title: `Set ${selectedOpt.brandName} as default for ${pkg.name}?`,
+        body: `'${selectedOpt.brandName}' currently charges ${formatDelta(amount)} in ${pkg.name}. A default included brand cannot charge an extra fee, so its upgrade rate in ${pkg.name} will automatically be set to ₹0.00.`,
+        confirmLabel: 'Set as Default (₹0)',
+        onConfirm: async () => {
+          const currentDeltas = (config?.packages ?? []).map((p) => {
+            const live = resolveLiveDelta(selectedOpt, p.id);
+            return {
+              packageId: p.id,
+              priceDelta: p.id === pkg.id ? 0 : live.amount,
+            };
+          });
+
+          const ok = await runAction(
+            `opt:${selectedOpt.id}`,
+            () =>
+              updateOptionPricing(selectedOpt.id, {
+                name: selectedOpt.brandName,
+                slug: selectedOpt.slug,
+                description: selectedOpt.specification,
+                prices: currentDeltas,
+              }),
+            {
+              success: `Set ${selectedOpt.brandName} upgrade delta to ₹0 for ${pkg.name}.`,
+              failure: `Failed to update rate for ${selectedOpt.brandName}.`,
+            }
+          );
+          if (!ok) return false;
+
+          return runAction(
+            `pkgitem:${mapping.id}`,
+            () => updatePackageItem(mapping.id, { defaultOptionId: newOptionId }),
+            {
+              success: `${selectedOpt.brandName} is now the default brand for ${pkg.name}.`,
+              failure: `Failed to set default brand for ${pkg.name}.`,
+            }
+          );
+        },
+      });
+      return;
+    }
+
+    await handleUpdatePackageItem(mapping.id, item.name, pkg.name, { defaultOptionId: newOptionId });
+  };
+
+  /**
+   * The package tiers as matrix columns, in catalogue order.
+   *
+   * `mapping` is the package_items row. null means the component is not part of
+   * that tier at all, which is a different thing from being in the tier with no
+   * brand chosen, and has to read differently on screen.
+   */
+  const tierColumnsFor = (specItem: AdminSpecificationItem) =>
+    (config?.packages ?? [])
+      .slice()
+      .sort((a, b) => a.id - b.id)
+      .map((pkg) => ({
+        pkg,
+        mapping: specItem.packageMappings.find((m) => m.packageId === pkg.id) ?? null,
+      }));
 
   const handleDeleteBrandOption = async (optionId: number, brandName: string, itemName: string) => {
     setConfirm({
@@ -2090,248 +2232,257 @@ export function AdminPricingConfigManager() {
                         </div>
                       </div>
 
-                      {/* Per-tier inclusion and the brand each tier includes. */}
-                      <div className="space-y-2">
-                        <span className="text-[10px] uppercase font-bold text-muted tracking-wider block">
-                          Included Brand per Package
-                        </span>
-                        {item.packageMappings.length === 0 ? (
-                          <p className="text-xs text-muted italic">
-                            This component is not mapped to any package tier.
-                          </p>
-                        ) : (
-                          <div className="space-y-1.5">
-                            {item.packageMappings
-                              .slice()
-                              .sort((a, b) => a.packageId - b.packageId)
-                              .map((mapping) => {
-                                const pkg = config?.packages.find(
-                                  (pk) => pk.id === mapping.packageId
-                                );
-                                const busyMapping = busyKeys[`pkgitem:${mapping.id}`];
-                                const hasDefault = mapping.defaultOptionId !== null;
-                                return (
-                                  <div
-                                    key={mapping.id}
-                                    className="flex flex-col sm:flex-row sm:items-center gap-2 p-2 rounded border border-border bg-surface"
-                                  >
-                                    <span className="text-[11px] font-bold w-full sm:w-32 shrink-0 truncate">
-                                      {pkg?.name ?? `Package ${mapping.packageId}`}
-                                    </span>
+                      {/*
+                        One matrix: rows are brands, columns are package tiers.
 
-                                    <label className="flex items-center gap-1.5 text-[11px] text-muted shrink-0">
-                                      <input
-                                        type="checkbox"
-                                        checked={mapping.isIncluded}
-                                        disabled={busyMapping}
-                                        onChange={(e) =>
-                                          handleUpdatePackageItem(
-                                            mapping.id,
-                                            item.name,
-                                            pkg?.name ?? 'this package',
-                                            { isIncluded: e.target.checked }
-                                          )
-                                        }
-                                      />
-                                      <span>Included</span>
-                                    </label>
+                        This replaced two stacked blocks that showed the same four
+                        brands twice in two different shapes. "Included Brand per
+                        Package" was a dropdown per tier writing
+                        package_items.default_option_id; "Brand Choices & Upgrade
+                        Price Deltas" listed the same brands again as cards with
+                        per-tier chips, writing option_prices. Nothing on screen
+                        said how the two related, so answering "what does Premium
+                        include, and what does switching cost" meant holding both
+                        in your head and matching brand names by eye.
 
-                                    <select
-                                      aria-label={`Included brand for ${item.name} in ${pkg?.name ?? 'this package'}`}
-                                      className="form-input text-xs py-1 flex-1 min-w-0"
-                                      value={mapping.defaultOptionId ?? ''}
-                                      disabled={busyMapping || item.options.length === 0}
-                                      onChange={(e) =>
-                                        handleUpdatePackageItem(
-                                          mapping.id,
-                                          item.name,
-                                          pkg?.name ?? 'this package',
-                                          {
-                                            defaultOptionId: e.target.value
-                                              ? Number(e.target.value)
-                                              : null,
-                                          }
-                                        )
-                                      }
-                                    >
-                                      <option value="">
-                                        {item.options.length === 0
-                                          ? 'Add a brand option first'
-                                          : 'No brand set — shows as a dash publicly'}
-                                      </option>
-                                      {item.options.map((opt) => (
-                                        <option key={opt.id} value={opt.id}>
-                                          {opt.brandName}
-                                        </option>
-                                      ))}
-                                    </select>
-
-                                    {busyMapping ? (
-                                      <Loader2
-                                        size={13}
-                                        className="animate-spin text-muted shrink-0"
-                                      />
-                                    ) : !hasDefault ? (
-                                      <span
-                                        className="text-[10px] font-bold text-amber-600 dark:text-amber-400 shrink-0"
-                                        title="The comparison matrix prints a dash for this tier, and the calculator falls back to an arbitrary brand."
-                                      >
-                                        Not set
-                                      </span>
-                                    ) : null}
-                                  </div>
-                                );
-                              })}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Brand Options */}
-                      <div className="space-y-2">
-                        <span className="text-[10px] uppercase font-bold text-muted tracking-wider block">
-                          Brand Choices & Upgrade Price Deltas ({item.options.length})
-                        </span>
+                        Here the included brand is simply the marked row, and the
+                        figure beside the mark is what that tier charges to switch
+                        to it.
+                      */}
+                      <div className="space-y-3">
+                        <div className="flex items-baseline justify-between gap-3 flex-wrap">
+                          <span className="text-[11px] uppercase font-bold text-muted tracking-wider">
+                            Brands &amp; Package Rates
+                          </span>
+                          <span className="text-[11px] text-muted">
+                            Choose each package&apos;s default brand in the column header. Click any rate delta or &lsquo;Edit Rates&rsquo; to customize pricing.
+                          </span>
+                        </div>
 
                         {item.options.length === 0 ? (
-                          <p className="text-xs text-muted italic">
-                            No brand options configured for this component.
-                          </p>
+                          <div className="rounded border border-dashed border-border px-4 py-7 text-center">
+                            <p className="text-xs text-muted max-w-md mx-auto">
+                              No brands yet. Every package prints a dash for {item.name} in the
+                              comparison matrix, and the calculator has nothing to offer.
+                            </p>
+                            <button
+                              type="button"
+                              onClick={() => openCreateOption(item.id, item.name)}
+                              className="button button--ghost text-xs py-1.5 px-3 mt-3 inline-flex items-center gap-1.5"
+                            >
+                              <Plus size={13} />
+                              <span>Add the first brand</span>
+                            </button>
+                          </div>
                         ) : (
-                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                            {item.options.map((opt) => {
-                              const busy = isBusy(`opt:${opt.id}`);
-                              // This view has no package tier in scope, so a single
-                              // delta box can only speak for the universal rate. An
-                              // option priced per tier has to be edited in the
-                              // per-package dialog, or one tier's edit would be
-                              // applied to all four.
-                              const livePrices = (opt.prices ?? []).filter(
-                                (p) =>
-                                  !p.effectiveTo ||
-                                  new Date(p.effectiveTo).getTime() > Date.now()
-                              );
-                              const universalPrice =
-                                livePrices.find((p) => p.packageId === null) ?? null;
-                              const perTierPrices = livePrices.filter(
-                                (p) => p.packageId !== null
-                              );
-                              const isPerTierPriced = !universalPrice && perTierPrices.length > 0;
-                              return (
-                                <div
-                                  key={opt.id}
-                                  className="p-3 rounded border border-border bg-background flex flex-col justify-between space-y-2.5 shadow-sm text-xs"
-                                >
-                                  <div className="flex items-start justify-between gap-1">
-                                    <div className="min-w-0">
-                                      <span className="font-bold text-foreground block truncate">
-                                        {opt.brandName}
-                                      </span>
-                                      <span className="font-mono text-[10px] text-muted">
-                                        {opt.slug}
-                                      </span>
-                                    </div>
-                                    <div className="flex items-center shrink-0">
-                                      <button
-                                        type="button"
-                                        onClick={() => openEditOption(opt, item.name)}
-                                        className="text-muted hover:text-foreground p-1 transition-colors"
-                                        aria-label={`Edit brand option ${opt.brandName}`}
-                                        title={`Edit ${opt.brandName}`}
+                          <div className="overflow-x-auto rounded-lg border border-border bg-card">
+                            <table className="w-full border-collapse text-[13px] min-w-[720px]">
+                              <thead>
+                                <tr className="border-b-2 border-border bg-surface-1">
+                                  <th className="text-left align-top py-3 px-4 text-[11px] uppercase font-bold tracking-wider text-muted w-[280px]">
+                                    Brand &amp; Specs
+                                  </th>
+                                  {tierColumnsFor(item).map(({ pkg, mapping }) => {
+                                    const busyMapping = mapping ? isBusy(`pkgitem:${mapping.id}`) : false;
+                                    return (
+                                      <th
+                                        key={pkg.id}
+                                        className="align-top px-3 py-3 text-center min-w-[150px] border-l border-border/50"
                                       >
-                                        <Pencil size={13} />
-                                      </button>
-                                      <button
-                                        type="button"
-                                        onClick={() =>
-                                          handleDeleteBrandOption(opt.id, opt.brandName, item.name)
-                                        }
-                                        className="text-muted hover:text-red-600 p-1 transition-colors"
-                                        aria-label={`Delete brand option ${opt.brandName}`}
-                                        title={`Delete ${opt.brandName}`}
-                                      >
-                                        <Trash2 size={13} />
-                                      </button>
-                                    </div>
-                                  </div>
-
-                                  {opt.specification && (
-                                    <p className="text-[11px] text-muted line-clamp-2">
-                                      {opt.specification}
-                                    </p>
-                                  )}
-
-                                  {isPerTierPriced ? (
-                                  <div className="pt-2 border-t border-border space-y-1.5">
-                                    <div className="flex flex-wrap gap-1">
-                                      {perTierPrices.map((p) => {
-                                        const tier = packages?.find((pk) => pk.id === p.packageId);
-                                        return (
-                                          <span
-                                            key={p.id}
-                                            className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-surface border border-border text-muted"
-                                          >
-                                            {tier?.name ?? `Package ${p.packageId}`}:{' '}
-                                            {formatDelta(p.priceDelta)}
+                                        <div className="flex items-center justify-between gap-1 mb-1.5">
+                                          <span className="text-xs font-bold text-foreground truncate">
+                                            {pkg.name}
                                           </span>
+                                          {mapping && (
+                                            <label
+                                              className="inline-flex items-center gap-1 text-[10px] font-normal text-muted cursor-pointer hover:text-foreground shrink-0"
+                                              title={`Whether ${item.name} is part of the ${pkg.name} package at all`}
+                                            >
+                                              <input
+                                                type="checkbox"
+                                                checked={mapping.isIncluded}
+                                                disabled={busyMapping}
+                                                onChange={(e) =>
+                                                  handleUpdatePackageItem(
+                                                    mapping.id,
+                                                    item.name,
+                                                    pkg.name,
+                                                    { isIncluded: e.target.checked }
+                                                  )
+                                                }
+                                              />
+                                              <span>Active</span>
+                                            </label>
+                                          )}
+                                        </div>
+
+                                        {mapping ? (
+                                          <div className="mt-1">
+                                            <div className="flex items-center justify-between text-[10px] text-muted mb-1 font-semibold uppercase tracking-wider">
+                                              <span>Default Brand</span>
+                                              {busyMapping && <Loader2 size={10} className="animate-spin text-primary" />}
+                                            </div>
+                                            <select
+                                              value={mapping.defaultOptionId ?? ''}
+                                              disabled={!mapping.isIncluded || busyMapping}
+                                              onChange={(e) => {
+                                                const val = e.target.value;
+                                                handleSelectDefaultBrand(
+                                                  mapping,
+                                                  item,
+                                                  pkg,
+                                                  val === '' ? null : Number(val)
+                                                );
+                                              }}
+                                              aria-label={`Default brand for ${pkg.name}`}
+                                              className="w-full text-[11px] py-1 px-1.5 rounded border border-border bg-background text-foreground font-medium disabled:opacity-50 cursor-pointer focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+                                            >
+                                              <option value="">-- None (dash) --</option>
+                                              {item.options.map((opt) => (
+                                                <option key={opt.id} value={opt.id}>
+                                                  {opt.brandName}
+                                                </option>
+                                              ))}
+                                            </select>
+                                          </div>
+                                        ) : (
+                                          <span className="mt-1.5 block text-[11px] font-normal text-muted italic">
+                                            Not mapped
+                                          </span>
+                                        )}
+                                      </th>
+                                    );
+                                  })}
+                                  <th className="py-3 px-3 text-right text-[11px] uppercase font-bold tracking-wider text-muted w-[140px] border-l border-border/50">
+                                    Actions
+                                  </th>
+                                </tr>
+                              </thead>
+
+                              <tbody className="divide-y divide-border/60">
+                                {item.options.map((opt) => {
+                                  const busyOption = isBusy(`opt:${opt.id}`);
+                                  return (
+                                    <tr
+                                      key={opt.id}
+                                      className="hover:bg-surface-2/40 transition-colors align-middle"
+                                    >
+                                      <td className="py-3 px-4">
+                                        <div className="font-bold text-foreground leading-snug">
+                                          {opt.brandName}
+                                        </div>
+                                        <div className="font-mono text-[10px] text-muted leading-snug">
+                                          {opt.slug}
+                                        </div>
+                                        {opt.specification && (
+                                          <div
+                                            className="text-[11px] text-muted mt-1 max-w-[260px] line-clamp-2"
+                                            title={opt.specification}
+                                          >
+                                            {opt.specification}
+                                          </div>
+                                        )}
+                                      </td>
+
+                                      {tierColumnsFor(item).map(({ pkg, mapping }) => {
+                                        if (!mapping) {
+                                          return (
+                                            <td
+                                              key={pkg.id}
+                                              className="px-3 py-3 text-center text-muted border-l border-border/40"
+                                            >
+                                              &mdash;
+                                            </td>
+                                          );
+                                        }
+                                        const isIncludedBrand = mapping.defaultOptionId === opt.id;
+                                        const { amount, inherited } = resolveLiveDelta(opt, pkg.id);
+                                        return (
+                                          <td
+                                            key={pkg.id}
+                                            className={`px-3 py-3 text-center border-l border-border/40 ${
+                                              isIncludedBrand ? 'bg-emerald-500/5' : ''
+                                            }`}
+                                          >
+                                            {isIncludedBrand ? (
+                                              <div className="inline-flex flex-col items-center">
+                                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 font-bold text-[11px] border border-emerald-500/25">
+                                                  <Check size={11} className="stroke-[3]" />
+                                                  <span>Included</span>
+                                                </span>
+                                                <span className="text-[10px] text-muted font-mono mt-0.5">
+                                                  ₹0.00 base
+                                                </span>
+                                              </div>
+                                            ) : (
+                                              <div className="inline-flex flex-col items-center">
+                                                <button
+                                                  type="button"
+                                                  onClick={() => openEditOption(opt, item.name)}
+                                                  className="group inline-flex items-center gap-1 px-2 py-1 rounded bg-surface-2 hover:bg-surface-3 text-foreground border border-border/70 hover:border-primary/50 transition-all text-left"
+                                                  title={`Click to edit rate for ${opt.brandName} (${pkg.name})`}
+                                                >
+                                                  <span className="font-mono text-xs font-semibold">
+                                                    {amount === 0 ? '₹0.00' : formatDelta(amount)}
+                                                  </span>
+                                                  <Pencil
+                                                    size={10}
+                                                    className="text-muted group-hover:text-primary transition-colors shrink-0"
+                                                  />
+                                                </button>
+                                                {inherited ? (
+                                                  <span
+                                                    className="text-[9px] text-muted tracking-tight underline decoration-dotted mt-0.5"
+                                                    title="Universal rate applies across packages"
+                                                  >
+                                                    universal rate
+                                                  </span>
+                                                ) : (
+                                                  <span className="text-[9px] text-muted mt-0.5">
+                                                    upgrade rate
+                                                  </span>
+                                                )}
+                                              </div>
+                                            )}
+                                          </td>
                                         );
                                       })}
-                                    </div>
-                                    <button
-                                      type="button"
-                                      onClick={() => openEditOption(opt, item.name)}
-                                      className="button button--ghost text-[11px] py-1 px-2.5 w-full"
-                                    >
-                                      Edit per-package rates
-                                    </button>
-                                  </div>
-                                  ) : (
-                                  <div className="pt-2 border-t border-border flex items-center justify-between gap-2">
-                                    <div className="relative flex-1">
-                                      <span className="absolute left-2 top-1/2 -translate-y-1/2 text-muted text-[11px] pointer-events-none">
-                                        ₹
-                                      </span>
-                                      <input
-                                        type="number"
-                                        step="0.01"
-                                        defaultValue={universalPrice?.priceDelta || 0}
-                                        id={`opt-delta-${opt.id}`}
-                                        aria-label={`Rate delta for ${opt.brandName}`}
-                                        className="form-input text-xs pl-6 py-1 font-mono font-bold w-full"
-                                        placeholder="0.00"
-                                        onKeyDown={(e) => {
-                                          // '-' is allowed now: a negative delta is a
-                                          // downgrade credit. 'e' still is not.
-                                          if (e.key === 'e') {
-                                            e.preventDefault();
-                                          }
-                                        }}
-                                      />
-                                    </div>
-                                    <button
-                                      type="button"
-                                      disabled={busy}
-                                      onClick={() => {
-                                        const rawVal = (
-                                          document.getElementById(
-                                            `opt-delta-${opt.id}`
-                                          ) as HTMLInputElement
-                                        )?.value;
-                                        const delta = Number(rawVal) || 0;
-                                        handleUpdateOptionPriceDelta(opt.id, opt.brandName, delta);
-                                      }}
-                                      className="button button--ghost text-[11px] py-1 px-2.5 shrink-0 disabled:opacity-50"
-                                    >
-                                      {busy ? (
-                                        <Loader2 size={12} className="animate-spin" />
-                                      ) : (
-                                        <span>Save</span>
-                                      )}
-                                    </button>
-                                  </div>
-                                  )}
-                                </div>
-                              );
-                            })}
+
+                                      <td className="py-3 px-3 text-right whitespace-nowrap border-l border-border/40">
+                                        <div className="flex items-center justify-end gap-1.5">
+                                          <button
+                                            type="button"
+                                            onClick={() => openEditOption(opt, item.name)}
+                                            className="button button--ghost text-xs py-1 px-2.5 inline-flex items-center gap-1.5 text-foreground hover:bg-surface-3"
+                                            aria-label={`Edit ${opt.brandName} and its per-package rates`}
+                                            title={`Edit ${opt.brandName} and its per-package rates`}
+                                          >
+                                            <Pencil size={12} />
+                                            <span>Edit Rates</span>
+                                          </button>
+                                          <button
+                                            type="button"
+                                            disabled={busyOption}
+                                            onClick={() =>
+                                              handleDeleteBrandOption(opt.id, opt.brandName, item.name)
+                                            }
+                                            className="text-muted hover:text-red-600 p-1.5 rounded transition-colors disabled:opacity-40"
+                                            aria-label={`Delete brand option ${opt.brandName}`}
+                                            title={`Delete ${opt.brandName}`}
+                                          >
+                                            {busyOption ? (
+                                              <Loader2 size={13} className="animate-spin" />
+                                            ) : (
+                                              <Trash2 size={13} />
+                                            )}
+                                          </button>
+                                        </div>
+                                      </td>
+                                    </tr>
+                                  );
+                                })}
+                              </tbody>
+                            </table>
                           </div>
                         )}
                       </div>
@@ -2596,6 +2747,15 @@ export function AdminPricingConfigManager() {
                                 <Save size={13} className="shrink-0" />
                               )}
                               <span>Save</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => openEditVariant(addon, variant)}
+                              className="text-muted hover:text-foreground p-1 transition-colors"
+                              aria-label={`Edit variant ${variant.variantName}`}
+                              title={`Edit ${variant.variantName} (name, packages, price)`}
+                            >
+                              <Pencil size={13} />
                             </button>
                             <button
                               type="button"
@@ -3649,10 +3809,14 @@ export function AdminPricingConfigManager() {
         </AdminModal>
       )}
 
-      {/* MODAL: ADD ADD-ON PRICE VARIANT */}
+      {/* MODAL: ADD / EDIT ADD-ON PRICE VARIANT */}
       {variantDialog && (
         <AdminModal
-          title={`Add Price Variant — ${variantDialog.addon.name}`}
+          title={
+            variantDialog.mode === 'create'
+              ? `Add Price Variant — ${variantDialog.addon.name}`
+              : `Edit Price Variant — ${variantDialog.addon.name}`
+          }
           onClose={() => setVariantDialog(null)}
         >
           <form onSubmit={handleSubmitVariant} className="space-y-3 text-xs">
@@ -3668,7 +3832,8 @@ export function AdminPricingConfigManager() {
                   setVariantForm((prev) => ({
                     ...prev,
                     variantName,
-                    variantSlug: slugify(variantName),
+                    variantSlug:
+                      variantDialog.mode === 'create' ? slugify(variantName) : prev.variantSlug,
                   }));
                 }}
                 className="form-input text-xs w-full"
@@ -3722,7 +3887,7 @@ export function AdminPricingConfigManager() {
             <PackageTierPicker
               packages={packageChoices}
               selected={variantForm.packageTiers}
-              idPrefix="new-variant"
+              idPrefix="variant-tier"
               onChange={(packageTiers) => setVariantForm((prev) => ({ ...prev, packageTiers }))}
             />
 
@@ -3737,9 +3902,16 @@ export function AdminPricingConfigManager() {
               <button
                 type="submit"
                 disabled={savingVariant}
-                className="button button--solid text-xs py-2 px-4 disabled:opacity-60"
+                className="button button--solid text-xs py-2 px-4 disabled:opacity-60 flex items-center gap-1.5"
               >
-                {savingVariant ? 'Saving…' : 'Add Variant'}
+                {savingVariant && <Loader2 size={13} className="animate-spin shrink-0" />}
+                <span>
+                  {savingVariant
+                    ? 'Saving…'
+                    : variantDialog.mode === 'create'
+                    ? 'Add Variant'
+                    : 'Save Changes'}
+                </span>
               </button>
             </div>
           </form>

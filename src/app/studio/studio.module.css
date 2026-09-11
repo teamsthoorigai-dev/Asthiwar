@@ -334,14 +334,27 @@
   max-width: 65ch;
 }
 
-/* Office Selector Tabs */
+/* Office Selector Tabs & Sticky Bar */
+.tabsStickyWrapper {
+  position: relative;
+  z-index: 35;
+  margin-block-end: var(--s-5);
+}
+
 .tabsBar {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
-  margin-block-end: var(--s-5);
   border-block-end: 1px solid var(--hairline);
   padding-block-end: 0.75rem;
+}
+
+.tabFullLabel {
+  display: inline;
+}
+
+.tabShortLabel {
+  display: none;
 }
 
 .tabButton {
@@ -380,6 +393,62 @@
   font-family: monospace;
   opacity: 0.6;
   font-size: 0.75rem;
+}
+
+@media (max-width: 1023px) {
+  .tabsStickyWrapper {
+    position: sticky;
+    top: 52px;
+    background: var(--bg);
+    margin-inline: calc(var(--gutter) * -1);
+    padding-inline: var(--gutter);
+    padding-block: 0.75rem 0.5rem;
+    border-block-end: 1px solid var(--hairline);
+    box-shadow: 0 4px 16px rgba(25, 36, 29, 0.05);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    transition: top 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  :global(body[data-header-hidden="true"]) .tabsStickyWrapper {
+    top: 0;
+  }
+
+  .tabsBar {
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    margin-block-end: 0;
+    border-block-end: none;
+    padding-block-end: 0.25rem;
+    gap: 0.45rem;
+  }
+
+  .tabsBar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .tabButton {
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 767px) {
+  .tabFullLabel {
+    display: none;
+  }
+
+  .tabShortLabel {
+    display: inline;
+  }
+
+  .tabButton {
+    padding: 0.45rem 0.75rem;
+    font-size: 0.72rem;
+  }
 }
 
 /* Office Display Layout */
@@ -507,5 +576,37 @@
 .consultationLink:hover {
   background: var(--bg);
   border-color: var(--ink);
+}
+
+@media (max-width: 640px) {
+  .officeDisplayGrid {
+    padding: var(--s-3);
+    gap: var(--s-4);
+  }
+}
+
+@media (max-width: 480px) {
+  .officeActions {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .directionsButton,
+  .consultationLink {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    text-align: center;
+  }
+
+  .pillarMark {
+    height: clamp(200px, 35vh, 280px);
+  }
+}
+
+@media (max-width: 380px) {
+  .states {
+    grid-template-columns: 1fr;
+    gap: var(--s-3);
+  }
 }
 

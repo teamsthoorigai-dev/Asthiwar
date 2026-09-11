@@ -2,6 +2,7 @@ import {
   db,
   schema,
   eq,
+  ne,
   and,
   inArray,
   isNull,
@@ -22,6 +23,7 @@ import {
   UpdateMilestonesDto,
   CreateAddonDto,
   CreateAddonVariantDto,
+  UpdateAddonVariantDto,
   CreateCategoryDto,
   UpdateCategoryDto,
   CreateItemDto,
@@ -672,6 +674,102 @@ export async function createAdminAddonVariant(addonId: number, dto: CreateAddonV
     .returning();
 
   return created;
+}
+
+export async function updateAdminAddonVariant(
+  addonId: number,
+  variantId: number,
+  dto: UpdateAddonVariantDto
+) {
+  const variant = await db.query.addonPrices.findFirst({
+    where: and(eq(schema.addonPrices.id, variantId), eq(schema.addonPrices.addonId, addonId)),
+  });
+
+  if (!variant) {
+    throw new AdminServiceError(
+      404,
+      'VARIANT_NOT_FOUND',
+      `Variant with ID ${variantId} not found on add-on ${addonId}`
+    );
+  }
+
+  const addon = await db.query.addons.findFirst({
+    where: eq(schema.addons.id, addonId),
+  });
+  if (!addon) {
+    throw new AdminServiceError(404, 'ADDON_NOT_FOUND', `Addon with ID ${addonId} not found`);
+  }
+
+  if (dto.variantSlug && dto.variantSlug !== variant.variantSlug) {
+    const clash = await db
+      .select({ id: schema.addonPrices.id })
+      .from(schema.addonPrices)
+      .where(
+        and(
+          eq(schema.addonPrices.addonId, addonId),
+          eq(schema.addonPrices.variantSlug, dto.variantSlug),
+          ne(schema.addonPrices.id, variantId),
+          isNull(schema.addonPrices.effectiveTo)
+        )
+      )
+      .limit(1);
+
+    if (clash.length > 0) {
+      throw new AdminServiceError(
+        409,
+        'VARIANT_ALREADY_EXISTS',
+        `'${addon.name}' already has an active variant with slug '${dto.variantSlug}'`
+      );
+    }
+  }
+
+  let serializedTier = variant.packageTier;
+  if (dto.packageTiers && dto.packageTiers.length > 0) {
+    const catalogueSlugs = await getActivePackageSlugs();
+    assertKnownPackageSlugs(dto.packageTiers, catalogueSlugs, dto.variantName || variant.variantName);
+    serializedTier = serializePackageTiers(dto.packageTiers, catalogueSlugs);
+  }
+
+  const nextName = dto.variantName !== undefined ? dto.variantName : variant.variantName;
+  const nextSlug = dto.variantSlug !== undefined ? dto.variantSlug : variant.variantSlug;
+  const priceChanged =
+    dto.price !== undefined && Number(dto.price).toFixed(2) !== Number(variant.price).toFixed(2);
+
+  if (priceChanged) {
+    return db.transaction(async (tx) => {
+      const now = new Date();
+      await tx
+        .update(schema.addonPrices)
+        .set({ effectiveTo: now })
+        .where(eq(schema.addonPrices.id, variantId));
+
+      const [created] = await tx
+        .insert(schema.addonPrices)
+        .values({
+          addonId,
+          variantName: nextName,
+          variantSlug: nextSlug,
+          packageTier: serializedTier,
+          price: dto.price!.toFixed(2),
+          effectiveFrom: now,
+        })
+        .returning();
+
+      return created;
+    });
+  }
+
+  const [updated] = await db
+    .update(schema.addonPrices)
+    .set({
+      ...(dto.variantName !== undefined && { variantName: dto.variantName }),
+      ...(dto.variantSlug !== undefined && { variantSlug: dto.variantSlug }),
+      ...(dto.packageTiers !== undefined && { packageTier: serializedTier }),
+    })
+    .where(eq(schema.addonPrices.id, variantId))
+    .returning();
+
+  return updated;
 }
 
 export async function deleteAdminAddonVariant(addonId: number, variantId: number) {
@@ -1363,6 +1461,53 @@ export async function updateAdminPackageItem(packageItemId: number, dto: UpdateP
         400,
         'OPTION_BELONGS_TO_ANOTHER_ITEM',
         `'${option.brandName}' is an option of a different component and cannot be this one's default.`
+      );
+    }
+
+    // A tier's included brand has to be free in that tier.
+    //
+    // "Included with your package" is what the calculator prints beside this
+    // option, and the price the customer is charged for it is its delta in this
+    // tier — two facts that only agree while that delta is zero. Point a tier at
+    // a brand that carries a delta and the same visible state means two prices:
+    // leave the tile alone and it is free, click the tile that is already
+    // highlighted and it is billed. On a 1,500 sq.ft Basic build, a ₹95/sq.ft
+    // brand made that gap ₹1,42,500.
+    //
+    // The catalogue already obeys this rule — all 96 (component × tier) pairs
+    // have a zero delta on their included brand, and the seed encodes it by
+    // leaving the row out entirely. Nothing enforced it until now, and the
+    // per-tier editor made it a one-click mistake.
+    //
+    // Per-tier row first, universal row (package_id IS NULL) as the fallback —
+    // the same precedence the calculator charges on.
+    const livePrices = await db
+      .select({
+        packageId: schema.optionPrices.packageId,
+        priceDelta: schema.optionPrices.priceDelta,
+      })
+      .from(schema.optionPrices)
+      .where(
+        and(
+          eq(schema.optionPrices.optionId, dto.defaultOptionId),
+          isNull(schema.optionPrices.effectiveTo)
+        )
+      );
+
+    const applicable =
+      livePrices.find((row) => row.packageId === item.packageId) ??
+      livePrices.find((row) => row.packageId === null);
+
+    // No row at all means no charge — the engine's own fallback — so that is fine.
+    const delta = applicable ? Number(applicable.priceDelta) : 0;
+
+    if (delta !== 0) {
+      throw new AdminServiceError(
+        400,
+        'INCLUDED_OPTION_IS_NOT_FREE',
+        `'${option.brandName}' costs ${delta > 0 ? '+' : '−'}₹${Math.abs(delta)}/sq.ft in this package, ` +
+          'so it cannot also be the brand included with it. Set its rate for this package to 0 first, ' +
+          'or choose a brand that is already included.'
       );
     }
   }

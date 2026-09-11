@@ -20,6 +20,7 @@ import {
   createAdminAddon,
   deleteAdminAddon,
   createAdminAddonVariant,
+  updateAdminAddonVariant,
   deleteAdminAddonVariant,
   createAdminCategory,
   updateAdminCategory,
@@ -41,6 +42,7 @@ import {
   UpdateMilestonesDto,
   CreateAddonDto,
   CreateAddonVariantDto,
+  UpdateAddonVariantDto,
   CreateCategoryDto,
   UpdateCategoryDto,
   CreateItemDto,
@@ -370,6 +372,22 @@ export async function createAddonVariantController(req: Request, res: Response, 
       success: true,
       message: `Variant '${created.variantName}' added successfully`,
       data: created,
+    });
+  } catch (error) {
+    relayServiceError(error, res, next);
+  }
+}
+
+export async function updateAddonVariantController(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const addonId = parseInt(req.params.id as string, 10);
+    const variantId = parseInt(req.params.variantId as string, 10);
+    const dto = req.body as UpdateAddonVariantDto;
+    const updated = await updateAdminAddonVariant(addonId, variantId, dto);
+    res.json({
+      success: true,
+      message: `Variant '${updated.variantName}' updated successfully`,
+      data: updated,
     });
   } catch (error) {
     relayServiceError(error, res, next);

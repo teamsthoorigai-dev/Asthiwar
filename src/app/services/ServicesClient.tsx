@@ -34,90 +34,68 @@ export function ServicesClient() {
     const track = trackRef.current;
     if (!stage || !track || REDUCED()) return;
 
-    const mm = gsap.matchMedia();
+    // Calculate horizontal translate distance dynamically
+    const getScrollDistance = () => Math.max(0, track.scrollWidth - window.innerWidth);
 
-    mm.add('(min-width: 1024px)', () => {
-      // Calculate horizontal translate distance
-      const getScrollDistance = () => track.scrollWidth - window.innerWidth;
-
-      const tween = gsap.to(track, {
-        x: () => -1 * getScrollDistance(),
-        ease: 'none',
-        scrollTrigger: {
-          trigger: stage,
-          pin: true,
-          scrub: 0.7,
-          start: 'top top',
-          end: () => `+=${getScrollDistance()}`,
-          invalidateOnRefresh: true,
-          onUpdate: (self) => {
-            if (progressBarRef.current) {
-              progressBarRef.current.style.transform = `scaleX(${self.progress})`;
-            }
-            const rawIndex = self.progress * (services.length - 1);
-            const index = Math.min(
-              Math.max(0, Math.round(rawIndex)),
-              services.length - 1
-            );
-            setActiveIndex(index);
-          },
+    const tween = gsap.to(track, {
+      x: () => -1 * getScrollDistance(),
+      ease: 'none',
+      scrollTrigger: {
+        trigger: stage,
+        pin: true,
+        scrub: 0.6,
+        start: 'top top',
+        end: () => `+=${getScrollDistance()}`,
+        invalidateOnRefresh: true,
+        anticipatePin: 1,
+        onUpdate: (self) => {
+          if (progressBarRef.current) {
+            progressBarRef.current.style.transform = `scaleX(${self.progress})`;
+          }
+          const rawIndex = self.progress * (services.length - 1);
+          const index = Math.min(
+            Math.max(0, Math.round(rawIndex)),
+            services.length - 1
+          );
+          setActiveIndex(index);
         },
-      });
-
-      horizontalTweenRef.current = tween;
-
-      return () => {
-        tween.scrollTrigger?.kill();
-        tween.kill();
-        horizontalTweenRef.current = null;
-        gsap.set(track, { clearProps: 'transform' });
-      };
+      },
     });
 
-    return () => mm.revert();
+    horizontalTweenRef.current = tween;
+
+    // Refresh ScrollTrigger after initial mount and asset render
+    const refreshTimer = setTimeout(() => {
+      ScrollTrigger.refresh();
+    }, 250);
+
+    const onResize = () => {
+      ScrollTrigger.refresh();
+    };
+    window.addEventListener('resize', onResize);
+
+    return () => {
+      clearTimeout(refreshTimer);
+      window.removeEventListener('resize', onResize);
+      tween.scrollTrigger?.kill();
+      tween.kill();
+      horizontalTweenRef.current = null;
+      gsap.set(track, { clearProps: 'transform' });
+    };
   }, []);
 
   // Jump to specific discipline panel smoothly
   const scrollToDiscipline = (index: number) => {
-    if (window.innerWidth >= 1024 && horizontalTweenRef.current?.scrollTrigger) {
-      const st = horizontalTweenRef.current.scrollTrigger;
+    const st = horizontalTweenRef.current?.scrollTrigger;
+    if (st) {
       const targetScroll =
         st.start + (index / (services.length - 1)) * (st.end - st.start);
       window.scrollTo({
         top: targetScroll,
         behavior: 'smooth',
       });
-    } else {
-      const targetPanel = panelRefs.current[index];
-      if (targetPanel) {
-        targetPanel.scrollIntoView({
-          behavior: 'smooth',
-          inline: 'center',
-          block: 'nearest',
-        });
-        setActiveIndex(index);
-      }
+      setActiveIndex(index);
     }
-  };
-
-  // Mobile horizontal scroll listener to update indicator & progress
-  const handleMobileScroll = () => {
-    const container = pinContainerRef.current;
-    if (!container || window.innerWidth >= 1024) return;
-    const scrollLeft = container.scrollLeft;
-    const maxScroll = container.scrollWidth - container.clientWidth;
-    const progress = maxScroll > 0 ? scrollLeft / maxScroll : 0;
-
-    if (progressBarRef.current) {
-      progressBarRef.current.style.transform = `scaleX(${progress})`;
-    }
-
-    const itemWidth = container.clientWidth * 0.88;
-    const current = Math.min(
-      Math.max(0, Math.round(scrollLeft / itemWidth)),
-      services.length - 1
-    );
-    setActiveIndex(current);
   };
 
   return (
@@ -164,7 +142,6 @@ export function ServicesClient() {
       <div
         ref={pinContainerRef}
         className={styles.pinContainer}
-        onScroll={handleMobileScroll}
       >
         <div ref={trackRef} className={styles.track}>
           {services.map((service, i) => (

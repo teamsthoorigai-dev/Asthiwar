@@ -213,6 +213,13 @@ export interface AddonVariantPayload {
   packageTiers: string[];
 }
 
+export interface UpdateAddonVariantPayload {
+  variantName?: string;
+  variantSlug?: string;
+  price?: number;
+  packageTiers?: string[];
+}
+
 export interface BrandOption {
   id: number;
   itemId: number;
@@ -960,6 +967,22 @@ export async function createAddonVariant(
     `/api/v1/admin/config/addons/${addonId}/variants`,
     {
       method: 'POST',
+      body: payload,
+      ...options,
+    }
+  );
+}
+
+export async function updateAddonVariant(
+  addonId: number,
+  variantId: number,
+  payload: UpdateAddonVariantPayload,
+  options?: RequestOptions
+): Promise<{ success: boolean; data: unknown }> {
+  return apiClient<{ success: boolean; data: unknown }>(
+    `/api/v1/admin/config/addons/${addonId}/variants/${variantId}`,
+    {
+      method: 'PATCH',
       body: payload,
       ...options,
     }

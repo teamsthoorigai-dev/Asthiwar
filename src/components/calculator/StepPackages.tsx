@@ -421,6 +421,27 @@ function orderMatrixItems(items: ComparisonMatrixItem[]): ComparisonMatrixItem[]
     .map(({ item }) => item);
 }
 
+const TIER_ICONS: Record<PackageSlug, typeof Home> = {
+  basic: Home,
+  standard: Shield,
+  premium: Gem,
+  luxury: Crown,
+};
+
+/** The matrix row's value for one tier, by slug rather than by four call sites. */
+function valueForTier(row: ComparisonMatrixItem, slug: PackageSlug): string {
+  switch (slug) {
+    case 'basic':
+      return row.basic;
+    case 'standard':
+      return row.standard;
+    case 'premium':
+      return row.premium;
+    case 'luxury':
+      return row.luxury;
+  }
+}
+
 function getIconForItem(slug: string) {
   switch (slug) {
     case 'steel_rebar_binding_wires':
@@ -566,18 +587,40 @@ export function StepPackages({
   // Pricing calculations: active rate, and the genuine rate to strike through.
   // Returns null when the catalogue has no rate for the tier — the caller shows
   // that honestly rather than falling back to a number written in this file.
+  /**
+   * The city multiplier the backend is applying to this quote.
+   *
+   * The cards showed the raw catalogue rate while the customer was charged the
+   * multiplied one — ₹3,250/sq.ft on the Luxury card against ₹3,412.50 actually
+   * quoted in Chennai, a ₹2,76,250 difference on a 1,700 sq.ft build that the
+   * customer only discovered after choosing. The preview already returns the
+   * multiplier; it just was not read.
+   */
+  const locationMultiplier = previewResult?.package?.locationMultiplier ?? 1;
+  const locationName = previewResult?.package?.locationName ?? '';
+
   const getPackageRates = (slug: PackageSlug) => {
     const pkg = pkgMap.get(slug);
     if (!pkg) return null;
 
-    const std = Number(pkg.standardPricePerSqft ?? pkg.pricing?.standardRatePerSqft);
-    const vol = Number(pkg.volumePricePerSqft ?? pkg.pricing?.volumeRatePerSqft);
-    if (!Number.isFinite(std) || !Number.isFinite(vol)) return null;
+    const catalogueStd = Number(pkg.standardPricePerSqft ?? pkg.pricing?.standardRatePerSqft);
+    const catalogueVol = Number(pkg.volumePricePerSqft ?? pkg.pricing?.volumeRatePerSqft);
+    if (!Number.isFinite(catalogueStd) || !Number.isFinite(catalogueVol)) return null;
+
+    // Rounded to two decimals exactly as the engine rounds effectiveRatePerSqft,
+    // so the figure on the card is the figure on the quotation.
+    const std = Number((catalogueStd * locationMultiplier).toFixed(2));
+    const vol = Number((catalogueVol * locationMultiplier).toFixed(2));
 
     const threshold =
       pkg.volumeDiscountThresholdSqft ?? pkg.pricing?.volumeDiscountThresholdSqft ?? 3500;
 
-    const isVolume = totalBuiltup > threshold;
+    // Head room counts towards the volume discount, the same as it does in the
+    // engine — see totalEnclosedArea in backend/.../pricing-math.ts.
+    const areaForThreshold =
+      previewResult?.dimensions?.totalEnclosedAreaSqft ?? totalBuiltup;
+
+    const isVolume = areaForThreshold > threshold;
     const activeRate = isVolume ? vol : std;
 
     // Only a rate the customer would genuinely otherwise pay may be struck out,
@@ -597,6 +640,8 @@ export function StepPackages({
       higherRate,
       isVolume,
       threshold,
+      locationMultiplier,
+      locationName,
     };
   };
 
@@ -956,6 +1001,83 @@ export function StepPackages({
                 })}
               </tbody>
             </table>
+          </div>
+
+          {/* The same data, laid out for a phone.
+              The table needs 40rem before its columns stop being unreadable, and
+              a phone has roughly 23 — so below that it was a sideways scroll
+              across five columns to read one row. Here the tier is a switch and
+              the specs run down the page. Picking a tier to read also picks it,
+              which is what tapping a column in the table already did. */}
+          <div className="pkg-spec-mobile">
+            <div className="pkg-spec-mobile__switch" role="tablist" aria-label="Package to show specifications for">
+              {uniquePackages.map((pkg) => {
+                const slug = pkg.slug as PackageSlug;
+                const TierIcon = TIER_ICONS[slug];
+                const isSelected = formData.packageSlug === slug;
+                return (
+                  <button
+                    key={pkg.slug}
+                    type="button"
+                    role="tab"
+                    aria-selected={isSelected}
+                    className="pkg-spec-mobile__tab"
+                    data-selected={isSelected || undefined}
+                    onClick={() => onChange({ packageSlug: slug })}
+                  >
+                    <TierIcon size={15} strokeWidth={2.2} aria-hidden="true" />
+                    <span>{pkg.name?.replace(/\s*package\s*$/i, '') || slug}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {(() => {
+              const slug = (formData.packageSlug || 'basic') as PackageSlug;
+              const rates = getPackageRates(slug);
+              return (
+                <div className="pkg-spec-mobile__rate">
+                  {rates === null ? (
+                    <span className="pkg-spec-mobile__rate-value">Rate unavailable</span>
+                  ) : (
+                    <>
+                      {rates.higherRate !== null && (
+                        <span className="pkg-spec-mobile__rate-was">
+                          ₹{rates.higherRate.toLocaleString('en-IN')}
+                        </span>
+                      )}
+                      <span className="pkg-spec-mobile__rate-value">
+                        ₹{rates.activeRate.toLocaleString('en-IN')}
+                        <span className="pkg-spec-mobile__rate-unit">/sq.ft</span>
+                      </span>
+                    </>
+                  )}
+                </div>
+              );
+            })()}
+
+            <dl className="pkg-spec-mobile__list">
+              {matrixData.map((row) => {
+                const ItemIcon = getIconForItem(row.slug);
+                const slug = (formData.packageSlug || 'basic') as PackageSlug;
+                return (
+                  <div className="pkg-spec-mobile__item" key={row.id || row.slug}>
+                    <dt className="pkg-spec-mobile__term">
+                      <span className="pkg-spec-mobile__icon">
+                        <ItemIcon size={14} aria-hidden="true" />
+                      </span>
+                      <span className="pkg-spec-mobile__term-text">
+                        <span className="pkg-spec-mobile__name">{row.name}</span>
+                        <span className="pkg-spec-mobile__category">{row.category}</span>
+                      </span>
+                    </dt>
+                    <dd className="pkg-spec-mobile__value">
+                      {renderCellContent(valueForTier(row, slug), slug)}
+                    </dd>
+                  </div>
+                );
+              })}
+            </dl>
           </div>
 
           <div className="flex justify-center mt-5 mb-2">

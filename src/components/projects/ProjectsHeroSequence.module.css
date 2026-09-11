@@ -1,25 +1,25 @@
 .section {
   position: relative;
   background: var(--film-bg);
-  /* Fallback height for mobile / touch */
-  height: auto;
+  height: 260vh;
 }
 
 .track {
   position: relative;
-  height: auto;
+  height: 100%;
 }
 
 .stage {
-  position: relative;
-  height: 85vh;
-  min-height: 540px;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  height: 100svh;
   overflow: hidden;
   background: var(--film-bg);
 }
 
 .canvas {
-  display: none;
+  display: block;
   position: absolute;
   inset: 0;
   width: 100%;
@@ -416,28 +416,90 @@
 }
 
 @media (max-width: 767px) {
+  /* Full-bleed canvas on mobile: fill the entire viewport with the 300-frame sequence (no black background box) */
+  .canvas,
+  .poster {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+  }
+
+  .scrim {
+    background:
+      linear-gradient(to bottom, rgba(22, 28, 24, 0.75) 0%, transparent 24%),
+      linear-gradient(to top, rgba(22, 28, 24, 0.90) 0%, rgba(22, 28, 24, 0.50) 42%, transparent 70%);
+  }
+
+  .gridOverlay {
+    display: none;
+  }
+
   .controlsButton {
     display: none;
   }
 
-  .counter {
+  /* Hide the 4-block mobile rail that was previously placed in the black box */
+  .rail {
     display: none;
   }
 
+  .counter {
+    display: flex;
+    right: var(--gutter);
+    bottom: 1.25rem;
+    padding: 0.35rem 0.65rem;
+    gap: 0.4rem;
+    width: auto;
+    max-width: calc(100vw - var(--gutter) * 2);
+  }
+
+  .counterMeta {
+    display: none;
+  }
+
+  .counterValues strong {
+    font-size: 0.9rem;
+  }
+
+  .counterValues span {
+    font-size: 0.65rem;
+  }
+
   .intro {
-    bottom: 2.5rem;
+    top: auto;
+    bottom: clamp(2.5rem, 6vh, 4.5rem);
     max-width: 100%;
     padding-right: var(--gutter);
   }
 
   .title {
-    font-size: clamp(2.4rem, 8vw, 3.5rem);
+    font-size: clamp(2.2rem, 7vw, 3.2rem);
     line-height: 1;
   }
 
-  .stage {
-    height: 80vh;
-    min-height: 480px;
+  .stageCopyContainer {
+    top: auto;
+    bottom: clamp(2.5rem, 6vh, 4.5rem);
+    left: var(--gutter);
+    right: var(--gutter);
+    max-width: 100%;
+  }
+
+  .stageCopy {
+    max-width: 100%;
+  }
+
+  .stageTitle {
+    font-size: clamp(1.15rem, 4vw, 1.5rem);
+    line-height: 1.25;
+  }
+
+  .stageNote {
+    font-size: var(--fs-xs);
+    line-height: 1.45;
   }
 }
 

@@ -160,6 +160,16 @@ export const updateAddonMetadataSchema = z
 
 export const createAddonVariantSchema = addonVariantItemSchema;
 
+export const updateAddonVariantSchema = z.object({
+  variantName: z.string().min(2).optional(),
+  variantSlug: slugField.optional(),
+  price: z.coerce.number().min(0, 'Price must be non-negative').optional(),
+  packageTiers: z
+    .array(z.string().min(1))
+    .min(1, 'Select at least one package this variant is available in')
+    .optional(),
+});
+
 export const createCategorySchema = z.object({
   name: z.string().min(2, 'Category name is required'),
   slug: slugField,
@@ -285,6 +295,7 @@ export type UpdateAddonPriceDto = z.infer<typeof updateAddonPriceSchema>;
 export type UpdateAddonMetadataDto = z.infer<typeof updateAddonMetadataSchema>;
 export type CreateAddonDto = z.infer<typeof createAddonSchema>;
 export type CreateAddonVariantDto = z.infer<typeof createAddonVariantSchema>;
+export type UpdateAddonVariantDto = z.infer<typeof updateAddonVariantSchema>;
 export type CreateCategoryDto = z.infer<typeof createCategorySchema>;
 export type UpdateCategoryDto = z.infer<typeof updateCategorySchema>;
 export type CreateItemDto = z.infer<typeof createItemSchema>;

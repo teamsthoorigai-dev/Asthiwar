@@ -98,6 +98,13 @@ export interface CalculationResult {
     carParkingAreaSqft: number;
     carCount: number;
     totalBuiltupAreaSqft: number;
+    /**
+     * Built-up area plus head room — every square foot the quotation was charged
+     * over. This is what the volume threshold is tested against and what the
+     * all-in rate per sq.ft divides by; `totalBuiltupAreaSqft` remains the area
+     * the base construction line multiplies out against.
+     */
+    totalEnclosedAreaSqft: number;
   };
   package: {
     id: number;

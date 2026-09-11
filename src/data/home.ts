@@ -24,20 +24,18 @@ export const homeHero = {
 
 export const logoReveal = {
   /**
-   * Sits under the wordmark once the reveal lands. An identity descriptor, not
-   * a slogan: the same three disciplines and the same city the page metadata
-   * and the footer already claim, so nothing here is a new assertion.
+   * Sits under the wordmark once the reveal lands.
    */
-  descriptor: ['Architecture', 'Engineering', 'Construction', 'Coimbatore'],
+  descriptor: ['A Better Way to Build'],
   /**
-   * The two things a visitor can actually do, on the hairline that closes the
-   * opening viewport. Same destinations the old hero CTAs carried; the homepage
-   * otherwise offers nothing actionable until the footer.
+   * Hero bottom bar: contextual transparent costing note and highlighted estimator.
    */
-  links: [
-    { label: 'Start a project', href: '/contact' },
-    { label: 'Estimate your build', href: '/cost-calculator' },
-  ],
+  pricingNote: 'Turnkey residential costing · Live 2026 Coimbatore rates',
+  estimateCta: {
+    badge: '2-Min Instant Estimate',
+    label: 'Estimate your build',
+    href: '/cost-calculator',
+  },
 } as const;
 
 export type HomePrincipleIcon =

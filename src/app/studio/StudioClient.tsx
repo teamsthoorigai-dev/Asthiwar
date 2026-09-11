@@ -140,24 +140,34 @@ export function StudioClient() {
             </p>
           </div>
 
-          {/* Office selector tabs */}
-          <div className={styles.tabsBar} role="tablist" aria-label="ASTHIWAR Studios">
-            {studioPage.offices.locations.map((office, idx) => {
-              const isActive = office.id === activeOffice.id;
-              return (
-                <button
-                  key={office.id}
-                  type="button"
-                  role="tab"
-                  aria-selected={isActive}
-                  className={`${styles.tabButton} ${isActive ? styles.tabActive : ''}`}
-                  onClick={() => setActiveOfficeId(office.id)}
-                >
-                  <span className={styles.tabIndex}>0{idx + 1}</span>
-                  <span>{office.city} — {office.region}</span>
-                </button>
-              );
-            })}
+          {/* Office selector tabs — sticky on mobile for switching locations while viewing map */}
+          <div className={styles.tabsStickyWrapper}>
+            <div className={styles.tabsBar} role="tablist" aria-label="ASTHIWAR Studios">
+              {studioPage.offices.locations.map((office, idx) => {
+                const isActive = office.id === activeOffice.id;
+                const shortLabel =
+                  office.id === 'cbe-1'
+                    ? 'Airport Axis'
+                    : office.id === 'cbe-2'
+                    ? 'GCT Axis'
+                    : 'Virudhunagar Hub';
+
+                return (
+                  <button
+                    key={office.id}
+                    type="button"
+                    role="tab"
+                    aria-selected={isActive}
+                    className={`${styles.tabButton} ${isActive ? styles.tabActive : ''}`}
+                    onClick={() => setActiveOfficeId(office.id)}
+                  >
+                    <span className={styles.tabIndex}>0{idx + 1}</span>
+                    <span className={styles.tabFullLabel}>{office.city} — {office.region}</span>
+                    <span className={styles.tabShortLabel}>{shortLabel}</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           {/* Interactive Office & Line Art Map Display */}

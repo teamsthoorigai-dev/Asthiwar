@@ -3,14 +3,24 @@
 // Rule #5: no money is computed here. All figures come from the backend.
 
 import React from 'react';
-import { ArrowLeft, ArrowRight, Building2, Car, Layers, Ruler } from 'lucide-react';
-import type { AreaUnit, EstimateFormState } from '@/lib/calculator/types';
+import { ArrowLeft, ArrowRight, Building2, Car, Layers, MapPin, Ruler } from 'lucide-react';
+import type { AreaUnit, EstimateFormState, LocationItem } from '@/lib/calculator/types';
 import { SQFT_PER_CAR } from '@/lib/calculator';
 import { convertAreaToDisplaySqft, plotAreaConversions } from '@/lib/calculator/units';
 
 interface StepDimensionsProps {
   formData: EstimateFormState;
   stepErrors: Record<string, string>;
+  /**
+   * Cities and their rate multipliers.
+   *
+   * The city used to be asked for on the final step, alongside name and phone,
+   * as though it were a contact detail. It is a pricing input: it multiplies the
+   * package rate by up to 1.05, so every customer outside Coimbatore compared
+   * packages at a rate that was not theirs and only saw the real one after they
+   * had chosen.
+   */
+  locations: LocationItem[];
   onChange: (fields: Partial<EstimateFormState>) => void;
   onNext: () => void;
 }
@@ -42,6 +52,7 @@ function resizeBreakdown(breakdown: number[], length: number, fallback: number):
 export function StepDimensions({
   formData,
   stepErrors,
+  locations,
   onChange,
   onNext,
 }: StepDimensionsProps) {
@@ -132,8 +143,39 @@ export function StepDimensions({
       </div>
 
       <div className="calculator-card p-5 sm:p-6 space-y-6">
-        {/* Total Plot Area */}
+        {/* Where the plot is. First, because it sets the rate everything else
+            is multiplied by. */}
         <div className="form-group">
+          <label className="form-label flex items-center gap-1.5" htmlFor="dimensions-location">
+            <MapPin size={16} aria-hidden="true" />
+            <span>Plot Location (Tamil Nadu)</span>
+          </label>
+          <select
+            id="dimensions-location"
+            className="form-select"
+            value={formData.plotLocation}
+            onChange={(e) => {
+              const loc = locations.find((l) => l.name === e.target.value);
+              onChange({
+                plotLocation: e.target.value,
+                locationId: loc ? loc.id : undefined,
+              });
+            }}
+          >
+            {locations.map((loc) => (
+              <option key={loc.id} value={loc.name}>
+                {loc.name}
+              </option>
+            ))}
+          </select>
+          <p className="calculator-field-hint">
+            Rates vary by city. Package prices update to match your location.
+          </p>
+          {stepErrors.plotLocation && <p className="form-error">{stepErrors.plotLocation}</p>}
+        </div>
+
+        {/* Total Plot Area */}
+        <div className="form-group calculator-field-divider">
           <div className="flex items-center justify-between gap-3 mb-1.5">
             <label className="form-label flex items-center gap-1.5 mb-0" htmlFor="plot-area">
               <Ruler size={16} aria-hidden="true" />

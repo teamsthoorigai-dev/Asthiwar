@@ -165,7 +165,7 @@ export function LogoReveal() {
         <div className={styles.center}>
           <h1 id="home-title" className={styles.lockup}>
             <span className={styles.name}>
-              ASTHIWAR — architecture, engineering and construction in Coimbatore
+              ASTHIWAR — A Better Way to Build
             </span>
             <AsthiwarWordmark ref={logoRef} className={styles.wordmark} />
           </h1>
@@ -178,11 +178,16 @@ export function LogoReveal() {
         </div>
 
         <div ref={footRef} className={styles.foot}>
-          {logoReveal.links.map((link) => (
-            <Link key={link.href} href={link.href} className={styles.footLink}>
-              {link.label}
-            </Link>
-          ))}
+          <div className={styles.footNote}>
+            <span className={styles.livePulse} aria-hidden="true" />
+            <span>{logoReveal.pricingNote}</span>
+          </div>
+
+          <Link href={logoReveal.estimateCta.href} className={styles.highlightedCta}>
+            <span className={styles.ctaBadge}>{logoReveal.estimateCta.badge}</span>
+            <span className={styles.ctaLabel}>{logoReveal.estimateCta.label}</span>
+            <span className={styles.ctaArrow} aria-hidden="true">↗</span>
+          </Link>
         </div>
 
         <span ref={cueRef} className={styles.cue} aria-hidden="true" />

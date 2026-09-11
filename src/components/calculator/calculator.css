@@ -791,16 +791,21 @@
 
 .pkg-matrix-table {
   width: 100%;
-  min-width: 58rem;
+  min-width: 50rem;
   border-collapse: separate;
   border-spacing: 0;
   background: var(--bg);
+  /* Auto layout sized every column to its own longest cell, so the four
+     package columns landed on different widths and no header card lined up
+     with the one beside it. Fixed layout splits whatever is left after the
+     label column four equal ways, at any viewport. */
+  table-layout: fixed;
 }
 
 /* Column Header Cells */
 .pkg-matrix-th {
   padding: 0;
-  vertical-align: stretch;
+  vertical-align: middle;
   border-bottom: 2px solid var(--accent);
 }
 
@@ -1011,6 +1016,7 @@
 
 .pkg-matrix-td {
   padding: 0.85rem 1rem;
+  overflow-wrap: break-word;
   border-bottom: 1px solid var(--hairline);
   border-right: 1px solid var(--hairline);
   color: var(--body);
@@ -1038,7 +1044,6 @@
 }
 
 .pkg-matrix-td--col {
-  width: 18.75%;
   text-align: center;
   cursor: pointer;
   transition: background-color 0.15s ease;
@@ -1123,5 +1128,220 @@
   border: 1px solid rgba(36, 50, 40, 0.25);
 }
 
+/* ==========================================================================
+   Comparison matrix — narrow viewports
 
+   The table is a horizontal scroller at every size, but its two fixed widths
+   were tuned for a desk: a 15rem label column and a 58rem floor. On a 440px
+   phone the visible track is ~364px, so the labels alone claimed two thirds
+   of it and the first package column was cut in half — nothing lined up with
+   a column you could actually read. Shrinking both keeps one package column
+   fully in view with the next one clipped, which is also the only cue that
+   the table scrolls sideways.
+   ========================================================================== */
 
+/* Base state: the phone layout is off, the table is on. Swapped below 48rem. */
+.pkg-spec-mobile {
+  display: none;
+}
+
+@media (max-width: 60rem) {
+  /* Below this the wrapper is narrower than the table's floor, so the table
+     could only be read by scrolling it sideways. The tier becomes a switch and
+     the specs run down the page instead. */
+  .pkg-matrix-scroll-wrapper {
+    display: none;
+  }
+
+  .pkg-spec-mobile {
+    display: block;
+  }
+
+  .pkg-matrix-section {
+    margin-top: 1rem;
+  }
+}
+
+.pkg-spec-mobile__switch {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  padding: 1px;
+  border: 1px solid var(--hairline);
+  border-radius: 4px;
+  background: var(--hairline);
+  overflow: hidden;
+}
+
+.pkg-spec-mobile__tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  /* 44px is the floor for a control a thumb has to hit. */
+  min-height: 3.25rem;
+  padding: 0.5rem 0.2rem;
+  border: 0;
+  background: var(--surface);
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  line-height: 1.1;
+  cursor: pointer;
+  transition: background-color 0.15s var(--ease-state), color 0.15s var(--ease-state);
+}
+
+.pkg-spec-mobile__tab:hover {
+  background: var(--clay);
+  color: var(--ink);
+}
+
+.pkg-spec-mobile__tab[data-selected] {
+  background: var(--accent);
+  color: #ffffff;
+}
+
+.pkg-spec-mobile__rate {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.85rem 0.5rem 0.75rem;
+}
+
+.pkg-spec-mobile__rate-was {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--muted);
+  text-decoration: line-through;
+}
+
+.pkg-spec-mobile__rate-value {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+}
+
+.pkg-spec-mobile__rate-unit {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--muted);
+  letter-spacing: 0;
+}
+
+.pkg-spec-mobile__list {
+  margin: 0;
+  border: 1px solid var(--hairline);
+  border-radius: 4px;
+  background: var(--bg);
+  overflow: hidden;
+}
+
+.pkg-spec-mobile__item {
+  padding: 0.7rem 0.8rem 0.75rem;
+  border-bottom: 1px solid var(--hairline);
+}
+
+.pkg-spec-mobile__item:last-child {
+  border-bottom: 0;
+}
+
+.pkg-spec-mobile__item:nth-child(even) {
+  background-color: rgba(228, 225, 218, 0.35);
+}
+
+.pkg-spec-mobile__term {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.pkg-spec-mobile__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 4px;
+  border: 1px solid var(--hairline);
+  background: var(--surface);
+  color: var(--accent);
+}
+
+.pkg-spec-mobile__term-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.pkg-spec-mobile__name {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--ink);
+}
+
+.pkg-spec-mobile__category {
+  font-size: 0.625rem;
+  line-height: 1.3;
+  color: var(--muted);
+}
+
+/* Indented to the label's text, not its icon, so the column reads straight. */
+.pkg-spec-mobile__value {
+  margin: 0.35rem 0 0 2rem;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--body);
+  overflow-wrap: break-word;
+}
+
+/* A value the customer set earlier and can go back to, rather than a second
+   editable copy of it. The city lives here: it is a pricing input chosen in
+   step 1, and an editable duplicate on the contact step let someone change
+   their multiplier after they had already compared and chosen a package. */
+.calculator-readonly-field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.625rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 0.375rem;
+  background: var(--surface-active, var(--surface));
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.calculator-readonly-field__action {
+  flex-shrink: 0;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  background: none;
+  border: 0;
+  padding: 0.125rem 0.25rem;
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.calculator-readonly-field__action:hover {
+  color: var(--foreground);
+  text-decoration: underline;
+}
+
+/* Sits under a field that changes pricing, so the customer knows why it matters. */
+.calculator-field-hint {
+  margin-top: 0.375rem;
+  font-size: 0.6875rem;
+  line-height: 1.5;
+  color: var(--muted);
+}

@@ -196,6 +196,8 @@ export interface CalculationResult {
     carParkingAreaSqft: number;
     carCount: number;
     totalBuiltupAreaSqft: number;
+    /** Built-up area plus head room — what the volume threshold is tested against. */
+    totalEnclosedAreaSqft?: number;
   };
   package: {
     id: number;

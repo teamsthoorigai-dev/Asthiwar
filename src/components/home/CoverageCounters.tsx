@@ -5,7 +5,6 @@ import { Section } from '@/components/ui/Section';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { Odometer } from '@/components/ui/Odometer';
 import { coverage } from '@/data/home';
-import { LOCATIONS } from '@/data/pricing';
 import { gsap, MOTION, REDUCED, revealTrigger } from '@/lib/gsap';
 import styles from './CoverageCounters.module.css';
 
@@ -13,7 +12,16 @@ import styles from './CoverageCounters.module.css';
  * Homepage section 09 · Where we build.
  * Three odometer counters and seven location pills read from pricing data.
  */
-export function CoverageCounters() {
+interface CoverageCountersProps {
+  /**
+   * Cities to show, from the catalogue. Passed in by a server component rather
+   * than imported, so this section cannot advertise a city the calculator has
+   * never heard of — which is exactly what the previous hard-coded list did.
+   */
+  locations?: ReadonlyArray<{ slug: string; name: string }>;
+}
+
+export function CoverageCounters({ locations = [] }: CoverageCountersProps) {
   const pillsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -54,7 +62,7 @@ export function CoverageCounters() {
         ref={pillsRef}
         aria-label="Locations served across Tamil Nadu"
       >
-        {LOCATIONS.map((loc) => (
+        {locations.map((loc) => (
           <span key={loc.slug} className={styles.pill}>
             {loc.name}
           </span>

@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { LogoReveal } from '@/components/home/LogoReveal';
 import { PrinciplesMarquee } from '@/components/home/PrinciplesMarquee';
+import { SustainabilityHero } from '@/components/home/SustainabilityHero';
 import { WorkGallery } from '@/components/home/WorkGallery';
 import { EstimateBand } from '@/components/home/EstimateBand';
 import { LastingCards } from '@/components/home/LastingCards';
@@ -30,12 +31,10 @@ export const metadata: Metadata = {
  * Homepage — proof first.
  *
  * The opening viewport is the logo reveal and nothing else. What follows is the
- * agreed order: the four principles, the work, then what it costs, then how the
- * practice thinks, then what it covers, then the questions people actually ask.
- * The footer, from SiteChrome, closes it.
- *
- * The principles band takes the place v1 gave it — the first thing after the
- * opening viewport — since this page has no photographic hero to weld it to.
+ * agreed order: the work, then the sustainability photographic statement ("Comfort
+ * designed in, before energy is spent"), then the principles marquee, then what it
+ * costs, then how the practice thinks, then what it covers, then the questions people
+ * actually ask. The footer, from SiteChrome, closes it.
  *
  * DisciplinesSticky is the one sticky set-piece left on the page; everything
  * below the hero otherwise scrolls at its natural rate.
@@ -46,6 +45,7 @@ export default function HomePage() {
       <LogoReveal />
       <EstimateBand />
       <WorkGallery content={workGallery} />
+      <SustainabilityHero />
       <PrinciplesMarquee />
       <LastingCards />
       <DisciplinesSticky />

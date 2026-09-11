@@ -44,6 +44,17 @@ import {
   AddonDetail,
   floorsIncludingGround,
 } from './calculator.types.js';
+import {
+  convertAreaToSqft,
+  distributeMilestoneAmounts,
+  getDurationForFloors,
+  totalEnclosedArea,
+} from './pricing-math.js';
+
+// Re-exported: these were defined here, and the pure arithmetic has moved to
+// pricing-math.ts so it can be tested without a database connection. Callers and
+// tests that already import them from this module are unaffected.
+export { convertAreaToSqft, getDurationForFloors, totalEnclosedArea };
 
 /** One reason a requested selection could not be turned into a priced line. */
 export interface CalculationIssue {
@@ -124,41 +135,9 @@ export const MILESTONE_DEFINITIONS = [
   { stageNumber: 10, stageName: 'Fixtures, Finishing & Handover', percentage: 5, keyDeliverables: 'CP & sanitary fittings, switches, lights, glass railings, deep clean' },
 ];
 
-export function getDurationForFloors(floorsAboveGround: number) {
-  if (floorsAboveGround === 0) return { range: '5–6 Months', min: 5, max: 6, floorNumber: 1 };
-  if (floorsAboveGround === 1) return { range: '7–8 Months', min: 7, max: 8, floorNumber: 2 };
-  if (floorsAboveGround === 2) return { range: '9–11 Months', min: 9, max: 11, floorNumber: 3 };
-  if (floorsAboveGround === 3) return { range: '12–14 Months', min: 12, max: 14, floorNumber: 4 };
-
-  // For each floor beyond 3, add 2 months to min and max.
-  const extraFloors = floorsAboveGround - 3;
-  const min = 12 + (extraFloors * 2);
-  const max = 14 + (extraFloors * 2);
-  return {
-    range: `${min}–${max} Months`,
-    min,
-    max,
-    floorNumber: floorsIncludingGround(floorsAboveGround),
-  };
-}
-
 // ---------------------------------------------------------------------------
 // Unit Conversion Helpers
 // ---------------------------------------------------------------------------
-
-export function convertAreaToSqft(area: number, unit: AreaUnit = 'sqft'): number {
-  switch (unit) {
-    case 'cents':
-      return Number((area * 435.6).toFixed(2));
-    case 'sqyards':
-      return Number((area * 9).toFixed(2));
-    case 'sqm':
-      return Number((area * 10.7639).toFixed(2));
-    case 'sqft':
-    default:
-      return Number(area.toFixed(2));
-  }
-}
 
 export function generateEstimateNumber(): string {
   const year = new Date().getFullYear();
@@ -221,7 +200,18 @@ export async function calculateEstimate(
   }
 
   const pkg = pkgRows[0];
-  const isVolumeRateApplied = totalBuiltupAreaSqft > pkg.volumeThreshold;
+
+  // Head room is priced separately from the built-up area — its own rate over its
+  // own area, so the base line on the quotation multiplies out — but it is still
+  // built structure, and the volume discount is a discount for building more of
+  // it. Testing the threshold against built-up area alone meant two builds with
+  // the same enclosed area were charged different rates purely by where the area
+  // was booked: 3,400 sq.ft plus 200 of parking crossed the threshold, 3,400 plus
+  // 200 of head room did not, a swing of roughly ₹50/sq.ft across the whole job.
+  const headRoomAreaSqft = Number((input.headRoomAreaSqft ?? 0).toFixed(2));
+  const totalEnclosedAreaSqft = totalEnclosedArea(totalBuiltupAreaSqft, headRoomAreaSqft);
+
+  const isVolumeRateApplied = totalEnclosedAreaSqft > pkg.volumeThreshold;
   const baseRatePerSqft = isVolumeRateApplied
     ? Number(pkg.volumePricePerSqft)
     : Number(pkg.pricePerSqft);
@@ -269,8 +259,14 @@ export async function calculateEstimate(
   // it in here made that line fail to add up.
   const baseConstructionCost = Math.round(totalBuiltupAreaSqft * effectiveRatePerSqft);
 
-  const headRoomAreaSqft = Number((input.headRoomAreaSqft ?? 0).toFixed(2));
-  const headRoomRatePerSqft = Number(pkg.headRoomPricePerSqft);
+  // The city multiplier applies here too.
+  //
+  // It represents what building in that city costs — labour, material, logistics —
+  // and none of that stops at the stairwell. Charging the main floors at Chennai's
+  // 1.05 and the head room at the flat catalogue rate made the same structure cost
+  // two different things depending on which line it landed on.
+  const headRoomBaseRatePerSqft = Number(pkg.headRoomPricePerSqft);
+  const headRoomRatePerSqft = Number((headRoomBaseRatePerSqft * locationMultiplier).toFixed(2));
   const headRoomCost = Math.round(headRoomAreaSqft * headRoomRatePerSqft);
 
   // 4. Customizations & Upgrades Calculation (Batch-optimized for O(1) in-memory lookup)
@@ -383,8 +379,15 @@ export async function calculateEstimate(
         const pi = packageItemMap.get(itm.id);
         if (pi && !pi.isIncluded && Number(pi.additionalCostPrice) > 0) {
           unitPriceDelta = Number(pi.additionalCostPrice);
-          priceType = 'per_sqft';
-          calculatedPrice = Math.round(unitPriceDelta * totalBuiltupAreaSqft);
+          // Read the component's own unit rather than assuming per-sqft. A
+          // component declared 'fixed', 'item' or 'allowance' carries a lump sum,
+          // and multiplying that by the whole built-up area turned a ₹25,000
+          // charge into ₹4.25 crore on a 1,700 sq.ft build.
+          priceType = itm.unit === 'sqft' || itm.unit === 'rft' ? 'per_sqft' : 'fixed';
+          calculatedPrice =
+            priceType === 'per_sqft'
+              ? Math.round(unitPriceDelta * totalBuiltupAreaSqft)
+              : Math.round(unitPriceDelta);
         }
       }
 
@@ -606,8 +609,12 @@ export async function calculateEstimate(
     ]);
   }
 
-  const effectiveTotalCostPerSqft = totalBuiltupAreaSqft > 0
-    ? Number((totalProjectCost / totalBuiltupAreaSqft).toFixed(2))
+  // Divided by every square foot the total was charged over, head room included.
+  // The numerator already carried the head room cost while the denominator left
+  // its area out, so quoting head room inflated the headline "all-in rate" against
+  // an area the customer was not being shown.
+  const effectiveTotalCostPerSqft = totalEnclosedAreaSqft > 0
+    ? Number((totalProjectCost / totalEnclosedAreaSqft).toFixed(2))
     : 0;
 
   // 7. Milestone Phase Schedule
@@ -626,26 +633,20 @@ export async function calculateEstimate(
       }))
     : MILESTONE_DEFINITIONS;
 
-  let distributedAmountSum = 0;
-  const milestones: MilestoneStage[] = activeMilestoneDefs.map((m, index) => {
-    const isLast = index === activeMilestoneDefs.length - 1;
-    let amount = Math.round(totalProjectCost * (m.percentage / 100));
+  // The last stage absorbs the rounding so the instalments sum to the total
+  // exactly — see distributeMilestoneAmounts.
+  const milestoneAmounts = distributeMilestoneAmounts(
+    totalProjectCost,
+    activeMilestoneDefs.map((m) => m.percentage)
+  );
 
-    if (isLast) {
-      // Ensure sum is exactly equal to totalProjectCost
-      amount = totalProjectCost - distributedAmountSum;
-    } else {
-      distributedAmountSum += amount;
-    }
-
-    return {
-      stageNumber: m.stageNumber,
-      stageName: m.stageName,
-      percentage: m.percentage,
-      amount,
-      keyDeliverables: m.keyDeliverables,
-    };
-  });
+  const milestones: MilestoneStage[] = activeMilestoneDefs.map((m, index) => ({
+    stageNumber: m.stageNumber,
+    stageName: m.stageName,
+    percentage: m.percentage,
+    amount: milestoneAmounts[index],
+    keyDeliverables: m.keyDeliverables,
+  }));
 
   // A preview must not consume a sequence number — it would leave gaps for every
   // keystroke the customer makes, and show a number that is never issued.
@@ -671,6 +672,7 @@ export async function calculateEstimate(
       carParkingAreaSqft,
       carCount,
       totalBuiltupAreaSqft,
+      totalEnclosedAreaSqft,
     },
     package: {
       id: pkg.id,

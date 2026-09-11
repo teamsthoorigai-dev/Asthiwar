@@ -198,6 +198,7 @@ export function CalculatorWizard() {
         <StepDimensions
           formData={formData}
           stepErrors={stepErrors}
+          locations={locations}
           onChange={updateForm}
           onNext={handleNextStep}
         />
@@ -245,6 +246,7 @@ export function CalculatorWizard() {
         <StepLeadCapture
           formData={formData}
           locations={locations}
+          onEditLocation={() => handleGoToStep(0)}
           calculating={calculating}
           stepErrors={stepErrors}
           error={error}

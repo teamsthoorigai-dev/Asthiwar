@@ -317,3 +317,64 @@
   color: #ffffff;
   border-color: #1c1917;
 }
+
+@media (max-width: 640px) {
+  .wrapper {
+    min-height: 350px;
+  }
+
+  .topRightMapsCard {
+    width: 120px;
+    height: 75px;
+    top: 0.6rem;
+    right: 0.6rem;
+    padding: 0.35rem;
+  }
+
+  .mapsBadge {
+    font-size: 0.65rem;
+    padding: 0.2rem 0.45rem;
+  }
+
+  .satelliteLabel {
+    font-size: 0.56rem;
+  }
+
+  .bottomLegendBar {
+    flex-direction: column-reverse;
+    align-items: stretch;
+    gap: 0.45rem;
+    bottom: 0.65rem;
+    left: 0.65rem;
+    right: 0.65rem;
+  }
+
+  .scaleBadge {
+    justify-content: center;
+    font-size: 0.62rem;
+    padding: 0.25rem 0.5rem;
+    gap: 0.5rem;
+  }
+
+  .scaleLine {
+    width: 28px;
+  }
+
+  .actionPillButton {
+    justify-content: center;
+    width: 100%;
+    padding: 0.45rem 0.75rem;
+    font-size: 0.68rem;
+  }
+
+  .mapToolbar {
+    top: 0.5rem;
+    right: 0.5rem;
+    gap: 0.35rem;
+  }
+
+  .toolButton {
+    padding: 0.35rem 0.6rem;
+    font-size: 0.65rem;
+  }
+}

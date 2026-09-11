@@ -14,7 +14,7 @@ import styles from './EstimateBand.module.css';
  */
 export function EstimateBand() {
   return (
-    <section className={styles.section} aria-labelledby="estimate-title">
+    <section className={styles.section} id="cost-calculator-section" aria-labelledby="estimate-title">
       <div className={styles.grid}>
         <div>
           <p className={styles.eyebrow}>{estimateBand.eyebrow}</p>

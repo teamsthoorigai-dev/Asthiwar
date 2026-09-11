@@ -15,6 +15,8 @@ interface StepLeadCaptureProps {
   onChange: (fields: Partial<EstimateFormState>) => void;
   onSubmit: () => void;
   onBack: () => void;
+  /** Takes the customer back to step 1, where the city is chosen. */
+  onEditLocation: () => void;
 }
 
 export function StepLeadCapture({
@@ -26,6 +28,7 @@ export function StepLeadCapture({
   onChange,
   onSubmit,
   onBack,
+  onEditLocation,
 }: StepLeadCaptureProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -113,33 +116,28 @@ export function StepLeadCapture({
           </div>
         </div>
 
+        {/* Shown, not edited.
+            The city is a pricing input and is chosen in step 1, where the rates
+            it changes are on screen. Leaving an editable copy here meant a
+            customer could change their multiplier on the contact form, after
+            comparing packages and picking one — the total would move and nothing
+            on this step would explain why. */}
         <div className="form-group">
-          <label className="form-label flex items-center gap-1.5" htmlFor="summary-location">
+          <span className="form-label flex items-center gap-1.5">
             <MapPin size={16} aria-hidden="true" />
-            <span>Plot Location (Tamil Nadu)</span>
-            <span className="text-red-500">*</span>
-          </label>
-          <select
-            id="summary-location"
-            className="form-select"
-            value={formData.plotLocation}
-            onChange={(e) => {
-              const loc = locations.find((l) => l.name === e.target.value);
-              onChange({
-                plotLocation: e.target.value,
-                locationId: loc ? loc.id : undefined,
-              });
-            }}
-          >
-            {locations.map((loc) => (
-              <option key={loc.id} value={loc.name}>
-                {loc.name}
-              </option>
-            ))}
-          </select>
-          {stepErrors.plotLocation && (
-            <p className="form-error">{stepErrors.plotLocation}</p>
-          )}
+            <span>Plot Location</span>
+          </span>
+          <div className="calculator-readonly-field">
+            <span>{formData.plotLocation || '—'}</span>
+            <button
+              type="button"
+              onClick={onEditLocation}
+              className="calculator-readonly-field__action"
+            >
+              Change
+            </button>
+          </div>
+          {stepErrors.plotLocation && <p className="form-error">{stepErrors.plotLocation}</p>}
         </div>
 
         <div className="calculator-actions pt-4 border-t border-border flex items-center justify-between">
