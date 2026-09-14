@@ -31,7 +31,6 @@ export function LogoReveal() {
   const sectionRef = useRef<HTMLElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const logoRef = useRef<SVGSVGElement>(null);
-  const descriptorRef = useRef<HTMLParagraphElement>(null);
   const footRef = useRef<HTMLDivElement>(null);
   const cueRef = useRef<HTMLSpanElement>(null);
 
@@ -39,10 +38,9 @@ export function LogoReveal() {
     const section = sectionRef.current;
     const stage = stageRef.current;
     const logo = logoRef.current;
-    const descriptor = descriptorRef.current;
     const foot = footRef.current;
     const cue = cueRef.current;
-    if (!section || !stage || !logo || !descriptor || !foot || !cue) return;
+    if (!section || !stage || !logo || !foot || !cue) return;
 
     // The header owns the brand from the start when nothing is going to animate.
     if (REDUCED()) {
@@ -126,21 +124,12 @@ export function LogoReveal() {
           { open: 1, duration: 0.52, ease: 'power2.out', onUpdate: paintWipe },
           0.4,
         )
-        // Arrives only once the wordmark is whole, so the opening viewport
-        // still holds nothing but the mark.
-        .fromTo(
-          descriptor,
-          { autoAlpha: 0, y: 14 },
-          { autoAlpha: 1, y: 0, duration: 0.18, ease: 'power2.out' },
-          0.68,
-        )
-        // autoAlpha, not opacity: the links must not be focusable while the
-        // reveal is still running.
+        // Arrives only once the wordmark is whole
         .fromTo(
           foot,
           { autoAlpha: 0, y: 14 },
-          { autoAlpha: 1, y: 0, duration: 0.18, ease: 'power2.out' },
-          0.74,
+          { autoAlpha: 1, y: 0, duration: 0.22, ease: 'power2.out' },
+          0.68,
         )
         .to(cue, { autoAlpha: 0, duration: 0.18, ease: 'none' }, 0)
         // Holds the finished composition for the last of the scrub, so it is
@@ -167,12 +156,15 @@ export function LogoReveal() {
             <span className={styles.name}>ASTHIWAR</span>
             <AsthiwarWordmark ref={logoRef} className={styles.wordmark} />
           </h1>
+        </div>
 
-          <p ref={descriptorRef} className={styles.singleLineNote}>
+        <div ref={footRef} className={styles.foot}>
+          <p className={styles.footNote}>
+            <span className={styles.livePulse} aria-hidden="true" />
             {logoReveal.pricingNote}
           </p>
 
-          <div ref={footRef} className={styles.estimateTabWrap}>
+          <div className={styles.estimateTabWrap}>
             <Link href={logoReveal.estimateCta.href} className={styles.highlightedCta}>
               <span className={styles.ctaBadge}>{logoReveal.estimateCta.badge}</span>
               <span className={styles.ctaLabel}>{logoReveal.estimateCta.label}</span>
@@ -187,7 +179,7 @@ export function LogoReveal() {
       <noscript>
         <style>
           {`.${styles.wordmark}{transform:none;clip-path:none}` +
-            `.${styles.singleLineNote},.${styles.estimateTabWrap}{opacity:1}` +
+            `.${styles.foot}{opacity:1}` +
             `.${styles.cue}{display:none}`}
         </style>
       </noscript>

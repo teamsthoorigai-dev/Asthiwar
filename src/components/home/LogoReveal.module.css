@@ -52,38 +52,14 @@
   display: block;
   width: 100%;
   height: auto;
-  color: var(--accent-bright);
+  color: var(--ink);
   transform-origin: 53.2943% 50%;
   transform: translateX(-3.2943%) scale(var(--reveal-start-scale));
   clip-path: inset(0% 44.6615% 0% 51.25%);
   --reveal-start-scale: 7.2;
 }
 
-/* Single line note directly between the company name lockup and the estimate tab. */
-.singleLineNote {
-  display: block;
-  white-space: nowrap;
-  max-width: min(94vw, 54rem);
-  margin: clamp(0.75rem, 2vh, 1.35rem) 0 0;
-  color: var(--muted);
-  font-size: clamp(0.82rem, 0.76rem + 0.35vw, 1.05rem);
-  font-weight: var(--fw-medium);
-  letter-spacing: 0.05em;
-  line-height: 1.4;
-  text-align: center;
-  opacity: 0;
-}
-
-.estimateTabWrap {
-  display: flex;
-  justify-content: center;
-  margin-top: clamp(1rem, 2.4vh, 1.6rem);
-  opacity: 0;
-}
-
-/* Closes the opening viewport with an edge instead of leaving the lower half
-   empty. Centred with left/right + auto margins rather than a transform, because
-   the reveal animates `y` on this element and would overwrite it. */
+/* Bottom foot bar at the base of the hero section */
 .foot {
   position: absolute;
   inset-inline: var(--gutter);
@@ -92,23 +68,32 @@
   flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
-  gap: var(--s-1) var(--s-4);
+  gap: var(--s-2) var(--s-4);
   max-width: var(--container-large);
+  width: calc(100% - (var(--gutter) * 2));
   margin-inline: auto;
   padding-block-start: var(--s-2);
   border-block-start: 1px solid var(--hairline);
   opacity: 0;
+  z-index: 10;
+  pointer-events: auto;
 }
 
 .footNote {
   display: inline-flex;
   align-items: center;
-  gap: 0.55rem;
+  gap: 0.65rem;
   color: var(--muted);
-  font-size: var(--fs-xs);
+  font-size: clamp(0.82rem, 0.76rem + 0.25vw, 0.95rem);
   font-weight: var(--fw-medium);
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin: 0;
+}
+
+.estimateTabWrap {
+  display: flex;
+  align-items: center;
+  margin: 0;
 }
 
 .livePulse {
@@ -194,25 +179,22 @@
 
 /* Too narrow for four terms and three separators. Whitespace does the work
    instead, and the descriptor breaks into a tidy two-by-two. */
-@media (max-width: 560px) {
-  .singleLineNote {
-    font-size: clamp(0.7rem, 2.9vw, 0.85rem);
-    letter-spacing: 0.02em;
-  }
-
+@media (max-width: 640px) {
   .foot {
     flex-direction: column;
     justify-content: center;
     align-items: center;
     gap: var(--s-2);
     text-align: center;
-    bottom: clamp(0.75rem, 2.5vh, 1.5rem);
+    bottom: clamp(0.75rem, 2.5vh, 1.25rem);
+    padding-block-start: var(--s-2);
   }
 
   .footNote {
     justify-content: center;
-    font-size: 0.7rem;
-    letter-spacing: 0.08em;
+    font-size: 0.76rem;
+    letter-spacing: 0.02em;
+    text-align: center;
   }
 }
 
@@ -243,8 +225,6 @@
     clip-path: none;
   }
 
-  .singleLineNote,
-  .estimateTabWrap,
   .foot {
     opacity: 1;
   }
