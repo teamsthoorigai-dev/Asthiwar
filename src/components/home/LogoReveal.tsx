@@ -159,10 +159,11 @@ export function LogoReveal() {
         </div>
 
         <div ref={footRef} className={styles.foot}>
-          <p className={styles.footNote}>
+          <Link href={logoReveal.estimateCta.href} className={styles.footNoteCta}>
             <span className={styles.livePulse} aria-hidden="true" />
-            {logoReveal.pricingNote}
-          </p>
+            <span>{logoReveal.pricingNote}</span>
+            <span className={styles.footNoteArrow} aria-hidden="true">→</span>
+          </Link>
 
           <div className={styles.estimateTabWrap}>
             <Link href={logoReveal.estimateCta.href} className={styles.highlightedCta}>

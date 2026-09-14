@@ -33,8 +33,8 @@ export const legalNav: NavLink[] = [
  */
 export const contact = {
   address: 'Coimbatore & Virudhunagar, Tamil Nadu',
-  phone: 'To be confirmed',
-  email: 'To be confirmed',
+  phone: '+91 94884 40123',
+  email: 'contact@asthiwar.com',
 } as const;
 
 /** Social URLs to be supplied. Empty until then — nothing is rendered. */

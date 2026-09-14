@@ -12,6 +12,8 @@ import styles from './WorkGallery.module.css';
 export type WorkGalleryImage = {
   src: string;
   alt: string;
+  /** 'contain' shows the photo at its full, uncropped proportions. Defaults to 'cover'. */
+  fit?: 'cover' | 'contain';
 };
 
 export type WorkGalleryItem = {
@@ -92,15 +94,26 @@ export function WorkGallery({ content }: WorkGalleryProps) {
         {content.tiles.map((tile, index) => (
           <article className={styles.tile} data-work-tile key={tile.id}>
             <Link href={tile.href} className={styles.link}>
-              <span className={styles.media}>
-                <Image
-                  src={tile.image.src}
-                  alt={tile.image.alt}
-                  fill
-                  sizes={imageSizes[index] ?? fallbackImageSize}
-                  className={styles.image}
-                />
-              </span>
+              {tile.image.fit === 'contain' ? (
+                <span className={styles.mediaNatural}>
+                  {/* eslint-disable-next-line @next/next/no-img-element -- natural aspect ratio, unknown at build time */}
+                  <img
+                    src={tile.image.src}
+                    alt={tile.image.alt}
+                    className={styles.imageNatural}
+                  />
+                </span>
+              ) : (
+                <span className={styles.media}>
+                  <Image
+                    src={tile.image.src}
+                    alt={tile.image.alt}
+                    fill
+                    sizes={imageSizes[index] ?? fallbackImageSize}
+                    className={styles.image}
+                  />
+                </span>
+              )}
 
               <span className={styles.caption}>
                 <span className={styles.projectTitle}>{tile.title}</span>

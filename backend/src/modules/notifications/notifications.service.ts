@@ -110,8 +110,8 @@ export async function sendEstimateQuotationNotification(estimateIdOrNumber: stri
           </div>
           
           <p style="font-size: 12px; color: #94a3b8; text-align: center; margin-top: 30px;">
-            Asthiwar Design & Build • Coimbatore • Chennai • Tiruppur • Erode • Pollachi<br/>
-            Contact: +91 98765 43210 | info@asthiwar.com
+            Asthiwar Design & Build • Coimbatore • Virudhunagar • Chennai • Tiruppur • Erode • Pollachi<br/>
+            Contact: +91 94884 40123 | contact@asthiwar.com
           </p>
         </div>
       </div>
@@ -171,8 +171,8 @@ export async function sendAdminNewLeadAlert(enquiryId: string) {
     throw new NotificationError(404, 'ENQUIRY_NOT_FOUND', `Enquiry with ID ${enquiryId} not found`);
   }
 
-  const adminEmail = process.env.ADMIN_ALERT_EMAIL || 'sales@asthiwar.com';
-  const adminPhone = process.env.ADMIN_ALERT_PHONE || '9876543210';
+  const adminEmail = process.env.ADMIN_ALERT_EMAIL || 'contact@asthiwar.com';
+  const adminPhone = process.env.ADMIN_ALERT_PHONE || '9488440123';
 
   const subject = `🚨 [NEW LEAD] Consultation Request: ${enquiry.fullName} (${enquiry.plotLocation})`;
   const message = `🚨 *NEW ASTHIWAR LEAD ALERT*\n\n👤 *Client:* ${enquiry.fullName}\n📞 *Phone:* ${enquiry.phone}\n📧 *Email:* ${enquiry.email ?? 'N/A'}\n📍 *Site Location:* ${enquiry.plotLocation}\n⏰ *Preferred Time:* ${enquiry.preferredContactTime || 'Anytime'}\n📝 *Requirement:* ${enquiry.requirementNotes || 'Standard consultation'}\n${enquiry.estimateNumber ? `📋 *Linked Estimate:* ${enquiry.estimateNumber}` : ''}`;

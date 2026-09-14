@@ -22,14 +22,17 @@
   --ease-cinematic: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+/* Opacity only, deliberately. `animate-fade-in` wraps every calculator step,
+   including the package comparison matrix's sticky header — any non-`none`
+   transform on an ancestor makes it the containing block for `position:
+   sticky`/`fixed` descendants, so a translate here would silently stop the
+   matrix header (and any step's fixed overlays) from sticking on scroll. */
 @keyframes fadeIn {
   from {
     opacity: 0;
-    transform: translateY(6px);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
   }
 }
 
@@ -854,8 +857,14 @@
 }
 
 .pkg-matrix-scroll-wrapper {
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
+  /* No horizontal scroll needed: below 60rem this wrapper is hidden in favour
+     of .pkg-spec-mobile (see the narrow-viewport block below), and at 60rem+
+     the container is always wider than the table's 50rem floor. `overflow-x:
+     auto` here was dead weight that, worse, forced overflow-y to compute to
+     `auto` too (the two axes can't independently be `auto`/`visible`) — turning
+     this div into a vertical scroll container that hijacked the sticky header
+     below: it has no scroll of its own, so the header just scrolled away with
+     the page instead of sticking to the viewport. */
   border-radius: 4px;
   border: 1px solid var(--hairline);
   background: var(--bg);
@@ -880,10 +889,12 @@
   padding: 0;
   vertical-align: middle;
   border-bottom: 2px solid var(--accent);
+  position: sticky;
+  top: calc(var(--header-height, 4.5rem) + 0.5rem);
+  z-index: 20;
 }
 
 .pkg-matrix-th--sticky {
-  position: sticky;
   left: 0;
   z-index: 25;
   width: 15rem;

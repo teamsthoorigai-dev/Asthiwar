@@ -3,32 +3,27 @@
 // Rule #5: no money is computed here. All figures come from the backend.
 
 import React from 'react';
-import { User, Phone, Mail, MapPin, ArrowRight, ArrowLeft, Shield, Loader2 } from 'lucide-react';
-import type { EstimateFormState, LocationItem } from '@/lib/calculator/types';
+import { User, Phone, Mail, ArrowRight, ArrowLeft, Shield, Loader2 } from 'lucide-react';
+import type { EstimateFormState } from '@/lib/calculator/types';
 
 interface StepLeadCaptureProps {
   formData: EstimateFormState;
-  locations: LocationItem[];
   calculating: boolean;
   stepErrors: Record<string, string>;
   error: string | null;
   onChange: (fields: Partial<EstimateFormState>) => void;
   onSubmit: () => void;
   onBack: () => void;
-  /** Optional handler to take the customer back to step 1. */
-  onEditLocation?: () => void;
 }
 
 export function StepLeadCapture({
   formData,
-  locations,
   calculating,
   stepErrors,
   error,
   onChange,
   onSubmit,
   onBack,
-  onEditLocation,
 }: StepLeadCaptureProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -114,40 +109,6 @@ export function StepLeadCapture({
               <p className="form-error">{stepErrors.customerEmail}</p>
             )}
           </div>
-        </div>
-
-        {/* Location Dropdown */}
-        <div className="form-group">
-          <label className="form-label flex items-center gap-1.5" htmlFor="customer-location">
-            <MapPin size={16} aria-hidden="true" />
-            <span>Plot Location (Tamil Nadu)</span>
-            <span className="text-red-500">*</span>
-          </label>
-          <select
-            id="customer-location"
-            className="form-select"
-            value={formData.plotLocation}
-            onChange={(e) => {
-              const loc = locations.find((l) => l.name === e.target.value);
-              onChange({
-                plotLocation: e.target.value,
-                locationId: loc ? loc.id : undefined,
-              });
-            }}
-          >
-            {locations.length === 0 && (
-              <option value="">Select location...</option>
-            )}
-            {locations.map((loc) => (
-              <option key={loc.id} value={loc.name}>
-                {loc.name}
-              </option>
-            ))}
-          </select>
-          <p className="calculator-field-hint">
-            Rates vary by city. Your estimate will be calculated for this location.
-          </p>
-          {stepErrors.plotLocation && <p className="form-error">{stepErrors.plotLocation}</p>}
         </div>
 
         <div className="calculator-actions pt-4 border-t border-border flex items-center justify-between">

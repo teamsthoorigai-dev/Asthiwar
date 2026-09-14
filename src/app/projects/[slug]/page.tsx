@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 import { PageHero } from '@/components/ui/PageHero';
 import { Section } from '@/components/ui/Section';
@@ -13,7 +13,8 @@ import styles from './page.module.css';
 type Params = { slug: string };
 
 export function generateStaticParams(): Params[] {
-  return projects.map((p) => ({ slug: p.slug }));
+  const base = projects.map((p) => ({ slug: p.slug }));
+  return [...base, { slug: 'ather' }, { slug: 'trevea' }];
 }
 
 export async function generateMetadata({
@@ -51,43 +52,55 @@ function Value({ children }: { children: string }) {
   );
 }
 
-function Block({ label, children }: { label: string; children: string }) {
+function Block({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
   return (
     <div className={styles.block}>
-      <p className={styles.blockLabel}>{label}</p>
-      <p className={[styles.prose, isUnconfirmed(children) && styles.pending].filter(Boolean).join(' ')}>
-        {children}
-      </p>
+      <h2 className={styles.blockLabel}>{label}</h2>
+      <div className={styles.blockBody}>{children}</div>
     </div>
   );
 }
 
-export default async function ProjectPage({ params }: { params: Promise<Params> }) {
+export default async function ProjectPage({
+  params,
+}: {
+  params: Promise<Params>;
+}) {
   const { slug } = await params;
+  if (slug === 'ather') redirect('/projects/aether');
+  if (slug === 'trevea') redirect('/projects/trivara');
+
   const project = getProject(slug);
   if (!project) notFound();
 
   const index = projects.findIndex((p) => p.slug === project.slug);
   const next = projects[(index + 1) % projects.length];
 
-  const facts: Array<[string, string]> = [
-    ['Type', project.type],
-    ['Category', project.category],
-    ['Area', project.area],
+  const facts: ReadonlyArray<readonly [string, string]> = [
+    ['Location', project.location],
+    ['Typology', project.type],
+    ['Built-up Area', project.area],
     ['Year', project.year],
     ['Status', project.status],
   ];
 
   return (
-    <>
+    <div className={styles.page}>
       <JsonLd data={getProjectBreadcrumbJsonLd(project)} />
       <PageHero
         eyebrow="Project"
         title={project.title}
         body={project.summary}
-        image={project.image.src}
-        imageAlt={project.image.alt || project.title}
+        image={project.image}
         imageCaption={[project.location, project.year]}
+        video={project.video}
+        imageFit="contain"
         className={styles.projectHero}
       />
 
@@ -95,19 +108,27 @@ export default async function ProjectPage({ params }: { params: Promise<Params> 
         <div className={styles.blueprintDatumStrip}>
           <div className={styles.datumItem}>
             <span className={styles.datumLabel}>Structure</span>
-            <span className={styles.datumVal}>Engineered RC &amp; Load-Bearing Earth</span>
+            <span className={styles.datumVal}>
+              {project.datum?.structure ?? 'Engineered RC & Load-Bearing Earth'}
+            </span>
           </div>
           <div className={styles.datumItem}>
             <span className={styles.datumLabel}>Envelope</span>
-            <span className={styles.datumVal}>Passive Jaali &amp; Slaked Lime Plaster</span>
+            <span className={styles.datumVal}>
+              {project.datum?.envelope ?? 'Passive Jaali & Slaked Lime Plaster'}
+            </span>
           </div>
           <div className={styles.datumItem}>
             <span className={styles.datumLabel}>Thermal Delta</span>
-            <span className={styles.datumVal}>-5.8°C Natural Cooling Differential</span>
+            <span className={styles.datumVal}>
+              {project.datum?.thermalDelta ?? '-5.8°C Natural Cooling Differential'}
+            </span>
           </div>
           <div className={styles.datumItem}>
-            <span className={styles.datumLabel}>Coimbatore Datum</span>
-            <span className={styles.datumVal}>11°00&apos;N 76°57&apos;E • +411M</span>
+            <span className={styles.datumLabel}>Site Datum</span>
+            <span className={styles.datumVal}>
+              {project.datum?.coordinates ?? '11°00\'N 76°57\'E • Coimbatore'}
+            </span>
           </div>
         </div>
 
@@ -172,6 +193,6 @@ export default async function ProjectPage({ params }: { params: Promise<Params> 
           </Button>
         </div>
       </Section>
-    </>
+    </div>
   );
 }

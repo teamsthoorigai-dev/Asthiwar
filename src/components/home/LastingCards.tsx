@@ -8,8 +8,6 @@ import { lastingCards, type LastingCardIcon } from '@/data/home';
 import { gsap, MOTION, REDUCED, revealTrigger } from '@/lib/gsap';
 import styles from './LastingCards.module.css';
 
-// Spec flip removed — cards are display-only; prev/next arrows and tabs navigate
-
 const cardIcons = {
   site: (
     <svg viewBox="0 0 28 28" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
@@ -67,6 +65,7 @@ const cardIcons = {
 export function LastingCards() {
   const containerRef = useRef<HTMLDivElement>(null);
   const [activeIndex, setActiveIndex] = useState(0);
+  const [flippedCards, setFlippedCards] = useState<Record<number, boolean>>({});
 
   const totalCards = lastingCards.cards.length;
 
@@ -82,6 +81,13 @@ export function LastingCards() {
     setActiveIndex((current) => (current < totalCards - 1 ? current + 1 : 0));
   }, [totalCards]);
 
+  const toggleFlip = useCallback((idx: number) => {
+    setFlippedCards((prevMap) => ({
+      ...prevMap,
+      [idx]: !prevMap[idx],
+    }));
+  }, []);
+
   // Keyboard navigation
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -91,9 +97,15 @@ export function LastingCards() {
       } else if (e.key === 'ArrowRight') {
         e.preventDefault();
         next();
+      } else if (e.key === ' ' || e.key === 'Enter') {
+        e.preventDefault();
+        next();
+      } else if (e.key.toLowerCase() === 'f') {
+        e.preventDefault();
+        toggleFlip(activeIndex);
       }
     },
-    [next, prev]
+    [activeIndex, next, prev, toggleFlip]
   );
 
   // Touch gesture support
@@ -166,6 +178,7 @@ export function LastingCards() {
             {lastingCards.cards.map((card, i) => {
               const diff = i - activeIndex;
               const isActive = diff === 0;
+              const isFlipped = !!flippedCards[i];
               const isBehind = diff > 0;
               const isPast = diff < 0;
 
@@ -188,12 +201,25 @@ export function LastingCards() {
               return (
                 <div
                   key={card.title}
-                  className={`${styles.cardWrapper} ${cardStateClass}`}
+                  className={`${styles.cardWrapper} ${cardStateClass} ${
+                    isFlipped ? styles.isFlipped : ''
+                  }`}
                   style={styleVars}
-                  onClick={() => (isActive ? next() : goTo(i))}
+                  onClick={() => {
+                    if (isActive) {
+                      next();
+                    } else {
+                      goTo(i);
+                    }
+                  }}
                   role="button"
                   tabIndex={isActive ? 0 : -1}
-                  aria-label={`Principle ${String(i + 1).padStart(2, '0')}: ${card.title}${isActive ? '. Click to advance.' : ''}`}
+                  aria-pressed={isActive}
+                  aria-label={`${card.title}. ${
+                    isActive
+                      ? 'Active card. Click to advance to next principle.'
+                      : `Principle 0${i + 1}. Click to bring to top.`
+                  }`}
                 >
                   {/* 3D Inner Card flipper */}
                   <div className={styles.cardInner}>
@@ -208,6 +234,21 @@ export function LastingCards() {
                           <span className={styles.tag}>{card.tag}</span>
                         </div>
 
+                        <button
+                          type="button"
+                          className={styles.flipPill}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleFlip(i);
+                          }}
+                          title="Flip card to view technical blueprint"
+                          aria-label="Flip to engineering blueprint"
+                        >
+                          <span className={styles.flipPillText}>Spec</span>
+                          <span className={styles.flipPillIcon} aria-hidden="true">
+                            ⤾
+                          </span>
+                        </button>
                       </div>
 
                       <div className={styles.bodyContent}>
@@ -229,8 +270,73 @@ export function LastingCards() {
                           className={styles.cardImage}
                           priority={i === 0}
                         />
+                        <div className={styles.photoOverlay}>
+                          <span className={styles.overlayPrompt}>
+                            Click card for next · Spec ⤾ for blueprint
+                          </span>
+                        </div>
                       </div>
                     </article>
+
+                    {/* BACK FACE: Technical Engineering Blueprint */}
+                    <div
+                      className={`${styles.cardFace} ${styles.cardFaceBack}`}
+                      aria-hidden={!isFlipped}
+                    >
+                      <div className={styles.blueprintHeader}>
+                        <div className={styles.blueprintMeta}>
+                          <span className={styles.cadRef}>{card.blueprint.cadRef}</span>
+                          <span className={styles.blueprintStandard}>
+                            {card.blueprint.standard}
+                          </span>
+                        </div>
+
+                        <button
+                          type="button"
+                          className={styles.flipPillBack}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleFlip(i);
+                          }}
+                          title="Flip back to finished architectural photo"
+                          aria-label="Flip back to photo"
+                        >
+                          <span className={styles.flipPillText}>Photo</span>
+                          <span className={styles.flipPillIcon} aria-hidden="true">
+                            ⤾
+                          </span>
+                        </button>
+                      </div>
+
+                      <div className={styles.blueprintBody}>
+                        <div className={styles.blueprintTitleBlock}>
+                          <span className={styles.blueprintEyebrow}>Technical Specification</span>
+                          <h4 className={styles.blueprintTitle}>{card.title}</h4>
+                        </div>
+
+                        <div className={styles.specMetricBox}>
+                          <span className={styles.metricLabel}>Required Tolerance</span>
+                          <span className={styles.metricValue}>{card.blueprint.tolerance}</span>
+                        </div>
+
+                        <div className={styles.specDetailBlock}>
+                          <span className={styles.metricLabel}>Method & Protocol</span>
+                          <p className={styles.specText}>{card.blueprint.spec}</p>
+                        </div>
+                      </div>
+
+                      <div className={styles.blueprintFooter}>
+                        <div className={styles.cadCrosshair} aria-hidden="true">
+                          <svg viewBox="0 0 40 40" className={styles.crosshairSvg}>
+                            <line x1="0" y1="20" x2="40" y2="20" stroke="currentColor" strokeWidth="1" strokeDasharray="3 3" />
+                            <line x1="20" y1="0" x2="20" y2="40" stroke="currentColor" strokeWidth="1" strokeDasharray="3 3" />
+                            <circle cx="20" cy="20" r="10" fill="none" stroke="currentColor" strokeWidth="1" />
+                            <circle cx="20" cy="20" r="2" fill="currentColor" />
+                          </svg>
+                        </div>
+                        <span className={styles.sealText}>ASTHIWAR // AS-BUILT ACCREDITED</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
               );
@@ -273,7 +379,9 @@ export function LastingCards() {
 
         {/* Tactical Interaction Hint */}
         <div className={styles.interactionNotice}>
-          <span>Click card or use arrows to advance</span>
+          <span>Click card or side arrow to advance</span>
+          <span className={styles.noticeDot} aria-hidden="true">·</span>
+          <span>Click Spec ⤾ for blueprint</span>
         </div>
       </div>
     </Section>

@@ -38,7 +38,7 @@ const BORDER_COLOR = '#E2E8F0';
 doc.rect(0, 0, doc.page.width, 92).fill(NAVY_HEADER);
 doc.fillColor('#F59E0B').font('Helvetica-Bold').fontSize(18).text('ASTHIWAR DESIGN & BUILD', 36, 22);
 doc.font('Helvetica').fontSize(8.5).fillColor('#E2E8F0').text('Turnkey Residential Construction & Civil Engineering • Tamil Nadu', 36, 44);
-doc.fontSize(7.5).fillColor('#94A3B8').text('Coimbatore • Chennai • Tiruppur • Erode • Pollachi • Madurai | Web: asthiwar.com', 36, 58);
+doc.fontSize(7.5).fillColor('#94A3B8').text('Coimbatore • Virudhunagar • Chennai • Tiruppur • Erode • Pollachi • Madurai | Web: asthiwar.com', 36, 58);
 
 // Right Badge
 const badgeWidth = 175;

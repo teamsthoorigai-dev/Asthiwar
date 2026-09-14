@@ -32,83 +32,39 @@ export const studioPage = {
     eyebrow: 'ASTHIWAR – STUDIO PROFILE',
     heading: 'Designing with Purpose. Rooted in Context. Evolving with Time.',
     paragraphs: [
-      'At ASTHIWAR, every project begins with a conversation — not just with our clients, but with the site, the culture, the climate, and the unspoken stories a space yearns to tell. We are an integrated Architecture, Structural Engineering, and Construction Studio grounded in the belief that design must not only function and perform, but also evoke emotion and permanence.',
-      'Based in Coimbatore and Virudhunagar, Tamil Nadu — our practice spans across residential, commercial, and sustainable typologies, with landmark milestones including Aether (2025) and Trivara (2026). Each project is approached as an opportunity to craft spaces that breathe — spaces that speak softly yet powerfully to those who inhabit them.',
-      'Our work is defined by a quiet clarity, where structural honesty, crafted detailing, and sensitive environmental planning take center stage. Whether it is a sunlit residence unfolding around courtyards, or a climate-responsive structure layered with raw textures, we design with deep respect for proportion, light, and generational longevity.',
+      `At Asthiwar, We believe a home should be built around the way you live — not the other way around.
+We understand your lifestyle, listen to what you truly need, through meaningful conversations and create spaces where living gets interesting. Our approaches are practical, personal, and sustainable.`,
+      `From thoughtful planning to responsible materials and energy-efficient design, we build homes that feel right today — and remain right for years to come.
+We craft every detail of your home so it tells a story worth whispering about.`,
     ],
     heroImage: {
       src: '/images/studio/asthiwar-studio.jpg',
       alt: 'ASTHIWAR architecture and structural engineering studio workshop interior in Coimbatore with physical models and drafting tables',
       caption: ['ASTHIWAR / DESIGN & EXECUTION STUDIO', 'COIMBATORE & VIRUDHUNAGAR · TAMIL NADU'] as const,
     },
-    secondaryHeading: 'We don’t chase trends — we respond to time, place, and people.',
-    secondaryParagraphs: [
-      'In our studio, architecture is not just about building — it is about slowing down to listen, to sketch with intent, to align aesthetics with structural purpose. We collaborate with regional craftspeople, understanding materials at their rawest, and drawing lasting connections between traditional craftsmanship and contemporary engineering.',
-      'Our process is immersive, inclusive, and iterative. Every line we draw is tested against physical site constraints and structural load paths. Founded by Structural Engineer Akileshwaran V R R and Urban Designer Arthiya C N, our leadership unites engineering discipline with humane, climate-conscious spatial planning.',
-      'Working alongside on-site engineering leadership spearheaded by Site Execution Engineer Gowtham Chakravarthy, we ensure zero discrepancy between design intent and on-site reality. We are ASTHIWAR. Built for longevity, rooted in Tamil Nadu.',
-    ],
     stats: [
       { value: 2025, label: 'Aether Milestone' },
       { value: 2026, label: 'Trivara Milestone' },
       { value: 3, pad: 2, label: 'Studio & Regional Hubs' },
-      { value: 100, suffix: '%', label: 'Integrated Design-Build' },
+      { value: 750, suffix: '+', label: 'Quality Checklist Points' },
     ] as const,
   },
 
   team: {
-    eyebrow: 'OUR PEOPLE',
+    eyebrow: 'CO-FOUNDERS',
+    executionEyebrow: 'TEAM',
     heading: 'The Skill & Soul Behind Our Projects',
     lead: 'A multidisciplinary practice uniting structural rigor, urban sensitivity, and precision on-site execution.',
     principalsHeading: 'Owners & Principals',
     teamHeading: 'Site Execution & Coordination',
-    
-    // Unified team members for 3-column layout matching reference
-    members: [
-      {
-        id: 'akileshwaran',
-        name: 'Akileshwaran V R R',
-        role: 'Structural Engineer and Owner',
-        designation: 'Structural Engineer and Owner',
-        isFounder: true,
-        image: {
-          src: '/images/studio/akileshwaran.jpg',
-          alt: 'Akileshwaran V R R — Structural Engineer and Owner',
-        },
-        bio: 'Leading structural engineering discipline, load-path integrity, and practice direction across all ASTHIWAR projects.',
-      },
-      {
-        id: 'arthiya',
-        name: 'Arthiya C N',
-        role: 'Urban Designer and Co-Owner',
-        designation: 'Urban Designer and Co-Owner',
-        isFounder: true,
-        image: {
-          src: '/images/studio/arthiya.jpg',
-          alt: 'Arthiya C N — Urban Designer and Co-Owner',
-        },
-        bio: 'Directing spatial philosophy, urban contextual integration, and climate-responsive architecture.',
-      },
-      {
-        id: 'gowtham',
-        name: 'Gowtham Chakravarthy',
-        role: 'Site Execution Engineer',
-        designation: 'Site Execution Engineer',
-        isFounder: false,
-        image: {
-          src: '/images/studio/gowtham.jpg',
-          alt: 'Gowtham Chakravarthy — Site Execution Engineer',
-        },
-        bio: 'Overseeing on-site construction execution, material quality control, and structural craftsmanship.',
-      },
-    ] satisfies readonly TeamMember[],
 
     // Top Row: Owners (like unknownarchitects.in/team)
     principals: [
       {
         id: 'akileshwaran',
         name: 'Akileshwaran V R R',
-        role: 'Structural Engineer and Owner',
-        designation: 'Structural Engineer and Owner',
+        role: 'Structural Engineer',
+        designation: 'Structural Engineer',
         isFounder: true,
         image: {
           src: '/images/studio/akileshwaran.jpg',
@@ -119,8 +75,8 @@ export const studioPage = {
       {
         id: 'arthiya',
         name: 'Arthiya C N',
-        role: 'Urban Designer and Co-Owner',
-        designation: 'Urban Designer and Co-Owner',
+        role: 'Urban Designer',
+        designation: 'Urban Designer',
         isFounder: true,
         image: {
           src: '/images/studio/arthiya.jpg',
@@ -155,9 +111,9 @@ export const studioPage = {
     locations: [
       {
         id: 'cbe-1',
-        name: 'Coimbatore Studio 1 — Nehru Nagar West',
+        name: 'Coimbatore Studio 1 — Nehru Nagar East',
         region: 'Airport Corridor / Avinashi Axis',
-        address: 'Zubenel Group, East, Nehru Nagar West',
+        address: 'Asthiwar, Nehru Nagar East',
         city: 'Coimbatore',
         state: 'Tamil Nadu 641014',
         coordinates: '11°02\'38" N, 77°01\'52" E',
@@ -172,7 +128,7 @@ export const studioPage = {
         id: 'cbe-2',
         name: 'Coimbatore Studio 2 — Venkatapuram',
         region: 'GCT Sector / Thadagam Axis',
-        address: 'Lakshmi & Co, 30, Amman Kovil Street, GCT Post, Venkatapuram',
+        address: 'Asthiwar, 30, Amman Kovil Street, GCT Post, Venkatapuram',
         city: 'Coimbatore',
         state: 'Tamil Nadu 641013',
         coordinates: '11°01\'18" N, 76°56\'24" E',
@@ -187,13 +143,13 @@ export const studioPage = {
         id: 'virudhunagar',
         name: 'Virudhunagar Regional Studio',
         region: 'Southern Tamil Nadu Hub',
-        address: 'Virudhunagar (Coordinates: 9.5894522, 77.9532706)',
+        address: 'Asthiwar,41, Puluganoorani Road (Opp to Old Bus Stand)',
         city: 'Virudhunagar',
         state: 'Tamil Nadu 626001',
         coordinates: '09°35\'22" N, 77°57\'12" E',
         cadRef: 'VNR-ST-01 // NH44-SOUTHERN',
         roadAxis: 'Madurai – Tirunelveli Axis (NH44)',
-        landmark: 'Virudhunagar Regional Center',
+        landmark: 'Opposite to Old Bus Stand',
         mapUrl: 'https://maps.app.goo.gl/7fpatmnGNRfFLZYn7?g_st=ic',
         embedSrc:
           'https://maps.google.com/maps?q=9.5894522,77.9532706&t=&z=15&ie=UTF8&iwloc=&output=embed',

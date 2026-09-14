@@ -26,12 +26,19 @@
   position: relative;
   background: var(--bg);
   width: 100%;
+  /* Rendered HUD bar height at its current padding/type scale; kept as a
+     variable so the sticky offset and panel height calcs below share one
+     number instead of drifting out of sync. */
+  --hud-h: 78px;
 }
 
-/* Persistent HUD atop the pinned track */
+/* Persistent HUD atop the pinned track. Sticks to the bottom edge of the
+   fixed site header (var(--header-height)) rather than top:0 — at top:0 it
+   would stick to the same position as the header and render underneath it
+   (header is z-index 100 vs. this bar's 30), disappearing from view. */
 .hud {
   position: sticky;
-  top: 0;
+  top: var(--header-height, 4.5rem);
   left: 0;
   right: 0;
   z-index: 30;
@@ -171,13 +178,13 @@
 .panel {
   position: relative;
   width: 100vw;
-  height: calc(100vh - 53px);
+  height: calc(100vh - var(--header-height, 4.5rem) - var(--hud-h));
   min-height: 680px;
   flex-shrink: 0;
   box-sizing: border-box;
   display: grid;
   grid-template-columns: 1.15fr 0.85fr;
-  align-items: start;
+  align-items: center;
   /* --scrollbar is subtracted so the panel copy lands on the same left edge as
      every container-bound section on every other page; without it the vw term
      is a scrollbar too wide and the copy sits 7px right of the site's margin. */
@@ -324,9 +331,13 @@
 }
 
 /* Panel Media */
+/* Fills the available pinned-panel height (no gap below). A strict 5:4 crop
+   (the homepage Disciplines ratio) can't also fill this height at this column's
+   width without overflowing into the copy column, so height drives the box
+   here instead of aspect-ratio. */
 .panelMedia {
   position: relative;
-  height: min(76svh, calc(100vh - 53px - 4rem));
+  height: min(76svh, calc(100vh - var(--header-height, 4.5rem) - var(--hud-h) - 4rem));
   width: 100%;
   overflow: hidden;
   border-radius: 4px;
@@ -380,8 +391,8 @@
 
   .panel {
     width: 100vw;
-    height: calc(100vh - 53px);
-    height: calc(100svh - 53px);
+    height: calc(100vh - var(--header-height, 4.5rem) - var(--hud-h));
+    height: calc(100svh - var(--header-height, 4.5rem) - var(--hud-h));
     min-height: 0;
     display: flex;
     flex-direction: column;

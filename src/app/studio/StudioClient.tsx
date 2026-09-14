@@ -45,19 +45,6 @@ export function StudioClient() {
                   </p>
                 ))}
               </div>
-
-              {/* Secondary Editorial Heading & Narrative */}
-              <h2 className={styles.headingSecondary}>
-                {studioPage.profile.secondaryHeading}
-              </h2>
-
-              <div className={styles.bodyText}>
-                {studioPage.profile.secondaryParagraphs.map((p, i) => (
-                  <p key={i} className={styles.paragraph}>
-                    {p}
-                  </p>
-                ))}
-              </div>
             </div>
 
             {/* Architectural Building Pillar Emblem in Full Size */}
@@ -84,7 +71,7 @@ export function StudioClient() {
         </div>
       </section>
 
-      {/* 2. Our People Section — 3-Column Card Overlay matching media_1789119603362.jpg */}
+      {/* 2. Our People Section — Owners & Principals */}
       <section className={`${styles.section} ${styles.teamSection}`} aria-labelledby="team-heading">
         <div className={styles.inner}>
           <div className={styles.peopleTitleCard}>
@@ -95,20 +82,47 @@ export function StudioClient() {
           </div>
 
           <div className={styles.peopleGrid}>
-            {studioPage.team.members.map((member) => (
+            {studioPage.team.principals.map((member) => (
               <article key={member.id} className={styles.peopleCard}>
                 <Image
                   src={member.image.src}
                   alt={member.image.alt}
                   fill
-                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                  sizes="320px"
                   className={`${styles.peopleImage} ${
-                    member.id === 'akileshwaran'
-                      ? styles.akileshwaranPos
-                      : member.id === 'arthiya'
-                      ? styles.arthiyaPos
-                      : styles.gowthamPos
+                    member.id === 'akileshwaran' ? styles.akileshwaranPos : styles.arthiyaPos
                   }`}
+                />
+                <div className={styles.peopleGradient} aria-hidden="true" />
+                <div className={styles.peopleMeta}>
+                  <h3 className={styles.peopleName}>{member.name}</h3>
+                  <p className={styles.peopleRole}>{member.role}</p>
+                </div>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* 3. Team Section — Site Execution & Coordination */}
+      <section className={`${styles.section} ${styles.teamSection}`} aria-labelledby="execution-team-heading">
+        <div className={styles.inner}>
+          <div className={styles.peopleTitleCard}>
+            <h6 className={styles.peopleEyebrow} id="execution-team-heading">
+              {studioPage.team.executionEyebrow}
+            </h6>
+            <div className={styles.peopleLine} aria-hidden="true" />
+          </div>
+
+          <div className={styles.peopleGrid}>
+            {studioPage.team.executionTeam.map((member) => (
+              <article key={member.id} className={styles.peopleCard}>
+                <Image
+                  src={member.image.src}
+                  alt={member.image.alt}
+                  fill
+                  sizes="320px"
+                  className={`${styles.peopleImage} ${styles.gowthamPos}`}
                 />
                 <div className={styles.peopleGradient} aria-hidden="true" />
                 <div className={styles.peopleMeta}>

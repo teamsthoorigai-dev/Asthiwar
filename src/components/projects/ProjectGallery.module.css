@@ -16,7 +16,7 @@
 }
 
 .image {
-  object-fit: cover;
+  object-fit: contain;
   border-radius: 4px;
   transition: transform 0.6s var(--ease-out);
 }

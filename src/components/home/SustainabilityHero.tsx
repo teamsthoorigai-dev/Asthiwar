@@ -2,15 +2,15 @@
 
 import Image from 'next/image';
 import { useEffect, useRef } from 'react';
-import { ArrowDown } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { gsap, MOTION, REDUCED, revealTrigger } from '@/lib/gsap';
+import { PrinciplesMarquee } from './PrinciplesMarquee';
 import styles from './SustainabilityHero.module.css';
 
 /**
- * Photographic sustainability hero section from v1.
- * Placed immediately after the projects section and directly before the
- * principles marquee animation.
+ * Photographic sustainability section.
+ * Combines the earthen masonry statement with the moving principles marquee
+ * welded to its foot, fitting the entire composition into a single page scroll.
  */
 export function SustainabilityHero() {
   const copyRef = useRef<HTMLDivElement>(null);
@@ -33,38 +33,39 @@ export function SustainabilityHero() {
   }, []);
 
   return (
-    <section className={styles.hero} aria-labelledby="sustainability-hero-title">
-      <Image
-        src="/images/sustainable.jpg"
-        alt="Earthen masonry and a perforated screen shown in direct sunlight"
-        fill
-        priority
-        sizes="100vw"
-        className={styles.image}
-      />
-      <div className={styles.scrim} aria-hidden="true" />
+    <section className={styles.container} aria-labelledby="sustainability-hero-title">
+      <div className={styles.hero}>
+        <Image
+          src="/images/sustainable.jpg"
+          alt="Earthen masonry and a perforated screen shown in direct sunlight"
+          fill
+          priority
+          sizes="100vw"
+          className={styles.image}
+        />
+        <div className={styles.scrim} aria-hidden="true" />
 
-      <div className={styles.inner}>
-        <div className={styles.copy} ref={copyRef}>
-          <p className={styles.eyebrow}>Sustainable Construction</p>
-          <h2 id="sustainability-hero-title" className={styles.title}>
-            Where cement ends, nature begins &mdash; walls breathe and energy flows like air, unspent.
-          </h2>
-          <p className={styles.intro}>
-            Natural cooling, lower-carbon material choices, and healthier spaces are considered
-            before mechanical energy is added.
-          </p>
-          <div className={styles.actions}>
-            <Button href="/sustainable-construction" variant="white">
-              Walk with Nature
-            </Button>
+        <div className={styles.inner}>
+          <div className={styles.copy} ref={copyRef}>
+            <p className={styles.eyebrow}>Sustainable Construction</p>
+            <h2 id="sustainability-hero-title" className={styles.title}>
+              Where cement ends, nature begins &mdash; walls breathe and energy flows like air, unspent.
+            </h2>
+            <p className={styles.intro}>
+              Natural cooling, lower-carbon material choices, and healthier spaces are considered
+              before mechanical energy is added.
+            </p>
+            <div className={styles.actions}>
+              <Button href="/sustainable-construction" variant="white">
+                Walk with Nature
+              </Button>
+            </div>
           </div>
         </div>
+      </div>
 
-        <div className={styles.scrollCue} aria-hidden="true">
-          <span>Scroll to explore</span>
-          <ArrowDown size={14} />
-        </div>
+      <div className={styles.marqueeBand}>
+        <PrinciplesMarquee />
       </div>
     </section>
   );

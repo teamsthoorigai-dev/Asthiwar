@@ -245,8 +245,6 @@ export function CalculatorWizard() {
       {!estimateResult && currentStep === LAST_FORM_STEP && (
         <StepLeadCapture
           formData={formData}
-          locations={locations}
-          onEditLocation={() => handleGoToStep(0)}
           calculating={calculating}
           stepErrors={stepErrors}
           error={error}

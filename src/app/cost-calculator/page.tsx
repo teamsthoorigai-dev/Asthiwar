@@ -23,16 +23,11 @@ export default function CostCalculatorPage() {
       <section className={styles.hero} aria-label="Cost planning hero">
         <div className={styles.heroLinework} aria-hidden="true" />
         <div className={styles.heroInner}>
-          <p className={styles.eyebrow}>Cost planning / indicative only</p>
+          <p className={styles.eyebrow}>Cost Calculator</p>
           <h1 className={styles.title}>
-            A number is useful only when its assumptions stay visible.
+            A number is useful only when calculated with zero assumptions.
           </h1>
-          <div className={styles.introRow}>
-            <p className={styles.intro}>
-              Square-foot rates help with early planning, but they are not a substitute for site conditions,
-              coordinated drawings, specifications, and an agreed scope.
-            </p>
-          </div>
+          
         </div>
       </section>
 

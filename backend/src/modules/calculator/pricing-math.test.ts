@@ -60,8 +60,10 @@ test('programme length is defined for every floor count the schema allows', () =
   }
 });
 
-test('programme length grows beyond the hand-written tiers', () => {
-  assert.deepEqual(getDurationForFloors(4).min, 14);
+test('programme length starts at 7–8 months for ground floor and adds 2 months per floor', () => {
+  assert.deepEqual(getDurationForFloors(0), { range: '7–8 Months', min: 7, max: 8, floorNumber: 1 });
+  assert.deepEqual(getDurationForFloors(1), { range: '9–10 Months', min: 9, max: 10, floorNumber: 2 });
+  assert.deepEqual(getDurationForFloors(4).min, 15);
   assert.deepEqual(getDurationForFloors(4).max, 16);
 });
 

@@ -38,7 +38,7 @@ const marqueeItems = [...homePrinciples, ...homePrinciples, ...homePrinciples].m
  */
 export function PrinciplesMarquee() {
   return (
-    <section className={styles.section}>
+    <div className={styles.section}>
       <Marquee
         items={marqueeItems}
         speed={38}
@@ -46,6 +46,6 @@ export function PrinciplesMarquee() {
         direction="right"
         aria-label={homePrinciplesLabel}
       />
-    </section>
+    </div>
   );
 }

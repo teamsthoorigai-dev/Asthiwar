@@ -195,7 +195,7 @@ export function StudioLineArtMap({ office }: Props) {
               <text x="765" y="275" transform="rotate(64 765 275)">AIRPORT LINK ROAD</text>
               <text x="210" y="445" transform="rotate(80 210 445)">PEELAMEDU</text>
               <text x="645" y="180" transform="rotate(-23 645 180)">SITRA CIRCLE</text>
-              <text x="440" y="275">NEHRU NAGAR WEST</text>
+              <text x="440" y="275">NEHRU NAGAR EAST</text>
               <text x="825" y="135" transform="rotate(-23 825 135)">GOLDWINS</text>
             </g>
 
@@ -237,7 +237,7 @@ export function StudioLineArtMap({ office }: Props) {
               <circle cx="470" cy="350" r="9" fill="#faf6f0" stroke="#d5cebe" strokeWidth="1" />
             </g>
 
-            {/* Radar Pulse Beacon at Nehru Nagar West (520, 270) */}
+            {/* Radar Pulse Beacon at Nehru Nagar East (520, 270) */}
             <g>
               <circle cx="520" cy="270" r="32" fill="none" stroke="#d97706" opacity="0.25" strokeWidth="1.5" strokeDasharray="3 3" />
               <circle cx="520" cy="270" r="20" fill="none" stroke="#d97706" opacity="0.4" strokeWidth="1.5" />

@@ -32,7 +32,7 @@
   justify-content: center;
   gap: var(--s-3);
   width: 100%;
-  max-width: 580px;
+  max-width: 660px;
   position: relative;
   margin: 0 auto var(--s-3);
 }
@@ -82,7 +82,7 @@
 /* ---- Contained Back-to-Back Stack Stage ---- */
 .stackStage {
   position: relative;
-  width: min(420px, 100%);
+  width: min(500px, 100%);
   height: 540px;
   display: flex;
   justify-content: center;

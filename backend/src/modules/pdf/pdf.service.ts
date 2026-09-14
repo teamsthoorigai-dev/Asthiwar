@@ -197,7 +197,7 @@ export async function generateEstimatePdf(estimateNumberOrId: string): Promise<B
         doc.fillColor(PAPER).font('Helvetica-Bold').fontSize(18).text('ASTHIWAR DESIGN & BUILD', 36, 22);
       }
       doc.font('Helvetica').fontSize(8.5).fillColor(OXIDE_LIGHT).text('Turnkey Residential Construction & Civil Engineering • Tamil Nadu', 36, 46);
-      doc.fontSize(7.5).fillColor('#B0ABA1').text('Coimbatore • Chennai • Tiruppur • Erode • Pollachi • Madurai | Web: asthiwar.com', 36, 60);
+      doc.fontSize(7.5).fillColor('#B0ABA1').text('Coimbatore • Virudhunagar • Chennai • Tiruppur • Erode • Pollachi • Madurai | Web: asthiwar.com', 36, 60);
 
       // Top Right Official Quotation Badge
       const badgeWidth = 175;

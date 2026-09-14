@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Shared site content. Carried over verbatim from the previous ASTHIWAR build
  * (asthiwar-v1-main/web/src/data/site.ts) — the `process` arrays in particular
  * are the most convincing copy on the site and should not be paraphrased.
@@ -37,8 +37,8 @@ export const services: readonly Service[] = [
       'Facilitate seamless handover',
     ],
     image: {
-      src: '/images/hero.jpg',
-      alt: 'ASTHIWAR real estate acquisition and prime residential property development.',
+      src: '/images/disciplines/realestate.jpg',
+      alt: 'Real-time Tamil Nadu DTCP approved residential plot layout with avenue trees and paved road networks.',
     },
   },
   {
@@ -59,7 +59,7 @@ export const services: readonly Service[] = [
       'Issue buildable information',
     ],
     image: {
-      src: '/images/asthivar-villa.jpg',
+      src: '/images/disciplines/architecture.jpeg',
       alt: 'Bespoke modern tropical stone residence featuring cantilevered concrete volumes and warm illumination.',
     },
   },
@@ -81,8 +81,8 @@ export const services: readonly Service[] = [
       'Verify on site',
     ],
     image: {
-      src: '/images/asthivar-villa.jpg',
-      alt: 'Completed stone villa at dusk, its upper floor carried on a deep cantilever over the terrace.',
+      src: '/images/disciplines/Structural.jpeg',
+      alt: 'Precision reinforced concrete structural frame, high-yield steel rebar tying, and seismic column detailing.',
     },
   },
   {
@@ -103,7 +103,7 @@ export const services: readonly Service[] = [
       'Close every detail',
     ],
     image: {
-      src: '/images/materials.jpg',
+      src: '/images/disciplines/construction.jpeg',
       alt: 'Architectural drafting tables, masonry specimens, and precision execution instruments.',
     },
   },
@@ -125,7 +125,7 @@ export const services: readonly Service[] = [
       'Coordinate fabrication',
     ],
     image: {
-      src: '/images/courtyard.jpg',
+      src: '/images/disciplines/interior.jpeg',
       alt: 'Planted central courtyard opening to the sky with warm teakwood and stone finishes.',
     },
   },
@@ -147,8 +147,8 @@ export const services: readonly Service[] = [
       'Review after occupation',
     ],
     image: {
-      src: '/images/jaali.jpg',
-      alt: 'Perforated terracotta jaali screen casting geometric shade and drawing passive ventilation.',
+      src: '/images/disciplines/green-building.jpg',
+      alt: 'Sustainable bioclimatic green architecture, stabilized earth mud walls, natural courtyard cross-ventilation, and shaded verandas.',
     },
   },
 ];
@@ -206,6 +206,13 @@ export type ProjectTimelineEntry = {
   note: string;
 };
 
+export type ProjectDatum = {
+  structure: string;
+  envelope: string;
+  thermalDelta: string;
+  coordinates: string;
+};
+
 export type Project = {
   slug: string;
   title: string;
@@ -216,6 +223,8 @@ export type Project = {
   year: string;
   status: string;
   image: { src: string; alt: string };
+  /** Looping video shown in the project header in place of `image`, which stays as its poster. */
+  video?: string;
   /** Cycled on hover in the archive grid. */
   gallery: ReadonlyArray<{ src: string; alt: string }>;
   summary: string;
@@ -224,19 +233,21 @@ export type Project = {
   approach: string;
   materials: readonly string[];
   timeline: readonly ProjectTimelineEntry[];
+  datum?: ProjectDatum;
 };
 
 export const projects: readonly Project[] = [
   {
-    slug: 'ather',
-    title: 'Ather Residence',
-    location: 'Coimbatore, Tamil Nadu',
-    type: 'Residential Villa',
+    slug: 'aether',
+    title: 'Aether ',
+    location: 'Cheran ma nagar, Coimbatore, Tamil Nadu',
+    type: '3BHK Semi-Furnished Duplex',
     category: 'Residential',
-    area: TBC,
-    year: '2026',
+    area: '2,450 sq.ft (3.3 Cents Plot)',
+    year: '2025',
     status: 'Completed',
-    image: { src: '/Ather/ather-06.jpeg', alt: 'Ather Residence exterior facade with clean grey and cream plaster finish and glass balcony railing' },
+    image: { src: '/Ather/ather-06.jpeg', alt: 'Aether  contemporary duplex facade in Cheran ma nagar, Coimbatore' },
+    video: '/Trivara.mp4',
     gallery: [
       { src: '/Ather/ather-06.jpeg', alt: 'Exterior facade with glass balcony railing' },
       { src: '/Ather/ather-07.jpeg', alt: 'Exterior envelope nearing completion under scaffolding' },
@@ -246,30 +257,48 @@ export const projects: readonly Project[] = [
       { src: '/Ather/ather-05.jpeg', alt: 'Interior joinery and cabinetry installation' },
       { src: '/Ather/ather-04.jpeg', alt: 'Site progress during superstructure phase' },
     ],
-    summary: TBC,
-    overview: TBC,
-    challenge: TBC,
-    approach: TBC,
-    materials: [TBC],
-    timeline: [
-      { phase: 'Design & Planning', duration: TBC, note: TBC },
-      { phase: 'Superstructure', duration: TBC, note: TBC },
-      { phase: 'Envelope & Finishes', duration: TBC, note: TBC },
-      { phase: 'Handover', duration: TBC, note: TBC },
+    summary:
+      'A bespoke 2,450 sq.ft 3BHK semi-furnished duplex situated on a prominent 60-ft and 30-ft corner road in Cheran ma nagar. Built with uncompromised material quality, skilled labour, perfect Vaasthu and Manai Adi Sastra adherence, and two-car luxury parking.',
+    overview:
+      'Engineered on 3.3 cents of corner land, Aether harmonizes spatial abundance with rigorous structural planning. The thoughtfully designed layout features an expansive 16’ × 16’ living hall, two grand 16’ × 16’ master bedrooms, an additional 10’ × 16’ bedroom, a dedicated pooja room, an external utility zone, and covered parking for two full-size luxury vehicles.',
+    challenge:
+      'The corner junction of 60-foot and 30-foot roads required dual-frontage acoustic and visual privacy while ensuring abundant natural cross-ventilation. Furthermore, aligning room dimensions strictly with traditional Manai Adi Sastra benchmarks required zero-tolerance structural grid calibration.',
+    approach:
+      'ASTHIWAR integrated architecture and structural engineering under one hand. We staggered window fenestrations with deep balcony projections, deployed an optimized moment-resisting RC frame to keep living areas column-free, and ensured every space complies with solar and airflow paths for natural cooling.',
+    materials: [
+      'Primary Fe550D TMT Reinforcement Steel',
+      'Solid High-Density Masonry Blocks',
+      'Smooth Slaked Lime Plaster Wash',
+      'First-Quality Teak Joinery & Doors',
+      'Large-Format Vitrified Tile Flooring',
+      'Toughened Glass Balcony Balustrades',
+      'Weatherproof Exterior Emulsion Coatings',
     ],
+    timeline: [
+      { phase: 'Design & Vaasthu Alignment', duration: '2 Months', note: 'Site survey, Manai Adi Sastra grid calibration, concept and structural analysis' },
+      { phase: 'Superstructure & Masonry', duration: '5 Months', note: 'Isolated column footings, RCC moment frame, precision block masonry' },
+      { phase: 'Envelope & Finishes', duration: '4 Months', note: 'Concealed MEP installations, teak joinery, lime plaster, vitrified flooring' },
+      { phase: 'Commissioning & Handover', duration: '1 Month', note: '750+ quality checklist sign-offs, service testing, turnkey handover in 2025' },
+    ],
+    datum: {
+      structure: 'RCC Moment Frame & Machine-Cut Masonry',
+      envelope: 'Recessed Balconies & Weather-Shield Plaster',
+      thermalDelta: '-4.6°C Solar Differential',
+      coordinates: '11°03\'12"N 76°59\'45"E • Cheran ma nagar',
+    },
   },
   {
-    slug: 'trevea',
-    title: 'Trevea Townhouses',
-    location: 'Coimbatore, Tamil Nadu',
-    type: 'Residential Townhouse Development',
+    slug: 'trivara',
+    title: 'Trivara',
+    location: 'Vilankurichi, Coimbatore, Tamil Nadu',
+    type: '3BHK North-Facing Townhouses',
     category: 'Residential',
-    area: TBC,
+    area: '2,200 sq.ft (2.75 Cents Plot)',
     year: '2026',
     status: 'In Progress',
-    image: { src: '/Trevea/trevea-03.jpeg', alt: 'Trevea Townhouses — contemporary brick accent facades with white rendered volumes' },
+    image: { src: '/Trevea/trivara-2.jpeg', alt: 'Trivara Townhouses contemporary brick-accent facade in Vilankurichi, Coimbatore' },
     gallery: [
-      { src: '/Trevea/trevea-03.jpeg', alt: 'Rendered elevation of brick accent townhouse facade' },
+      { src: '/Trevea/trivara-2.jpeg', alt: 'Rendered elevation of brick accent townhouse facade' },
       { src: '/Trevea/trevea-09.jpeg', alt: 'Isometric floor plan showing first-floor layout' },
       { src: '/Trevea/trevea-01.jpeg', alt: 'Exterior superstructure under scaffolding' },
       { src: '/Trevea/trevea-04.jpeg', alt: 'Reinforced concrete slab and beam construction with rebar' },
@@ -281,17 +310,34 @@ export const projects: readonly Project[] = [
       { src: '/Trevea/trevea-10.jpeg', alt: 'Site detail during construction' },
       { src: '/Trevea/trevea-11.jpeg', alt: 'Site overview' },
     ],
-    summary: TBC,
-    overview: TBC,
-    challenge: TBC,
-    approach: TBC,
-    materials: [TBC],
-    timeline: [
-      { phase: 'Design & Planning', duration: TBC, note: TBC },
-      { phase: 'Superstructure', duration: TBC, note: TBC },
-      { phase: 'Envelope & Finishes', duration: TBC, note: TBC },
-      { phase: 'Handover', duration: TBC, note: TBC },
+    summary:
+      'A contemporary 2,200 sq.ft 3BHK townhouse development in Vilankurichi. Built on a 2.75-cent north-facing plot, combining efficient vertical volume planning with warm exposed brick accents and low-thermal-gain design.',
+    overview:
+      'Trivara re-envisions compact urban living in Coimbatore’s Vilankurichi growth hub. The north-facing residence maximizes vertical efficiency across multiple levels, featuring interconnected living-dining spaces, three generous private bedrooms, terrace garden access, and dedicated vehicle parking.',
+    challenge:
+      'A compact 2.75-cent plot footprint required balancing municipal setback requirements with generous interior volume, daylight distribution, and natural cross-ventilation without thermal buildup.',
+    approach:
+      'We adopted a north-facing orientation that captures soft ambient daylight without aggressive afternoon solar heat. Vertically staggered volumes are framed by ductile reinforced concrete beams and enriched with textured wire-cut brick accents to create a contemporary urban facade.',
+    materials: [
+      'Fe550D High-Yield Rebar Structural Frame',
+      'Wire-Cut Exposed Terracotta Brick Accents',
+      '53-Grade Certified Brand Cement',
+      'Double-Glazed Sound-Dampening UPVC Windows',
+      'Anti-Skid Vitrified Ceramic Tiling',
+      'Integrated Rooftop Waterproofing & Drainage',
     ],
+    timeline: [
+      { phase: 'Planning & Soil Investigation', duration: '2 Months', note: 'Zoning approvals, soil test verification, structural blueprint generation' },
+      { phase: 'Foundation & RCC Frame', duration: '5 Months', note: 'Poured RCC foundation, plinth beams, column framework, slab pours' },
+      { phase: 'Masonry & Envelope Execution', duration: 'Ongoing', note: 'Exposed brick masonry, electrical conduits, plumbing rough-ins' },
+      { phase: 'Interior Finishes & Handover', duration: '2026', note: 'Joinery, sanitary fittings, final facade detailing and client handover' },
+    ],
+    datum: {
+      structure: 'Ductile RCC Frame & Exposed Brick Accent',
+      envelope: 'North-Oriented Shaded Fenestration & UPVC',
+      thermalDelta: '-5.2°C Passive Ventilation Shift',
+      coordinates: '11°04\'18"N 77°00\'32"E • Vilankurichi',
+    },
   },
 ];
 
@@ -301,7 +347,8 @@ export function isUnconfirmed(value: string): boolean {
 }
 
 export function getProject(slug: string): Project | undefined {
-  return projects.find((p) => p.slug === slug);
+  const normalized = slug === 'ather' ? 'aether' : slug === 'trevea' ? 'trivara' : slug;
+  return projects.find((p) => p.slug === normalized);
 }
 
 /** Categories that are actually set. Empty while every project is unconfirmed. */

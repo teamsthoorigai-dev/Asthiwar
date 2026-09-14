@@ -122,6 +122,16 @@
   border-radius: 4px;
 }
 
+.videoNatural {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 88vh;
+  margin-inline: auto;
+  border-radius: 4px;
+  background: var(--surface);
+}
+
 .caption {
   display: flex;
   justify-content: space-between;

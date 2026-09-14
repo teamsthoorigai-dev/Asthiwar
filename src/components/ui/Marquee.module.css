@@ -55,34 +55,34 @@
   display: flex;
   flex-direction: row;
   align-items: center;
-  gap: clamp(2rem, 4vw, 3.5rem);
-  padding-right: clamp(2rem, 4vw, 3.5rem);
+  gap: clamp(1.5rem, 3.5vw, 3rem);
+  padding-right: clamp(1.5rem, 3.5vw, 3rem);
   flex-shrink: 0;
 }
 
 .band .item {
   display: grid;
   flex: 0 0 auto;
-  width: clamp(11.5rem, 14vw, 14rem);
-  min-height: clamp(8.5rem, 11vw, 10.25rem);
+  width: clamp(10rem, 13vw, 13rem);
+  min-height: clamp(6.25rem, 8.5vw, 7.5rem);
   /* A fixed first row keeps the four labels on one baseline, however tall each
      mark's own artwork happens to be. */
-  grid-template-rows: 3.9rem auto;
+  grid-template-rows: 2.85rem auto;
   place-items: center;
   align-content: center;
-  gap: 0.35rem;
-  padding: 0.8rem 1rem 0.9rem;
+  gap: 0.25rem;
+  padding: 0.5rem 0.75rem;
   text-align: center;
 }
 
 .band .icon {
-  width: 3.75rem;
-  height: 3.75rem;
+  width: 2.75rem;
+  height: 2.75rem;
 }
 
 .band .label {
   display: grid;
-  font-size: clamp(0.82rem, 1vw, 0.96rem);
+  font-size: clamp(0.78rem, 0.9vw, 0.88rem);
   line-height: 1.15;
 }
 

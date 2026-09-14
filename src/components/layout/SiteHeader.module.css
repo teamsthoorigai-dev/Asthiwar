@@ -177,7 +177,7 @@
   display: block;
   height: 22px;
   width: auto;
-  color: var(--accent-bright);
+  color: var(--ink);
 }
 
 /* ---- Book Consultation CTA button ---- */

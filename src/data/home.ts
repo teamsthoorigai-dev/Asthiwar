@@ -1,4 +1,4 @@
-﻿import type { FaqContent } from '@/components/home/Faq';
+import type { FaqContent } from '@/components/home/Faq';
 import type { EnquiryFormContent } from '@/components/home/EnquiryForm';
 import type { WorkGalleryContent } from '@/components/home/WorkGallery';
 
@@ -70,7 +70,7 @@ export const philosophy = {
   body: 'Architecture, interior, construction, structural engineering and green building are brought together through one coordinated process. The process is deliberately front-loaded — coordination is cheaper on paper than under a poured slab.',
   cta: { label: 'How we work', href: '/about' },
   counters: [
-    { value: 5, label: 'Disciplines' },
+    { value: 6, label: 'Disciplines' },
     { value: 1, label: 'Continuous process' },
     { value: 7, label: 'Stages', sublabel: 'First walk to handover' },
     { value: 0, label: 'Handoffs', sublabel: 'Between teams' },
@@ -171,39 +171,39 @@ export const lastingCards = {
     },
     {
       icon: 'material',
-      tag: 'Conventional High-Grade Materials',
+      tag: 'Material Integrity',
       tabLabel: 'Materials',
       title: 'Material honesty',
-      body: 'Certified 53-grade cement, primary Fe550D TMT steel, precision-cured masonry, and washed graded sand. Finishes and structural materials meet rigorous Indian Standard (IS) benchmarks without dilution.',
+      body: 'Materials are selected for structural integrity, longevity, and how they weather over time. We build with verified, high-grade fundamentals that endure rather than cosmetic finishes that degrade.',
       image: '/images/materials.jpg',
-      imageAlt: 'Conventional high-grade construction materials, steel rebar testing and masonry specimens.',
+      imageAlt: 'High-grade architectural construction materials and masonry specimens.',
       blueprint: {
         standard: 'IS 456:2000, IS 1786 & IS 269',
         tolerance: 'TMT yield ≥ 550 N/mm² · Silt < 3% · Slump 100±25mm',
         spec: 'Fe550D primary TMT rebar with batch test certificates, 53-grade OPC/PPC certified brand cement, double-washed graded M-sand, and machine-cut masonry with 21-day curing protocol.',
-        cadRef: 'MT-04 // CONV-MAT-01',
+        cadRef: 'MT-04 // MAT-INT-01',
       },
     },
     {
       icon: 'safety',
-      tag: 'Execution & Site Safety',
+      tag: 'Disciplined Execution',
       tabLabel: 'Execution',
-      title: 'Execution process & safety measures',
-      body: 'Standardized stage-gate execution protocols, daily safety toolbox briefings, PPE compliance, and multi-tier supervision across all structural operations.',
+      title: 'Precision on site',
+      body: 'A design is only as lasting as the rigor on site. Structured milestone reviews, continuous multi-tier supervision, and strict safety protocols ensure every phase is built without compromise.',
       image: '/frames/frame-150.webp',
-      imageAlt: 'Active construction site with safety protocols and scaffolding supervision.',
+      imageAlt: 'Active construction site with structured execution and safety protocols.',
       blueprint: {
         standard: 'IS 3764:1992, NBC 2016 Part 7 & ISO 45001',
-        tolerance: 'Zero-incident mandate · 100% PPE adherence',
-        spec: 'Tiered stage-gate inspection sign-offs, mandatory safety harness & edge fall protection at height > 2m, certified steel staging scaffolding, and daily digital safety checklist verification.',
-        cadRef: 'EX-05 // SAFE-PROC-01',
+        tolerance: 'Zero-incident mandate · 100% milestone sign-off',
+        spec: 'Tiered stage-gate inspection sign-offs, mandatory safety harness & edge fall protection at increased heights, certified steel staging scaffolding, and daily digital safety checklist verification.',
+        cadRef: 'EX-05 // SITE-EXEC-01',
       },
     },
     {
       icon: 'record',
       tag: 'Full Lifetime Traceability',
       tabLabel: 'As-Built',
-      title: 'Recorded, not remembered',
+      title: 'Final detail and Handover',
       body: 'Progress, quality checks and site decisions are written down and handed over with the building.',
       image: '/images/workshop.jpg',
       imageAlt: 'Drafting tables carrying marked-up drawings and site record sheets.',
@@ -400,7 +400,7 @@ export const scopeColumns = {
 /* ---- Section 11 · SustainabilityInterlude ---- */
 
 export const sustainabilityInterlude = {
-  title: 'Where cement ends, nature begins — walls breathe and energy flows like air, unspent.',
+  title: 'Where cement ends, nature begins — walls breathe & energy flows',
   body:
     'Natural cooling, low-cement and cement-free construction, and green-building methods are treated as structural decisions, not add-ons. The aim is to ask less material to do more useful work — and to reduce what the building needs from a machine.',
   items: [
@@ -507,46 +507,48 @@ export const workGallery = {
   tiles: [
     {
       id: '01',
-      href: '/projects/ather',
-      title: 'Ather Residence',
-      location: 'Coimbatore, Tamil Nadu',
-      year: '2026',
+      href: '/projects/aether',
+      title: 'Aether ',
+      location: 'Cheran ma nagar, Coimbatore',
+      year: '2025',
       image: {
-        src: '/Ather/ather-06.jpeg',
-        alt: 'Ather Residence — contemporary facade with grey and cream plaster finish and glass balcony railing.',
+        src: '/Ather/ather-09.jpeg',
+        alt: 'Aether  exterior envelope nearing completion under scaffolding.',
       },
     },
     {
       id: '02',
-      href: '/projects/ather',
-      title: 'Ather Residence',
-      location: 'Coimbatore, Tamil Nadu',
-      year: '2026',
+      href: '/projects/aether',
+      title: 'Aether ',
+      location: 'Cheran ma nagar, Coimbatore',
+      year: '2025',
       image: {
-        src: '/Ather/ather-07.jpeg',
-        alt: 'Ather Residence exterior envelope nearing completion under scaffolding.',
+        src: '/Ather/ather-08.png',
+        alt: 'Aether  — contemporary duplex facade in Cheran ma nagar, Coimbatore.',
+        fit: 'contain',
       },
     },
     {
       id: '03',
-      href: '/projects/trevea',
-      title: 'Trevea Townhouses',
-      location: 'Coimbatore, Tamil Nadu',
+      href: '/projects/trivara',
+      title: 'Trivara',
+      location: 'Vilankurichi, Coimbatore',
       year: '2026',
       image: {
-        src: '/Trevea/trevea-03.jpeg',
-        alt: 'Trevea Townhouses — contemporary brick accent facade with white rendered volumes.',
+        src: '/Trevea/trivara-1.jpeg',
+        alt: 'Trivara Townhouses — exterior superstructure under scaffolding.',
+        fit: 'contain',
       },
     },
     {
       id: '04',
-      href: '/projects/trevea',
-      title: 'Trevea Townhouses',
-      location: 'Coimbatore, Tamil Nadu',
+      href: '/projects/trivara',
+      title: 'Trivara',
+      location: 'Vilankurichi, Coimbatore',
       year: '2026',
       image: {
-        src: '/Trevea/trevea-01.jpeg',
-        alt: 'Trevea Townhouses — exterior superstructure under scaffolding.',
+        src: '/Trevea/trivara-2.jpeg',
+        alt: 'Trivara Townhouses — contemporary brick accent facade in Vilankurichi, Coimbatore.',
       },
     },
   ],

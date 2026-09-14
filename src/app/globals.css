@@ -370,10 +370,18 @@ body[data-scroll-locked] {
 
 @media (pointer: fine) {
   html[data-custom-cursor="active"],
+  html[data-custom-cursor="active"] body,
   html[data-custom-cursor="active"] * {
     cursor: none;
   }
 
+  /* When selecting text, immediately yield to the native I-beam text cursor */
+  html[data-cursor-selecting="true"],
+  html[data-cursor-selecting="true"] * {
+    cursor: text !important;
+  }
+
+  /* Form controls and editable fields retain native input cursor */
   html[data-custom-cursor="active"] input,
   html[data-custom-cursor="active"] textarea,
   html[data-custom-cursor="active"] select,

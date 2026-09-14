@@ -79,7 +79,7 @@
   pointer-events: auto;
 }
 
-.footNote {
+.footNoteCta {
   display: inline-flex;
   align-items: center;
   gap: 0.65rem;
@@ -88,6 +88,27 @@
   font-weight: var(--fw-medium);
   letter-spacing: 0.03em;
   margin: 0;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    color var(--dur-fast) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out);
+}
+
+.footNoteCta:hover,
+.footNoteCta:focus-visible {
+  color: var(--ink);
+}
+
+.footNoteArrow {
+  font-size: 0.92rem;
+  color: var(--oxide);
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+
+.footNoteCta:hover .footNoteArrow,
+.footNoteCta:focus-visible .footNoteArrow {
+  transform: translateX(4px);
 }
 
 .estimateTabWrap {
@@ -190,7 +211,7 @@
     padding-block-start: var(--s-2);
   }
 
-  .footNote {
+  .footNoteCta {
     justify-content: center;
     font-size: 0.76rem;
     letter-spacing: 0.02em;

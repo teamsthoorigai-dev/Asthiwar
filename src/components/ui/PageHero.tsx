@@ -20,6 +20,10 @@ export type PageHeroProps = {
   image?: PageHeroImage;
   imageAlt?: string;
   imageCaption?: readonly [string, string] | [string, string];
+  /** Looping background video shown in the media slot instead of the image. `image` is kept as its poster. */
+  video?: string;
+  /** 'contain' shows the image at its full, uncropped proportions. Defaults to 'cover'. */
+  imageFit?: 'cover' | 'contain';
   meta?: ReactNode;
   align?: 'left' | 'center';
   className?: string;
@@ -33,6 +37,8 @@ export function PageHero({
   image,
   imageAlt,
   imageCaption,
+  video,
+  imageFit = 'cover',
   meta,
   align = 'left',
   className,
@@ -125,20 +131,35 @@ export function PageHero({
 
       {imageSrc ? (
         <div className={styles.mediaWrapper}>
-          <div ref={mediaRef} className={styles.media}>
-            <div ref={scaleLayerRef} className={styles.scaleLayer}>
-              <div ref={parallaxLayerRef} className={styles.parallaxLayer}>
-                <Image
-                  src={imageSrc}
-                  alt={resolvedAlt}
-                  fill
-                  preload
-                  sizes="(max-width: 1024px) 100vw, 1440px"
-                  className={styles.image}
-                />
+          {video ? (
+            <video
+              className={styles.videoNatural}
+              src={video}
+              poster={imageSrc}
+              aria-label={resolvedAlt}
+              autoPlay
+              muted
+              loop
+              playsInline
+              preload="auto"
+            />
+          ) : (
+            <div ref={mediaRef} className={styles.media}>
+              <div ref={scaleLayerRef} className={styles.scaleLayer}>
+                <div ref={parallaxLayerRef} className={styles.parallaxLayer}>
+                  <Image
+                    src={imageSrc}
+                    alt={resolvedAlt}
+                    fill
+                    preload
+                    sizes="(max-width: 1024px) 100vw, 1440px"
+                    className={styles.image}
+                    style={{ objectFit: imageFit }}
+                  />
+                </div>
               </div>
             </div>
-          </div>
+          )}
           {imageCaption ? (
             <figcaption className={styles.caption}>
               <span>{imageCaption[0]}</span>

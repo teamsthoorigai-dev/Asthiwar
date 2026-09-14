@@ -32,6 +32,22 @@
   transition: transform var(--dur-base) var(--ease-out);
 }
 
+.mediaNatural {
+  display: block;
+  position: relative;
+  overflow: hidden;
+  border-radius: 4px;
+  background: var(--surface);
+}
+
+.imageNatural {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 4px;
+  transition: transform var(--dur-base) var(--ease-out);
+}
+
 .caption {
   display: grid;
   gap: var(--s-1);
@@ -80,7 +96,8 @@
   line-height: var(--lh-body);
 }
 
-.link:is(:hover, :focus-visible) .image {
+.link:is(:hover, :focus-visible) .image,
+.link:is(:hover, :focus-visible) .imageNatural {
   transform: scale(1.04);
 }
 
@@ -161,6 +178,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .image,
+  .imageNatural,
   .caption {
     transition: none;
   }

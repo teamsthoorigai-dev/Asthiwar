@@ -50,16 +50,10 @@ export interface BuildDuration {
   floorNumber: number;
 }
 
-/** Programme length by storey count. Beyond G+3, two months per extra floor. */
+/** Programme length by storey count. Ground floor is 7–8 months; each floor above adds 2 months. */
 export function getDurationForFloors(floorsAboveGround: number): BuildDuration {
-  if (floorsAboveGround === 0) return { range: '5–6 Months', min: 5, max: 6, floorNumber: 1 };
-  if (floorsAboveGround === 1) return { range: '7–8 Months', min: 7, max: 8, floorNumber: 2 };
-  if (floorsAboveGround === 2) return { range: '9–11 Months', min: 9, max: 11, floorNumber: 3 };
-  if (floorsAboveGround === 3) return { range: '12–14 Months', min: 12, max: 14, floorNumber: 4 };
-
-  const extraFloors = floorsAboveGround - 3;
-  const min = 12 + extraFloors * 2;
-  const max = 14 + extraFloors * 2;
+  const min = 7 + floorsAboveGround * 2;
+  const max = 8 + floorsAboveGround * 2;
   return {
     range: `${min}–${max} Months`,
     min,

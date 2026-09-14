@@ -1,12 +1,33 @@
+.container {
+  position: relative;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+@media (min-width: 48rem) {
+  .container {
+    /* The fixed header (~72px) overlays content rather than reserving space
+       for it in the document. At the natural scroll-rest position — this
+       section's top sitting flush under the header — a full 100svh section
+       has its bottom ~72px pushed below the viewport, which is just enough
+       to clip the marquee band. Subtracting the header's height here is what
+       actually lands hero + marquee in one screen. */
+    min-height: calc(100svh - 4.5rem);
+    height: calc(100svh - 4.5rem);
+  }
+}
+
 .hero {
   position: relative;
   width: 100%;
-  min-height: clamp(38rem, 84svh, 52rem);
+  flex: 1 1 auto;
+  min-height: 0;
   overflow: hidden;
   background: var(--ink);
   isolation: isolate;
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   color: var(--on-accent);
 }
 
@@ -37,17 +58,17 @@
   max-width: var(--container);
   margin-inline: auto;
   padding-inline: var(--gutter);
-  padding-block: clamp(4rem, 8svh, 6.5rem);
+  padding-block: clamp(2rem, 4svh, 3.5rem);
 }
 
 .copy {
   position: relative;
   z-index: 1;
-  max-width: 48rem;
+  max-width: 52rem;
 }
 
 .eyebrow {
-  margin-bottom: clamp(1rem, 2.5vw, 1.5rem);
+  margin-bottom: 0.75rem;
   color: var(--oxide-light);
   font-size: var(--fs-xs);
   font-weight: var(--fw-bold);
@@ -56,22 +77,22 @@
 }
 
 .title {
-  max-width: 11ch;
-  margin-top: 0.5rem;
+  max-width: min(44rem, 100%);
+  margin-top: 0;
   color: var(--on-accent);
-  font-size: clamp(2.75rem, 6.8vw, 5.5rem);
+  font-size: clamp(1.85rem, 3.4vw, 3rem);
   font-weight: var(--fw-medium);
-  letter-spacing: -0.038em;
-  line-height: 0.92;
+  letter-spacing: -0.03em;
+  line-height: 1.08;
   text-wrap: balance;
 }
 
 .intro {
-  max-width: 34rem;
-  margin-top: clamp(1.25rem, 2.5vw, 1.75rem);
+  max-width: 36rem;
+  margin-top: 1rem;
   color: rgb(239 234 227 / 0.84);
-  font-size: clamp(0.95rem, 1.3vw, 1.08rem);
-  line-height: 1.55;
+  font-size: clamp(0.9rem, 1.1vw, 1.02rem);
+  line-height: 1.5;
   text-wrap: pretty;
 }
 
@@ -80,45 +101,27 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 1rem;
-  margin-top: clamp(1.5rem, 3vw, 2.25rem);
+  margin-top: 1.25rem;
 }
 
-.scrollCue {
-  display: none;
-  position: absolute;
-  z-index: 1;
-  bottom: 1.75rem;
-  left: 50%;
-  transform: translateX(-50%);
-  align-items: center;
-  gap: 0.55rem;
-  color: rgb(239 234 227 / 0.72);
-  font-size: 0.625rem;
-  font-weight: var(--fw-bold);
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  pointer-events: none;
-  animation: quiet-pulse 2.6s ease-in-out infinite;
-}
-
-@keyframes quiet-pulse {
-  0%, 100% {
-    opacity: 0.72;
-  }
-  50% {
-    opacity: 0.35;
-  }
-}
-
-@media (min-width: 48rem) {
-  .scrollCue {
-    display: flex;
-  }
+.marqueeBand {
+  flex: 0 0 auto;
+  width: 100%;
+  z-index: 2;
 }
 
 @media (max-width: 48rem) {
+  .container {
+    min-height: auto;
+  }
+
   .hero {
-    min-height: clamp(34rem, 80svh, 44rem);
+    min-height: clamp(26rem, 65svh, 34rem);
+    align-items: flex-end;
+  }
+
+  .inner {
+    padding-block: clamp(2.5rem, 5svh, 3.5rem);
   }
 
   .image {
@@ -132,13 +135,17 @@
   }
 
   .title {
-    max-width: none;
-    font-size: clamp(2.35rem, 10vw, 3.75rem);
-    line-height: 0.96;
+    font-size: clamp(1.65rem, 6.5vw, 2.25rem);
+    line-height: 1.12;
   }
 
   .intro {
-    font-size: 0.9375rem;
+    font-size: 0.9rem;
+    margin-top: 0.75rem;
+  }
+
+  .actions {
+    margin-top: 1rem;
   }
 }
 
@@ -146,9 +153,5 @@
   .image {
     transform: none;
     transition: none;
-  }
-
-  .scrollCue {
-    animation: none;
   }
 }
