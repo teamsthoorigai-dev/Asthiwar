@@ -11,6 +11,7 @@
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
+    "types": ["node"],
     "paths": {
       "@asthiwar/database": ["../database/src/index.ts"],
       "@asthiwar/database/*": ["../database/src/*"]
