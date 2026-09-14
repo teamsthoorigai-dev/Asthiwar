@@ -1,76 +1,29 @@
-# Render Blueprint — ASTHIWAR backend API
-# Docs: https://render.com/docs/blueprint-spec
-#
-# The database is NOT declared here: Postgres lives on Neon, so DATABASE_URL is
-# supplied as a secret rather than wired to a Render-managed instance.
+﻿databases:
+  - name: asthiwar-db
+    databaseName: asthiwar
+    user: asthiwar
+    plan: free
 
 services:
   - type: web
-    name: asthiwar-api
+    name: asthiwar-backend
     runtime: node
     plan: free
-    region: singapore
-    branch: main
-
-    # Must stay the repo root. This is an npm workspaces monorepo and the
-    # backend's `prebuild` shells out to `npm --workspace=@asthiwar/database`,
-    # which only resolves from the workspace root. Setting this to `backend`
-    # breaks the build.
-    rootDir: .
-
-    # `build:backend` chains the database build via backend's prebuild hook.
-    # The root `build` script is deliberately avoided: it also runs `next build`,
-    # which this service does not serve.
-    #
-    # Migrations run here rather than in a preDeployCommand, which Render only
-    # offers on paid instance types. Failing the build leaves the previous
-    # version serving, which is the behaviour we want. Drizzle records applied
-    # migrations in __drizzle_migrations, so a deploy that adds none is a no-op.
-    #
-    # Seeding is deliberately NOT run here. database/src/seeds/seed.ts UPDATEs
-    # existing package/option/addon price rows, so an automatic re-seed on every
-    # deploy would silently revert whatever prices an admin had edited. Seed by
-    # hand, once, per docs/DEPLOYMENT.md.
-    buildCommand: npm ci && npm run build:backend && npm run db:migrate
-
-    # NOT `npm start` — that is `next start`, the frontend.
-    startCommand: npm --workspace=backend run start
-
-    # Returns 503 while the database is unreachable (see health.controller.ts).
-    # On the free plan a cold start against a suspended Neon branch can trip
-    # this; if deploys flap, raise connectionTimeoutMillis in database/src/db.ts
-    # or disable Neon autosuspend.
+    buildCommand: npm install && npm run build:backend
+    startCommand: npm run db:setup && npm --workspace=backend run start
     healthCheckPath: /api/v1/health
-
-    autoDeploy: true
-
     envVars:
-      # Pinned deliberately. package.json now declares engines.node as 22.x,
-      # which Render also honours, but the explicit pin keeps the patch level
-      # identical to the version the lockfile was resolved against.
-      - key: NODE_VERSION
-        value: 22.17.0
-
       - key: NODE_ENV
         value: production
-
-      # Neon connection string. Use the DIRECT endpoint (no `-pooler`): the app
-      # runs its own pg.Pool, and Drizzle's migration advisory locks are not
-      # reliable through PgBouncer transaction pooling.
-      # Must include ?sslmode=require.
+      - key: PORT
+        value: 10000
       - key: DATABASE_URL
-        sync: false
-
-      # 44-char base64 value, comfortably over the 32-char minimum env.ts enforces.
+        fromDatabase:
+          name: asthiwar-db
+          property: connectionString
       - key: SESSION_SECRET
         generateValue: true
-
-      # Comma-separated browser origins. Now genuinely enforced — an origin that
-      # is not listed gets a 403. Set this to the real frontend domain(s).
-      #
-      # Note that the primary traffic path does not exercise this: Vercel's
-      # rewrite proxies /api/* server-to-server, and those requests carry no
-      # Origin header, which app.ts admits unconditionally. This governs direct
-      # browser calls to the Render URL.
       - key: CORS_ORIGIN
+        sync: false
+      - key: PUBLIC_BASE_URL
         sync: false
