@@ -128,6 +128,79 @@
   border-radius: 4px;
 }
 
+/* ==========================================================================
+   Running-difference bar (Customise & Add-Ons steps)
+   ==========================================================================
+   Both steps are long lists that are scrolled through while choosing, and the
+   figure the choices move sat at the very top — out of sight for most of the
+   deciding. It follows the scroll instead.
+
+   .calculator-card is deliberately transparent, so this needs its own ground:
+   a sticky element without one lets the option cards scroll through it. The
+   site header is fixed at z-index 100 and hides on scroll down, so this sits
+   below it and clears its height. */
+.calculator-summary-bar {
+  position: sticky;
+  top: calc(var(--header-height, 4.5rem) + 0.5rem);
+  z-index: 20;
+  background: var(--bg);
+  border: 1px solid var(--hairline);
+  box-shadow: 0 6px 16px -8px rgb(25 36 29 / 0.28);
+}
+
+.calculator-delta[data-direction='up'] {
+  color: var(--ink);
+}
+
+/* A cost going down is the good direction on a quote, so the credit is the one
+   that gets the green. */
+.calculator-delta[data-direction='down'] {
+  color: var(--accent-bright);
+}
+
+.calculator-delta[data-direction='flat'] {
+  color: var(--muted);
+}
+
+/* On a phone the bar has to stay short or it eats the list it is summarising:
+   one row, no avatar, and the explanation capped at two lines. */
+@media (max-width: 40rem) {
+  .calculator-summary-bar {
+    top: calc(var(--header-height, 4.5rem) + 0.25rem);
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.75rem 0.85rem;
+  }
+
+  .calculator-summary-bar__icon {
+    display: none;
+  }
+
+  .calculator-summary-bar__note {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow: hidden;
+  }
+
+  .calculator-summary-bar__aside {
+    border: none;
+    padding-inline-start: 0;
+  }
+
+  /* Built-up area is fixed for the whole step and already stated on the two
+     steps behind this one. Carrying it here cost the bar 80px of a 306px row,
+     which pushed the label and its note onto extra lines and took the bar to
+     120px — a fifth of the screen, permanently, on the step with the longest
+     list to scroll. The difference is what has to stay visible. */
+  .calculator-summary-bar__context {
+    display: none;
+  }
+}
+
 .calculator-step__header {
   margin-bottom: 1.5rem;
 }
@@ -1022,7 +1095,7 @@
   color: var(--body);
   font-size: 0.8125rem;
   line-height: 1.45;
-  vertical-align: middle;
+  vertical-align: top;
 }
 
 .pkg-matrix-td--sticky {
@@ -1066,7 +1139,7 @@
 
 .pkg-matrix-feature {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 0.75rem;
 }
 
@@ -1081,6 +1154,7 @@
   justify-content: center;
   flex-shrink: 0;
   color: var(--accent);
+  margin-top: 0.1rem;
 }
 
 .pkg-matrix-feature__name {

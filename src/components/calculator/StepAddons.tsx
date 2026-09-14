@@ -11,6 +11,7 @@ import type {
   AddonVariantItem,
   CalculationResult,
 } from '@/lib/calculator/types';
+import { deltaDirection, formatSignedINR } from '@/lib/calculator/format';
 
 interface StepAddonsProps {
   formData: EstimateFormState;
@@ -128,7 +129,10 @@ export function StepAddons({
   };
 
   // Rule #5: the authoritative add-on subtotal is returned by the backend preview engine.
+  // Like the customisation step, this is shown as a difference from the package
+  // price rather than as a project total: it is 0 until something is selected.
   const backendAddonsCost = previewResult?.breakdown?.addonsCost ?? 0;
+  const addonsDirection = deltaDirection(backendAddonsCost);
   const selectedCount = formData.addons.length;
 
   if (configLoading) {
@@ -154,9 +158,9 @@ export function StepAddons({
       </div>
 
       {/* Selection Counter & Backend Subtotal */}
-      <div className="calculator-card p-4 mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div className="calculator-summary-bar calculator-card p-4 mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-surface-active flex items-center justify-center text-foreground shrink-0">
+          <div className="calculator-summary-bar__icon w-8 h-8 rounded-full bg-surface-active flex items-center justify-center text-foreground shrink-0">
             <Sparkles size={16} aria-hidden="true" />
           </div>
           <div>
@@ -165,24 +169,27 @@ export function StepAddons({
                 ? 'No Add-Ons Selected (Optional)'
                 : `${selectedCount} Add-On${selectedCount > 1 ? 's' : ''} Selected`}
             </div>
-            <div className="text-xs text-muted">
+            <div className="calculator-summary-bar__note text-xs text-muted">
               {selectedCount === 0
                 ? 'Select any items below or click continue to skip.'
-                : 'Included in your comprehensive civil construction estimate.'}
+                : 'Added on top of your package and material selections.'}
             </div>
           </div>
         </div>
 
-        <div className="text-right sm:border-l sm:border-border sm:pl-5">
+        <div className="calculator-summary-bar__aside shrink-0 text-right sm:border-l sm:border-border sm:pl-5">
           <div className="text-[10px] uppercase tracking-wider text-muted font-semibold">
-            Add-Ons Investment
+            Added by your add-ons
           </div>
           <div
-            className={`text-lg tabular-nums font-bold transition-opacity ${
+            aria-atomic="true"
+            aria-live="polite"
+            data-direction={addonsDirection}
+            className={`calculator-delta text-lg tabular-nums font-bold transition-opacity ${
               previewLoading ? 'opacity-60' : 'opacity-100'
             }`}
           >
-            ₹{backendAddonsCost.toLocaleString('en-IN')}
+            {formatSignedINR(backendAddonsCost)}
           </div>
         </div>
       </div>

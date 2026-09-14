@@ -11,6 +11,7 @@ export function ArchitecturalCursor() {
   const [isVisible, setIsVisible] = useState(false);
   const [isTextInput, setIsTextInput] = useState(false);
 
+  const isVisibleRef = useRef(false);
   const pos = useRef({ x: -100, y: -100 });
   const target = useRef({ x: -100, y: -100 });
   const rafId = useRef<number | null>(null);
@@ -28,7 +29,10 @@ export function ArchitecturalCursor() {
       target.current.x = e.clientX;
       target.current.y = e.clientY;
 
-      if (!isVisible) setIsVisible(true);
+      if (!isVisibleRef.current) {
+        isVisibleRef.current = true;
+        setIsVisible(true);
+      }
 
       // Instantly position center dot with zero latency
       if (dotRef.current) {
@@ -71,10 +75,12 @@ export function ArchitecturalCursor() {
     };
 
     const onMouseLeave = () => {
+      isVisibleRef.current = false;
       setIsVisible(false);
     };
 
     const onMouseEnter = () => {
+      isVisibleRef.current = true;
       setIsVisible(true);
     };
 
@@ -90,8 +96,16 @@ export function ArchitecturalCursor() {
       rafId.current = requestAnimationFrame(render);
     };
 
+    const onDragStart = (e: DragEvent) => {
+      // Prevent browser native image drag from hijacking mouse events
+      if ((e.target as HTMLElement)?.tagName === 'IMG') {
+        e.preventDefault();
+      }
+    };
+
     window.addEventListener('mousemove', onMouseMove, { passive: true });
     window.addEventListener('mouseover', onMouseOver, { passive: true });
+    window.addEventListener('dragstart', onDragStart);
     document.documentElement.addEventListener('mouseleave', onMouseLeave);
     document.documentElement.addEventListener('mouseenter', onMouseEnter);
 
@@ -101,11 +115,12 @@ export function ArchitecturalCursor() {
       document.documentElement.removeAttribute('data-custom-cursor');
       window.removeEventListener('mousemove', onMouseMove);
       window.removeEventListener('mouseover', onMouseOver);
+      window.removeEventListener('dragstart', onDragStart);
       document.documentElement.removeEventListener('mouseleave', onMouseLeave);
       document.documentElement.removeEventListener('mouseenter', onMouseEnter);
       if (rafId.current) cancelAnimationFrame(rafId.current);
     };
-  }, [isVisible]);
+  }, []);
 
   const isHidden = !isVisible || isTextInput;
 

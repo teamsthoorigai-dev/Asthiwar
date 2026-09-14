@@ -35,10 +35,10 @@
 
 .eyebrow {
   margin: 0;
-  color: var(--body);
-  font-size: clamp(0.7rem, 1.45vw, 1.43rem);
-  font-weight: var(--fw-bold);
-  letter-spacing: 0.18em;
+  color: var(--accent);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  letter-spacing: 0.1em;
   line-height: var(--lh-head);
   text-transform: uppercase;
 }

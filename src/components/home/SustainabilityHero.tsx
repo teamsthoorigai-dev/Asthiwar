@@ -46,21 +46,17 @@ export function SustainabilityHero() {
 
       <div className={styles.inner}>
         <div className={styles.copy} ref={copyRef}>
-          <p className={styles.eyebrow}>Sustainable by design</p>
+          <p className={styles.eyebrow}>Sustainable Construction</p>
           <h2 id="sustainability-hero-title" className={styles.title}>
-            Comfort
-            <br />
-            designed in, before
-            <br />
-            energy is spent.
+            Where cement ends, nature begins &mdash; walls breathe and energy flows like air, unspent.
           </h2>
           <p className={styles.intro}>
             Natural cooling, lower-carbon material choices, and healthier spaces are considered
             before mechanical energy is added.
           </p>
           <div className={styles.actions}>
-            <Button href="/cost-calculator" variant="white">
-              Cost calculator
+            <Button href="/sustainable-construction" variant="white">
+              Walk with Nature
             </Button>
           </div>
         </div>

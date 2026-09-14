@@ -55,10 +55,6 @@ export function SiteFooter() {
                 className={styles.logo}
               />
             </Link>
-            <p className={styles.positioning}>
-              Architecture, engineering and construction in Coimbatore, coordinated through
-              one process.
-            </p>
             {socials.length > 0 ? (
               <ul className={styles.list}>
                 {socials.map((s) => (

@@ -199,11 +199,6 @@ export function StudioClient() {
                   <span>Open in Google Maps</span>
                   <span aria-hidden="true">↗</span>
                 </a>
-
-                <Link href="/contact" className={styles.consultationLink}>
-                  <span>Book Studio Consultation</span>
-                  <span aria-hidden="true">→</span>
-                </Link>
               </div>
             </div>
 

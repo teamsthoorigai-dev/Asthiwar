@@ -13,9 +13,7 @@ const SOLID_AFTER = 80;
 
 export function SiteHeader() {
   const [solid, setSolid] = useState(false);
-  const [hidden, setHidden] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  const lastY = useRef(0);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const pathname = usePathname();
 
@@ -27,23 +25,17 @@ export function SiteHeader() {
     const onScroll = () => {
       const y = window.scrollY;
       const isSolid = y > SOLID_AFTER;
-      const isHidden = !menuOpen && y > SOLID_AFTER * 2 && y > lastY.current;
       setSolid(isSolid);
-      // Never hide while the menu is open, or near the very top.
-      setHidden(isHidden);
-      document.body.dataset.headerHidden = String(isHidden);
       document.body.dataset.headerSolid = String(isSolid);
-      lastY.current = y;
     };
 
     onScroll();
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => {
       window.removeEventListener('scroll', onScroll);
-      delete document.body.dataset.headerHidden;
       delete document.body.dataset.headerSolid;
     };
-  }, [menuOpen]);
+  }, []);
 
   const isDarkHero = pathname === '/projects' || pathname === '/cost-calculator';
 
@@ -53,7 +45,6 @@ export function SiteHeader() {
         className={[
           styles.header,
           solid && styles.solid,
-          hidden && styles.hidden,
           isDarkHero && styles.darkHero,
         ]
           .filter(Boolean)
@@ -110,10 +101,10 @@ export function SiteHeader() {
             >
               <span className={styles.ctaLabel}>
                 <span className={styles.ctaFull}>
-                  BOOK CONSULTATION <ArrowUpRight size={14} strokeWidth={2.2} className={styles.ctaArrow} aria-hidden="true" />
+                  START A PROJECT <ArrowUpRight size={14} strokeWidth={2.2} className={styles.ctaArrow} aria-hidden="true" />
                 </span>
                 <span className={styles.ctaShort}>
-                  CONSULT <ArrowUpRight size={13} strokeWidth={2.2} className={styles.ctaArrow} aria-hidden="true" />
+                  START <ArrowUpRight size={13} strokeWidth={2.2} className={styles.ctaArrow} aria-hidden="true" />
                 </span>
               </span>
               <span className={styles.ctaBlock} aria-hidden="true" />

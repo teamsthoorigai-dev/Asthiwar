@@ -6,19 +6,13 @@
   border-bottom: 1px solid transparent;
   transition:
     background-color var(--dur-fast) var(--ease-out),
-    border-color var(--dur-fast) var(--ease-out),
-    transform 0.4s var(--ease-out);
+    border-color var(--dur-fast) var(--ease-out);
 }
 
 /* Past 80px of scroll the bar gains a ground and a hairline. */
 .solid {
   background: var(--bg);
   border-bottom-color: var(--hairline);
-}
-
-/* Hidden while scrolling down, restored on scroll up. */
-.hidden {
-  transform: translateY(-100%);
 }
 
 /* While over a dark hero sequence at the top of the page */
@@ -183,7 +177,7 @@
   display: block;
   height: 22px;
   width: auto;
-  color: var(--ink);
+  color: var(--accent-bright);
 }
 
 /* ---- Book Consultation CTA button ---- */

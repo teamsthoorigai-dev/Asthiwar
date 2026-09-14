@@ -915,7 +915,22 @@ async function seedSpecifications(
     const pId = pkgIds[d.packageSlug];
     if (!optId || !pId) continue;
 
-    const deltaVal = Math.max(0, parseFloat(d.priceDelta) || 0).toFixed(2);
+    // A downgrade credit is negative, and it has to survive the write.
+    //
+    // This read `Math.max(0, ...)`, which silently floored all 128 of the
+    // negative deltas authored in `opDefs` above to 0.00 — so every database
+    // ever built from this seed had a catalogue where no downgrade returns
+    // anything. On Luxury that is all 67 alternatives: a customer swapping
+    // JSW/TATA steel for commodity ISI was credited ₹0 while still paying the
+    // Luxury rate, which is priced on the assumption of JSW/TATA.
+    //
+    // The negatives here are not stray minus signs. They are internally
+    // consistent: each is `ladder(brand) − ladder(that tier's default)`, the same
+    // arithmetic every positive delta in this list already follows. The engine
+    // has always handled them (`upgradesCost` is explicitly allowed below zero,
+    // with a guard refusing a quotation whose total would reach zero), and the
+    // admin console has always accepted typing one.
+    const deltaVal = (parseFloat(d.priceDelta) || 0).toFixed(2);
     const existing = existingOPs.find(ex => ex.optionId === optId && ex.packageId === pId);
     if (existing) {
       await db.update(optionPrices).set({

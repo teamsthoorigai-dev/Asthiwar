@@ -52,38 +52,33 @@
   display: block;
   width: 100%;
   height: auto;
-  color: var(--ink);
+  color: var(--accent-bright);
   transform-origin: 53.2943% 50%;
   transform: translateX(-3.2943%) scale(var(--reveal-start-scale));
   clip-path: inset(0% 44.6615% 0% 51.25%);
   --reveal-start-scale: 7.2;
 }
 
-/* Eyebrow register — the third of the three registers the design system allows.
-   Hidden at rest: the reveal brings it in once the wordmark is whole. */
-.descriptor {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  column-gap: 0.75em;
-  row-gap: 0.4rem;
-  max-width: min(90vw, 44rem);
-  margin: clamp(0.9rem, 2.2vh, 1.75rem) 0 0;
+/* Single line note directly between the company name lockup and the estimate tab. */
+.singleLineNote {
+  display: block;
+  white-space: nowrap;
+  max-width: min(94vw, 54rem);
+  margin: clamp(0.75rem, 2vh, 1.35rem) 0 0;
   color: var(--muted);
-  font-size: var(--fs-xs);
+  font-size: clamp(0.82rem, 0.76rem + 0.35vw, 1.05rem);
   font-weight: var(--fw-medium);
-  letter-spacing: 0.18em;
-  line-height: 1.6;
+  letter-spacing: 0.05em;
+  line-height: 1.4;
   text-align: center;
-  text-transform: uppercase;
   opacity: 0;
 }
 
-/* The separator belongs to the word before it, so a wrapped line can never
-   open with an orphaned middot. */
-.descriptor > span:not(:last-child)::after {
-  content: "·";
-  margin-inline-start: 0.75em;
+.estimateTabWrap {
+  display: flex;
+  justify-content: center;
+  margin-top: clamp(1rem, 2.4vh, 1.6rem);
+  opacity: 0;
 }
 
 /* Closes the opening viewport with an edge instead of leaving the lower half
@@ -200,13 +195,9 @@
 /* Too narrow for four terms and three separators. Whitespace does the work
    instead, and the descriptor breaks into a tidy two-by-two. */
 @media (max-width: 560px) {
-  .descriptor {
-    column-gap: 1.6em;
-    letter-spacing: 0.14em;
-  }
-
-  .descriptor > span:not(:last-child)::after {
-    content: none;
+  .singleLineNote {
+    font-size: clamp(0.7rem, 2.9vw, 0.85rem);
+    letter-spacing: 0.02em;
   }
 
   .foot {
@@ -252,7 +243,8 @@
     clip-path: none;
   }
 
-  .descriptor,
+  .singleLineNote,
+  .estimateTabWrap,
   .foot {
     opacity: 1;
   }

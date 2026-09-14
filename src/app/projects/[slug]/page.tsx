@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { Button } from '@/components/ui/Button';
 import { PageHero } from '@/components/ui/PageHero';
 import { Section } from '@/components/ui/Section';
 import { ProjectGallery } from '@/components/projects/ProjectGallery';
@@ -87,9 +88,10 @@ export default async function ProjectPage({ params }: { params: Promise<Params> 
         image={project.image.src}
         imageAlt={project.image.alt || project.title}
         imageCaption={[project.location, project.year]}
+        className={styles.projectHero}
       />
 
-      <Section>
+      <Section className={styles.firstSection}>
         <div className={styles.blueprintDatumStrip}>
           <div className={styles.datumItem}>
             <span className={styles.datumLabel}>Structure</span>
@@ -160,15 +162,15 @@ export default async function ProjectPage({ params }: { params: Promise<Params> 
         <h2 className={styles.sectionTitle}>Gallery</h2>
         <ProjectGallery shots={project.gallery} title={project.title} />
 
-        <Link href={`/projects/${next.slug}`} className={styles.nextLink}>
-          <div className={styles.next}>
-            <div>
-              <p className={styles.nextLabel}>Next project</p>
-              <p className={styles.nextTitle}>{next.title}</p>
-            </div>
-            <span aria-hidden="true">&rarr;</span>
-          </div>
-        </Link>
+        <div className={styles.nextRow}>
+          <Link href={`/projects/${next.slug}`} className={styles.nextTextLink}>
+            <p className={styles.nextLabel}>Next project</p>
+            <p className={styles.nextTitle}>{next.title}</p>
+          </Link>
+          <Button href={`/projects/${next.slug}`} variant="primary" className={styles.nextCtaBtn}>
+            Next Project
+          </Button>
+        </div>
       </Section>
     </>
   );

@@ -15,8 +15,8 @@ interface StepLeadCaptureProps {
   onChange: (fields: Partial<EstimateFormState>) => void;
   onSubmit: () => void;
   onBack: () => void;
-  /** Takes the customer back to step 1, where the city is chosen. */
-  onEditLocation: () => void;
+  /** Optional handler to take the customer back to step 1. */
+  onEditLocation?: () => void;
 }
 
 export function StepLeadCapture({
@@ -116,27 +116,37 @@ export function StepLeadCapture({
           </div>
         </div>
 
-        {/* Shown, not edited.
-            The city is a pricing input and is chosen in step 1, where the rates
-            it changes are on screen. Leaving an editable copy here meant a
-            customer could change their multiplier on the contact form, after
-            comparing packages and picking one — the total would move and nothing
-            on this step would explain why. */}
+        {/* Location Dropdown */}
         <div className="form-group">
-          <span className="form-label flex items-center gap-1.5">
+          <label className="form-label flex items-center gap-1.5" htmlFor="customer-location">
             <MapPin size={16} aria-hidden="true" />
-            <span>Plot Location</span>
-          </span>
-          <div className="calculator-readonly-field">
-            <span>{formData.plotLocation || '—'}</span>
-            <button
-              type="button"
-              onClick={onEditLocation}
-              className="calculator-readonly-field__action"
-            >
-              Change
-            </button>
-          </div>
+            <span>Plot Location (Tamil Nadu)</span>
+            <span className="text-red-500">*</span>
+          </label>
+          <select
+            id="customer-location"
+            className="form-select"
+            value={formData.plotLocation}
+            onChange={(e) => {
+              const loc = locations.find((l) => l.name === e.target.value);
+              onChange({
+                plotLocation: e.target.value,
+                locationId: loc ? loc.id : undefined,
+              });
+            }}
+          >
+            {locations.length === 0 && (
+              <option value="">Select location...</option>
+            )}
+            {locations.map((loc) => (
+              <option key={loc.id} value={loc.name}>
+                {loc.name}
+              </option>
+            ))}
+          </select>
+          <p className="calculator-field-hint">
+            Rates vary by city. Your estimate will be calculated for this location.
+          </p>
           {stepErrors.plotLocation && <p className="form-error">{stepErrors.plotLocation}</p>}
         </div>
 

@@ -164,30 +164,21 @@ export function LogoReveal() {
       <div ref={stageRef} className={styles.stage}>
         <div className={styles.center}>
           <h1 id="home-title" className={styles.lockup}>
-            <span className={styles.name}>
-              ASTHIWAR — A Better Way to Build
-            </span>
+            <span className={styles.name}>ASTHIWAR</span>
             <AsthiwarWordmark ref={logoRef} className={styles.wordmark} />
           </h1>
 
-          <p ref={descriptorRef} className={styles.descriptor}>
-            {logoReveal.descriptor.map((item) => (
-              <span key={item}>{item}</span>
-            ))}
+          <p ref={descriptorRef} className={styles.singleLineNote}>
+            {logoReveal.pricingNote}
           </p>
-        </div>
 
-        <div ref={footRef} className={styles.foot}>
-          <div className={styles.footNote}>
-            <span className={styles.livePulse} aria-hidden="true" />
-            <span>{logoReveal.pricingNote}</span>
+          <div ref={footRef} className={styles.estimateTabWrap}>
+            <Link href={logoReveal.estimateCta.href} className={styles.highlightedCta}>
+              <span className={styles.ctaBadge}>{logoReveal.estimateCta.badge}</span>
+              <span className={styles.ctaLabel}>{logoReveal.estimateCta.label}</span>
+              <span className={styles.ctaArrow} aria-hidden="true">↗</span>
+            </Link>
           </div>
-
-          <Link href={logoReveal.estimateCta.href} className={styles.highlightedCta}>
-            <span className={styles.ctaBadge}>{logoReveal.estimateCta.badge}</span>
-            <span className={styles.ctaLabel}>{logoReveal.estimateCta.label}</span>
-            <span className={styles.ctaArrow} aria-hidden="true">↗</span>
-          </Link>
         </div>
 
         <span ref={cueRef} className={styles.cue} aria-hidden="true" />
@@ -196,7 +187,7 @@ export function LogoReveal() {
       <noscript>
         <style>
           {`.${styles.wordmark}{transform:none;clip-path:none}` +
-            `.${styles.descriptor},.${styles.foot}{opacity:1}` +
+            `.${styles.singleLineNote},.${styles.estimateTabWrap}{opacity:1}` +
             `.${styles.cue}{display:none}`}
         </style>
       </noscript>

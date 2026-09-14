@@ -1,4 +1,4 @@
-import type { FaqContent } from '@/components/home/Faq';
+﻿import type { FaqContent } from '@/components/home/Faq';
 import type { EnquiryFormContent } from '@/components/home/EnquiryForm';
 import type { WorkGalleryContent } from '@/components/home/WorkGallery';
 
@@ -24,16 +24,12 @@ export const homeHero = {
 
 export const logoReveal = {
   /**
-   * Sits under the wordmark once the reveal lands.
+   * Single line between company name and estimate tab.
    */
-  descriptor: ['A Better Way to Build'],
-  /**
-   * Hero bottom bar: contextual transparent costing note and highlighted estimator.
-   */
-  pricingNote: 'Turnkey residential costing · Live 2026 Coimbatore rates',
+  pricingNote: "Know what you're paying for, before you build.",
   estimateCta: {
     badge: '2-Min Instant Estimate',
-    label: 'Estimate your build',
+    label: 'Free Instant Quote',
     href: '/cost-calculator',
   },
 } as const;
@@ -103,7 +99,7 @@ export const estimateBand = {
   ],
   figureLabel: 'Estimated project cost',
   note: 'Estimated cost only. Final project cost depends on design, specifications, site conditions, materials and project requirements.',
-  cta: { label: 'Calculate your cost', href: '/cost-calculator' },
+  cta: { label: 'Free Instant Quote', href: '/cost-calculator' },
 } as const satisfies {
   eyebrow: string;
   title: string;
@@ -121,6 +117,7 @@ export type LastingCardIcon =
   | 'detail'
   | 'material'
   | 'less'
+  | 'safety'
   | 'record';
 
 export const lastingCards = {
@@ -174,32 +171,32 @@ export const lastingCards = {
     },
     {
       icon: 'material',
-      tag: 'Earth & Breathable Lime',
+      tag: 'Conventional High-Grade Materials',
       tabLabel: 'Materials',
       title: 'Material honesty',
-      body: 'Lime plaster, exposed masonry, engineered timber. Finishes are the material, not a coating over it.',
-      image: '/images/lime-plaster.jpg',
-      imageAlt: 'Hand-applied lime plaster, its trowel texture left visible.',
+      body: 'Certified 53-grade cement, primary Fe550D TMT steel, precision-cured masonry, and washed graded sand. Finishes and structural materials meet rigorous Indian Standard (IS) benchmarks without dilution.',
+      image: '/images/materials.jpg',
+      imageAlt: 'Conventional high-grade construction materials, steel rebar testing and masonry specimens.',
       blueprint: {
-        standard: 'IS 712 Class C Hydraulic Lime',
-        tolerance: 'Vapour perm > 0.8 mg/(m·h·Pa)',
-        spec: 'Naturally hydraulic 1:3 slaked fat lime and river sand matrix. Zero synthetic binders or acrylic polymer emulsion seals.',
-        cadRef: 'MT-04 // LIME-PLAST-22',
+        standard: 'IS 456:2000, IS 1786 & IS 269',
+        tolerance: 'TMT yield ≥ 550 N/mm² · Silt < 3% · Slump 100±25mm',
+        spec: 'Fe550D primary TMT rebar with batch test certificates, 53-grade OPC/PPC certified brand cement, double-washed graded M-sand, and machine-cut masonry with 21-day curing protocol.',
+        cadRef: 'MT-04 // CONV-MAT-01',
       },
     },
     {
-      icon: 'less',
-      tag: 'Low-Carbon CSEB Blocks',
-      tabLabel: 'Low-Carbon',
-      title: 'Ask less of the material',
-      body: 'Low-cement and cement-free methods where the structure allows, without trading away structural integrity.',
-      image: '/images/sustainable.jpg',
-      imageAlt: 'Compressed stabilised earth blocks stacked and curing on site.',
+      icon: 'safety',
+      tag: 'Execution & Site Safety',
+      tabLabel: 'Execution',
+      title: 'Execution process & safety measures',
+      body: 'Standardized stage-gate execution protocols, daily safety toolbox briefings, PPE compliance, and multi-tier supervision across all structural operations.',
+      image: '/frames/frame-150.webp',
+      imageAlt: 'Active construction site with safety protocols and scaffolding supervision.',
       blueprint: {
-        standard: 'IS 1725:2013 Class 7.5',
-        tolerance: 'Compressive strength ≥ 7.5 MPa',
-        spec: 'Auram press compacted blocks with 5% ordinary Portland cement stabilizer. 28-day water cured under shade canvas.',
-        cadRef: 'BL-05 // CSEB-SPEC-03',
+        standard: 'IS 3764:1992, NBC 2016 Part 7 & ISO 45001',
+        tolerance: 'Zero-incident mandate · 100% PPE adherence',
+        spec: 'Tiered stage-gate inspection sign-offs, mandatory safety harness & edge fall protection at height > 2m, certified steel staging scaffolding, and daily digital safety checklist verification.',
+        cadRef: 'EX-05 // SAFE-PROC-01',
       },
     },
     {
@@ -305,7 +302,7 @@ export const processReveal = {
 export const disciplines = {
   eyebrow: 'Services',
   title: 'Six disciplines. One continuous process.',
-  body: 'Real estate, architecture, interior, construction, structural engineering and green building brought together through one coordinated process.',
+  body: 'Real Estate, Architecture, Structural, Construction, Interior and Green Buildings brought together through one coordinated process.',
   cta: {
     label: 'Explore all services',
     href: '/services',
@@ -403,7 +400,7 @@ export const scopeColumns = {
 /* ---- Section 11 · SustainabilityInterlude ---- */
 
 export const sustainabilityInterlude = {
-  title: 'Comfort designed in, before energy is spent.',
+  title: 'Where cement ends, nature begins — walls breathe and energy flows like air, unspent.',
   body:
     'Natural cooling, low-cement and cement-free construction, and green-building methods are treated as structural decisions, not add-ons. The aim is to ask less material to do more useful work — and to reduce what the building needs from a machine.',
   items: [
@@ -424,7 +421,7 @@ export const sustainabilityInterlude = {
     },
   ],
   cta: {
-    label: 'Sustainable construction',
+    label: 'Walk with Nature',
     href: '/sustainable-construction',
   },
 } as const satisfies {
@@ -492,14 +489,13 @@ export const buildSequence = {
 
 export const faqContent = {
   title: 'Frequently asked questions',
-  intro: 'To be confirmed',
 } as const satisfies FaqContent;
 
 /* ---- Section 15 · WorkGallery ---- */
 
 export const workGallery = {
   eyebrow: 'Work',
-  title: 'Selected work',
+  title: 'Proof, Not Promises',
   labels: {
     location: 'Location',
     year: 'Year',
@@ -511,46 +507,46 @@ export const workGallery = {
   tiles: [
     {
       id: '01',
-      href: '/projects/project-01',
-      title: 'Project 01',
-      location: 'To be confirmed',
-      year: 'To be confirmed',
+      href: '/projects/ather',
+      title: 'Ather Residence',
+      location: 'Coimbatore, Tamil Nadu',
+      year: '2026',
       image: {
-        src: '/frames/frame-034.webp',
-        alt: 'Excavated foundations and footing pads set out on a cleared site.',
+        src: '/Ather/ather-06.jpeg',
+        alt: 'Ather Residence — contemporary facade with grey and cream plaster finish and glass balcony railing.',
       },
     },
     {
       id: '02',
-      href: '/projects/project-02',
-      title: 'Project 02',
-      location: 'To be confirmed',
-      year: 'To be confirmed',
+      href: '/projects/ather',
+      title: 'Ather Residence',
+      location: 'Coimbatore, Tamil Nadu',
+      year: '2026',
       image: {
-        src: '/frames/frame-090.webp',
-        alt: 'Reinforced concrete columns and first-floor slab formwork in place.',
+        src: '/Ather/ather-07.jpeg',
+        alt: 'Ather Residence exterior envelope nearing completion under scaffolding.',
       },
     },
     {
       id: '03',
-      href: '/projects/project-03',
-      title: 'Project 03',
-      location: 'To be confirmed',
-      year: 'To be confirmed',
+      href: '/projects/trevea',
+      title: 'Trevea Townhouses',
+      location: 'Coimbatore, Tamil Nadu',
+      year: '2026',
       image: {
-        src: '/frames/frame-150.webp',
-        alt: 'Completed frame with masonry infill beginning on the lower floor.',
+        src: '/Trevea/trevea-03.jpeg',
+        alt: 'Trevea Townhouses — contemporary brick accent facade with white rendered volumes.',
       },
     },
     {
       id: '04',
-      href: '/projects/project-04',
-      title: 'Project 04',
-      location: 'To be confirmed',
-      year: 'To be confirmed',
+      href: '/projects/trevea',
+      title: 'Trevea Townhouses',
+      location: 'Coimbatore, Tamil Nadu',
+      year: '2026',
       image: {
-        src: '/frames/frame-210.webp',
-        alt: 'Envelope closed, with openings framed and roof structure complete.',
+        src: '/Trevea/trevea-01.jpeg',
+        alt: 'Trevea Townhouses — exterior superstructure under scaffolding.',
       },
     },
   ],

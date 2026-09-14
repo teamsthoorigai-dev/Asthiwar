@@ -5,11 +5,12 @@
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: var(--accent);
+  background: #ffffff;
+  mix-blend-mode: difference;
   pointer-events: none;
   z-index: 99999;
   transform: translate(-50%, -50%);
-  transition: opacity 0.2s ease, transform 0.1s ease;
+  transition: opacity 0.2s ease;
   will-change: transform;
 }
 
@@ -20,8 +21,8 @@
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  border: 1px solid rgba(184, 133, 79, 0.5);
-  background: rgba(184, 133, 79, 0.04);
+  border: 1.5px solid rgba(184, 133, 79, 0.75);
+  background: rgba(184, 133, 79, 0.08);
   pointer-events: none;
   z-index: 99998;
   transform: translate(-50%, -50%);

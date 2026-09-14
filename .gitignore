@@ -56,3 +56,16 @@ next-env.d.ts
 # but deliberately out of the repo. docs/ itself (the specs) is still tracked.
 /docs
 public/frames/*.jpg
+
+# Documents and office files
+*.docx
+*.pdf
+!backend/assets/**
+
+# Temporary test images / screenshots
+*mobile*test*.png
+*mobiletest*.png
+
+# Agent planning documents
+AGENT_PLAN.md
+*AGENT_PLAN*.md

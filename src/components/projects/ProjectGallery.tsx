@@ -72,6 +72,15 @@ export function ProjectGallery({ shots, title }: { shots: readonly Shot[]; title
 
   const current = open === null ? null : shots[open];
 
+  const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement;
+    // Do not close if clicking directly inside the navigation controls or close button
+    if (target.closest(`.${styles.nav}`) || target.closest(`.${styles.close}`)) {
+      return;
+    }
+    close();
+  };
+
   return (
     <>
       <div className={styles.grid}>
@@ -104,6 +113,9 @@ export function ProjectGallery({ shots, title }: { shots: readonly Shot[]; title
         role="dialog"
         aria-modal="true"
         aria-label={`${title} gallery`}
+        onClick={handleBackdropClick}
+        onDragStart={(e) => e.preventDefault()}
+        data-cursor="close"
       >
         <button ref={closeRef} type="button" className={styles.close} onClick={close}>
           Close
@@ -117,6 +129,8 @@ export function ProjectGallery({ shots, title }: { shots: readonly Shot[]; title
               fill
               sizes="100vw"
               className={styles.lightboxImage}
+              draggable={false}
+              priority
             />
           </figure>
         ) : null}

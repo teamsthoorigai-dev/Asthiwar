@@ -89,7 +89,7 @@
 .satelliteLabel {
   margin-top: auto;
   font-size: 0.62rem;
-  font-family: monospace;
+  font-family: var(--font-brand, sans-serif);
   color: rgba(255, 255, 255, 0.85);
   background: rgba(0, 0, 0, 0.5);
   padding: 0.15rem 0.35rem;
@@ -186,7 +186,7 @@
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  font-family: monospace;
+  font-family: var(--font-brand, sans-serif);
   font-size: 0.68rem;
   color: #57534e;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);

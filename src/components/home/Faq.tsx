@@ -36,7 +36,7 @@ export function Faq({ content }: Props) {
           </div>
 
           <div className={styles.accordion}>
-            <Accordion items={FAQ_ITEMS} initialOpen={0} showMoreAfter={6} />
+            <Accordion items={FAQ_ITEMS} initialOpen={0} showMoreAfter={10} />
           </div>
         </div>
       </Section>

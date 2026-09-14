@@ -1198,17 +1198,7 @@ export function StepPackages({
           })}
         </div>
 
-        {/* Compare specifications action button */}
-          <div className="flex justify-center mb-6">
-            <button
-              type="button"
-              onClick={() => setViewMode('matrix')}
-              className="inline-flex items-center gap-2 text-xs font-bold text-gray-700 hover:text-black bg-white border border-gray-300 hover:border-gray-500 px-4 py-2.5 rounded-lg shadow-2xs transition-all cursor-pointer"
-            >
-              <Columns size={14} aria-hidden="true" />
-              <span>Compare Specifications &amp; Features</span>
-            </button>
-          </div>
+        
         </>
       )}
 

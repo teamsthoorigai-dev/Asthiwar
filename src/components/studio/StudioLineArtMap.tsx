@@ -188,7 +188,7 @@ export function StudioLineArtMap({ office }: Props) {
             />
 
             {/* Angled Street Name Typography */}
-            <g fill="#475569" fontSize="10.5" fontFamily="system-ui, -apple-system, sans-serif" fontWeight="600" letterSpacing="0.08em">
+            <g fill="#475569" fontSize="10.5" fontFamily="var(--font-brand)" fontWeight="600" letterSpacing="0.08em">
               <text x="140" y="405" transform="rotate(-19 140 405)">AVINASHI ROAD (NH 544)</text>
               <text x="680" y="175" transform="rotate(-23 680 175)">AVINASHI ROAD (TO AIRPORT / KMCH)</text>
               <text x="460" y="150" transform="rotate(-70 460 150)">KALAPATTI MAIN ROAD</text>
@@ -205,28 +205,28 @@ export function StudioLineArtMap({ office }: Props) {
               <g transform="translate(825, 410)">
                 <circle cx="0" cy="0" r="14" fill="#faf6f0" stroke="#d5cebe" strokeWidth="1.5" />
                 <path d="M -4 -2 L 4 -2 L 5 0 L 1 1 L 0 5 L -2 5 L -1 1 L -4 1 Z" fill="#b45309" />
-                <text x="18" y="4" fill="#78716c" fontSize="8.5" fontFamily="monospace" fontWeight="500">INTL AIRPORT</text>
+                <text x="18" y="4" fill="#78716c" fontSize="8.5" fontFamily="var(--font-brand)" fontWeight="500">INTL AIRPORT</text>
               </g>
 
               {/* KMCH Hospital */}
               <g transform="translate(640, 270)">
                 <circle cx="0" cy="0" r="13" fill="#faf6f0" stroke="#d5cebe" strokeWidth="1.5" />
                 <path d="M -4 -1 H -1 V -4 H 1 V -1 H 4 V 1 H 1 V 4 H -1 V 1 H -4 Z" fill="#b45309" />
-                <text x="16" y="4" fill="#78716c" fontSize="8.5" fontFamily="monospace" fontWeight="500">KMCH HOSPITAL</text>
+                <text x="16" y="4" fill="#78716c" fontSize="8.5" fontFamily="var(--font-brand)" fontWeight="500">KMCH HOSPITAL</text>
               </g>
 
               {/* CODISSIA Trade Fair Grounds */}
               <g transform="translate(300, 440)">
                 <circle cx="0" cy="0" r="13" fill="#faf6f0" stroke="#d5cebe" strokeWidth="1.5" />
                 <rect x="-3" y="-3" width="6" height="6" fill="#b45309" />
-                <text x="-70" y="4" fill="#78716c" fontSize="8.5" fontFamily="monospace" fontWeight="500">CODISSIA</text>
+                <text x="-70" y="4" fill="#78716c" fontSize="8.5" fontFamily="var(--font-brand)" fontWeight="500">CODISSIA</text>
               </g>
 
               {/* SITRA Campus */}
               <g transform="translate(730, 130)">
                 <circle cx="0" cy="0" r="12" fill="#faf6f0" stroke="#d5cebe" strokeWidth="1.5" />
                 <polygon points="0,-4 4,-1 0,2 -4,-1" fill="#b45309" />
-                <text x="16" y="4" fill="#78716c" fontSize="8.5" fontFamily="monospace" fontWeight="500">SITRA</text>
+                <text x="16" y="4" fill="#78716c" fontSize="8.5" fontFamily="var(--font-brand)" fontWeight="500">SITRA</text>
               </g>
 
               {/* Additional landmark dots */}
@@ -310,7 +310,7 @@ export function StudioLineArtMap({ office }: Props) {
             />
 
             {/* Angled Street Name Typography */}
-            <g fill="#475569" fontSize="10.5" fontFamily="system-ui, -apple-system, sans-serif" fontWeight="600" letterSpacing="0.08em">
+            <g fill="#475569" fontSize="10.5" fontFamily="var(--font-brand)" fontWeight="600" letterSpacing="0.08em">
               <text x="245" y="145" transform="rotate(-45 245 145)">THADAGAM ROAD (TO KANUVAI)</text>
               <text x="615" y="445" transform="rotate(-35 615 445)">THADAGAM ROAD</text>
               <text x="160" y="415" transform="rotate(7 160 415)">MARUTHAMALAI MAIN ROAD</text>
@@ -327,28 +327,28 @@ export function StudioLineArtMap({ office }: Props) {
               <g transform="translate(500, 310)">
                 <circle cx="0" cy="0" r="14" fill="#faf6f0" stroke="#d5cebe" strokeWidth="1.5" />
                 <polygon points="0,-4 5,-1 0,2 -5,-1" fill="#b45309" />
-                <text x="18" y="4" fill="#78716c" fontSize="8.5" fontFamily="monospace" fontWeight="500">GCT CAMPUS</text>
+                <text x="18" y="4" fill="#78716c" fontSize="8.5" fontFamily="var(--font-brand)" fontWeight="500">GCT CAMPUS</text>
               </g>
 
               {/* TNAU Botanical Gardens */}
               <g transform="translate(580, 440)">
                 <circle cx="0" cy="0" r="13" fill="#faf6f0" stroke="#d5cebe" strokeWidth="1.5" />
                 <circle cx="0" cy="0" r="3.5" fill="#b45309" />
-                <text x="18" y="4" fill="#78716c" fontSize="8.5" fontFamily="monospace" fontWeight="500">TNAU BOTANICAL</text>
+                <text x="18" y="4" fill="#78716c" fontSize="8.5" fontFamily="var(--font-brand)" fontWeight="500">TNAU BOTANICAL</text>
               </g>
 
               {/* Forest College */}
               <g transform="translate(420, 430)">
                 <circle cx="0" cy="0" r="13" fill="#faf6f0" stroke="#d5cebe" strokeWidth="1.5" />
                 <rect x="-3" y="-3" width="6" height="6" fill="#b45309" />
-                <text x="-80" y="4" fill="#78716c" fontSize="8.5" fontFamily="monospace" fontWeight="500">FOREST COLLEGE</text>
+                <text x="-80" y="4" fill="#78716c" fontSize="8.5" fontFamily="var(--font-brand)" fontWeight="500">FOREST COLLEGE</text>
               </g>
 
               {/* Maruthamalai Temple Artery */}
               <g transform="translate(90, 400)">
                 <circle cx="0" cy="0" r="12" fill="#faf6f0" stroke="#d5cebe" strokeWidth="1.5" />
                 <polygon points="0,-5 4,2 -4,2" fill="#b45309" />
-                <text x="16" y="4" fill="#78716c" fontSize="8.5" fontFamily="monospace" fontWeight="500">MARUTHAMALAI</text>
+                <text x="16" y="4" fill="#78716c" fontSize="8.5" fontFamily="var(--font-brand)" fontWeight="500">MARUTHAMALAI</text>
               </g>
 
               {/* Additional landmark dots */}
@@ -427,7 +427,7 @@ export function StudioLineArtMap({ office }: Props) {
             <line x1="482" y1="30" x2="482" y2="530" stroke="#e2ddd4" strokeWidth="1" strokeDasharray="8 6" />
 
             {/* Angled Street Name Typography */}
-            <g fill="#475569" fontSize="10.5" fontFamily="system-ui, -apple-system, sans-serif" fontWeight="600" letterSpacing="0.08em">
+            <g fill="#475569" fontSize="10.5" fontFamily="var(--font-brand)" fontWeight="600" letterSpacing="0.08em">
               <text x="465" y="110" transform="rotate(-90 465 110)">NATIONAL HIGHWAY 44 (TO MADURAI)</text>
               <text x="465" y="440" transform="rotate(-90 465 440)">NH 44 (TO TIRUNELVELI / KANYAKUMARI)</text>
               <text x="140" y="385" transform="rotate(-21 140 385)">SIVAKASI MAIN ROAD</text>
@@ -446,28 +446,28 @@ export function StudioLineArtMap({ office }: Props) {
                 <rect x="-3" y="-4" width="6" height="8" rx="1" fill="#b45309" />
                 <circle cx="-1.5" cy="1" r="0.75" fill="#fff" />
                 <circle cx="1.5" cy="1" r="0.75" fill="#fff" />
-                <text x="-95" y="4" fill="#78716c" fontSize="8.5" fontFamily="monospace" fontWeight="500">RAILWAY JUNCTION</text>
+                <text x="-95" y="4" fill="#78716c" fontSize="8.5" fontFamily="var(--font-brand)" fontWeight="500">RAILWAY JUNCTION</text>
               </g>
 
               {/* District Collectorate */}
               <g transform="translate(680, 185)">
                 <circle cx="0" cy="0" r="13" fill="#faf6f0" stroke="#d5cebe" strokeWidth="1.5" />
                 <polygon points="0,-4 5,-1 0,2 -5,-1" fill="#b45309" />
-                <text x="18" y="4" fill="#78716c" fontSize="8.5" fontFamily="monospace" fontWeight="500">COLLECTORATE</text>
+                <text x="18" y="4" fill="#78716c" fontSize="8.5" fontFamily="var(--font-brand)" fontWeight="500">COLLECTORATE</text>
               </g>
 
               {/* SIDCO Industrial Estate */}
               <g transform="translate(650, 310)">
                 <circle cx="0" cy="0" r="13" fill="#faf6f0" stroke="#d5cebe" strokeWidth="1.5" />
                 <rect x="-3" y="-3" width="6" height="6" fill="#b45309" />
-                <text x="18" y="4" fill="#78716c" fontSize="8.5" fontFamily="monospace" fontWeight="500">INDUSTRIAL HUB</text>
+                <text x="18" y="4" fill="#78716c" fontSize="8.5" fontFamily="var(--font-brand)" fontWeight="500">INDUSTRIAL HUB</text>
               </g>
 
               {/* VHNSN College */}
               <g transform="translate(320, 195)">
                 <circle cx="0" cy="0" r="12" fill="#faf6f0" stroke="#d5cebe" strokeWidth="1.5" />
                 <circle cx="0" cy="0" r="3.5" fill="#b45309" />
-                <text x="-95" y="4" fill="#78716c" fontSize="8.5" fontFamily="monospace" fontWeight="500">VHNSN CAMPUS</text>
+                <text x="-95" y="4" fill="#78716c" fontSize="8.5" fontFamily="var(--font-brand)" fontWeight="500">VHNSN CAMPUS</text>
               </g>
 
               {/* Additional landmark dots */}

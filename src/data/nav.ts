@@ -9,11 +9,12 @@ export const primaryNav: NavLink[] = [
 ];
 
 export const serviceNav: NavLink[] = [
+  { label: 'Real Estate', href: '/services#real-estate' },
   { label: 'Architecture', href: '/services#architecture' },
-  { label: 'Interior', href: '/services#interiors' },
-  { label: 'Construction', href: '/services#construction' },
   { label: 'Structural', href: '/services#structural' },
-  { label: 'Green Building', href: '/services#green-building' },
+  { label: 'Construction', href: '/services#construction' },
+  { label: 'Interior', href: '/services#interiors' },
+  { label: 'Green Buildings', href: '/services#green-building' },
 ];
 
 export const footerNav: NavLink[] = [

@@ -158,16 +158,42 @@
   margin: 0;
 }
 
+/* ---- project page spacing overrides ---- */
+
+.projectHero {
+  padding-block-start: calc(var(--header-height, 4.5rem) + 1.25rem) !important;
+  padding-block-end: 0 !important;
+}
+
+.projectHero div[class*="mediaWrapper"] {
+  margin-block-start: var(--s-4) !important;
+}
+
+.firstSection {
+  padding-block-start: var(--s-3) !important;
+}
+
 /* ---- next project ---- */
 
-.next {
+.nextRow {
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
+  align-items: flex-end;
   justify-content: space-between;
-  gap: var(--s-2) var(--s-4);
+  gap: var(--s-3) var(--s-4);
   padding-block: var(--s-5);
   border-top: 1px solid var(--hairline);
+  margin-block-start: var(--s-6);
+}
+
+.nextCtaBtn {
+  align-self: flex-end;
+  margin-bottom: 0.15rem;
+}
+
+.nextTextLink {
+  text-decoration: none;
+  display: block;
 }
 
 .nextLabel {
@@ -188,8 +214,8 @@
   transition: color var(--dur-fast) var(--ease-out);
 }
 
-.nextLink:hover .nextTitle,
-.nextLink:focus-visible .nextTitle {
+.nextTextLink:hover .nextTitle,
+.nextTextLink:focus-visible .nextTitle {
   color: var(--accent);
 }
 

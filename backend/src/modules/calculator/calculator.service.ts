@@ -195,8 +195,30 @@ export async function calculateEstimate(
     .orderBy(desc(packagePrices.effectiveFrom))
     .limit(1);
 
+  // Collected across the location, customization and add-on steps so the customer
+  // is told everything that is wrong at once, rather than fixing one selection
+  // only to be refused on the next.
+  const issues: CalculationIssue[] = [];
+
+  // A tier the customer can no longer be sold.
+  //
+  // This was a bare `throw new Error`, which the error handler can only read as a
+  // 500 — so deactivating a package in the admin console (an ordinary action, and
+  // the one the console offers instead of deleting) made every in-flight
+  // configurator session fail as though the server had broken. It is the customer's
+  // selection that is stale, not the server: 422, with a message saying so.
+  //
+  // Unlike the location below this cannot be collected and carried — every rate on
+  // the quotation comes from `pkg` — so it refuses on the spot.
   if (pkgRows.length === 0) {
-    throw new Error(`Package '${input.packageSlug}' not found or inactive`);
+    throw new CalculationRejectedError([
+      {
+        path: 'packageSlug',
+        message:
+          `The '${input.packageSlug}' package is no longer offered. ` +
+          'Reload the calculator and choose from the current packages.',
+      },
+    ]);
   }
 
   const pkg = pkgRows[0];
@@ -221,6 +243,23 @@ export async function calculateEstimate(
   let locationName = input.plotLocation;
   let resolvedLocationId: number | null = null;
 
+  // The city has to resolve to a catalogue row, and saying so out loud matters
+  // more here than anywhere else in this function.
+  //
+  // Both branches used to fall through silently to 1.0000 — the multiplier, not a
+  // refusal — while `locationName` kept whatever the customer typed. Two ways in:
+  //
+  //  - A `locationId` that no longer resolves. Deactivating a city is exactly what
+  //    the admin console recommends over deleting it, and any configurator session
+  //    already holding that id then priced at 1.0000 with the city's real name
+  //    still printed on the quotation. Chennai is 1.05, so a ₹73.05L job was issued,
+  //    signed and PDF'd at ₹69.58L — ₹3.47L under, with "Chennai" on the paper.
+  //  - A free-text location matching nothing. 'Dubai' returned a full authoritative
+  //    quotation. Note that 1.0000 is not even the conservative guess: the
+  //    catalogue's own catch-all, Other TN, is 0.96.
+  //
+  // A mispriced quotation is worse than a refused one, and this file already
+  // refuses every add-on and option it cannot price. The city is no different.
   if (input.locationId) {
     const locRows = await db
       .select()
@@ -232,6 +271,13 @@ export async function calculateEstimate(
       locationMultiplier = Number(locRows[0].priceMultiplier);
       locationName = locRows[0].name;
       resolvedLocationId = locRows[0].id;
+    } else {
+      issues.push({
+        path: 'locationId',
+        message:
+          `'${input.plotLocation}' is no longer a city we price for. ` +
+          'Reload the calculator and choose your location again.',
+      });
     }
   } else if (input.plotLocation) {
     const normalizedLoc = input.plotLocation.toLowerCase().trim();
@@ -248,6 +294,13 @@ export async function calculateEstimate(
       locationMultiplier = Number(matched.priceMultiplier);
       locationName = matched.name;
       resolvedLocationId = matched.id;
+    } else {
+      issues.push({
+        path: 'plotLocation',
+        message:
+          `We do not have a rate for '${input.plotLocation}'. ` +
+          'Choose one of the listed cities, or Other TN if yours is not among them.',
+      });
     }
   }
 
@@ -272,10 +325,6 @@ export async function calculateEstimate(
   // 4. Customizations & Upgrades Calculation (Batch-optimized for O(1) in-memory lookup)
   const customizationDetails: CustomizationDetail[] = [];
   let upgradesCost = 0;
-
-  // Collected across both loops so the customer is told everything that is wrong
-  // at once, rather than fixing one selection only to be refused on the next.
-  const issues: CalculationIssue[] = [];
 
   if (input.customizations && input.customizations.length > 0) {
     const itemSlugs = input.customizations.map((c) => c.itemSlug);

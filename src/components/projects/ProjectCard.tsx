@@ -13,7 +13,15 @@ const CYCLE_MS = 700;
  * the pointer is over the card. Devices without hover show the first frame only,
  * so a touch user never gets an animation they cannot stop.
  */
-export function ProjectCard({ project }: { project: Project }) {
+export function ProjectCard({
+  project,
+  index,
+  total,
+}: {
+  project: Project;
+  index?: number;
+  total?: number;
+}) {
   const [frame, setFrame] = useState(0);
   const [hovering, setHovering] = useState(false);
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -52,7 +60,17 @@ export function ProjectCard({ project }: { project: Project }) {
   ];
 
   return (
-    <article className={styles.card}>
+    <article className={styles.card} data-project-card>
+      <div className={styles.cardHeader}>
+        {typeof index === 'number' && (
+          <span className={styles.cardIndex}>
+            PROJECT {String(index + 1).padStart(2, '0')}
+            {typeof total === 'number' ? ` / ${String(total).padStart(2, '0')}` : ''}
+          </span>
+        )}
+        <span className={styles.cardCategory}>{project.category}</span>
+      </div>
+
       <Link
         href={`/projects/${project.slug}`}
         className={styles.link}

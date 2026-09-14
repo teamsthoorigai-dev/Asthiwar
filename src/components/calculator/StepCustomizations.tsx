@@ -11,6 +11,7 @@ import type {
   SpecificationItem,
   OptionItem,
 } from '@/lib/calculator/types';
+import { deltaDirection, formatSignedINR } from '@/lib/calculator/format';
 
 interface StepCustomizationsProps {
   formData: EstimateFormState;
@@ -22,10 +23,6 @@ interface StepCustomizationsProps {
   onChange: (fields: Partial<EstimateFormState>) => void;
   onNext: () => void;
   onBack: () => void;
-}
-
-function formatINR(amount: number): string {
-  return `₹${amount.toLocaleString('en-IN')}`;
 }
 
 /**
@@ -61,6 +58,10 @@ export function StepCustomizations({
       cat.items.filter((item) => item.isCustomizable && item.options.length > 1)
     ) || [];
 
+  // Rule #5: the authoritative upgrade difference is returned by the backend.
+  const upgradesCost = previewResult?.breakdown?.upgradesCost ?? 0;
+  const upgradesDirection = deltaDirection(upgradesCost);
+
   const handleOptionChange = (itemSlug: string, optionSlug: string) => {
     const existing = formData.customizations.filter((c) => c.itemSlug !== itemSlug);
     onChange({
@@ -87,51 +88,65 @@ export function StepCustomizations({
         </p>
       </div>
 
-      {/* The backend preview remains the only source of truth for this total. */}
+      {/* The running total is deliberately not shown on this step.
+          Quoting the whole project back on every click invites the customer to
+          read each brand against a seven-figure number, where a ₹48,000 upgrade
+          disappears into the rounding. What they are actually deciding here is
+          the difference, so the difference is what is displayed — and the full
+          figure is theirs on the final report.
+
+          `upgradesCost` is the backend's own line for it: it is 0 on the package
+          defaults and moves in both directions, so no arithmetic happens here
+          (Rule #5). GST is 0 on a civil construction quote, so this line is also
+          exactly what the project total moves by. */}
       <section
-        aria-label="Live project estimate"
-        className="calculator-card p-4 mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
+        aria-label="Cost change from your material selections"
+        className="calculator-summary-bar calculator-card p-4 mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
       >
         <div className="flex items-start gap-3">
-          <div className="w-9 h-9 rounded-full bg-surface-active flex items-center justify-center text-foreground shrink-0">
+          <div className="calculator-summary-bar__icon w-9 h-9 rounded-full bg-surface-active flex items-center justify-center text-foreground shrink-0">
             <ReceiptText size={17} aria-hidden="true" />
           </div>
           <div>
             <p className="text-[10px] uppercase tracking-wider text-muted font-semibold">
-              Your current estimate
+              Change from standard materials
             </p>
             <div
               aria-atomic="true"
               aria-live="polite"
-              className={`text-xl font-bold tabular-nums transition-opacity ${
+              data-direction={upgradesDirection}
+              className={`calculator-delta text-xl font-bold tabular-nums transition-opacity ${
                 previewLoading ? 'opacity-60' : 'opacity-100'
               }`}
             >
-              {previewResult ? formatINR(previewResult.breakdown.totalProjectCost) : '—'}
+              {previewResult ? formatSignedINR(upgradesCost) : '—'}
             </div>
-            <p className="text-xs text-muted mt-0.5">
+            <p className="calculator-summary-bar__note text-xs text-muted mt-0.5">
+              {/* Kept to roughly one line: this bar follows the scroll, and every
+                  line it takes is a line of the list it is summarising. */}
               {previewError
-                ? 'Live pricing is temporarily unavailable. Your estimate will refresh when it reconnects.'
+                ? 'Live pricing is unavailable. It will refresh on reconnect.'
                 : previewLoading
                 ? 'Updating with your latest selection…'
-                : previewResult
-                ? 'Includes your package, dimensions, and current material selections.'
-                : 'Calculating your project estimate…'}
+                : !previewResult
+                ? 'Preparing your brand options…'
+                : upgradesCost > 0
+                ? 'Added to your package price by the brands below.'
+                : upgradesCost < 0
+                ? 'Taken off your package price by the brands below.'
+                : 'Standard brands selected. Changes show as + or −.'}
             </p>
           </div>
         </div>
 
         {previewResult && (
-          <div className="flex gap-5 sm:border-l sm:border-border sm:pl-5">
-            
-            
-              <p className="text-[10px] uppercase tracking-wider text-muted font-semibold">
-                Built-up area
-              </p>
-              <p className="text-sm font-bold tabular-nums">
-                {previewResult.dimensions.totalBuiltupAreaSqft.toLocaleString('en-IN')} sq.ft
-              </p>
-           
+          <div className="calculator-summary-bar__context shrink-0 border-l border-border pl-5">
+            <p className="text-[10px] uppercase tracking-wider text-muted font-semibold">
+              Built-up area
+            </p>
+            <p className="text-sm font-bold tabular-nums">
+              {previewResult.dimensions.totalBuiltupAreaSqft.toLocaleString('en-IN')} sq.ft
+            </p>
           </div>
         )}
       </section>

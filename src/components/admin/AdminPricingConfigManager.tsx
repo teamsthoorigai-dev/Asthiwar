@@ -29,6 +29,7 @@ import {
   Check,
 } from 'lucide-react';
 import { ApiError } from '@/lib/api/client';
+import type { ApiFieldError } from '@/lib/api/types';
 import {
   getAdminPricingConfig,
   updatePackagePricing,
@@ -548,11 +549,38 @@ export function AdminPricingConfigManager() {
       if (err.code === 'INCLUDED_OPTION_IS_NOT_FREE') {
         return 'The default included brand for a package cannot charge an upgrade fee (delta must be ₹0).';
       }
-      if (err.message && err.message !== 'Internal Server Error') {
-        return err.message;
+      // Field-level reasons first, and they are an array.
+      //
+      // `details` is ApiFieldError[] — the check below used to be
+      // `typeof err.details === 'string'`, which an array never satisfies, and it
+      // sat after the generic-message branch that returns first regardless. So
+      // every per-field message the API sends was dropped twice over: an admin
+      // typing a volume rate above the standard rate got "Invalid input
+      // parameters" instead of the API's own "The volume rate (Rs 9999/sq.ft) is
+      // above the standard rate (Rs 2000/sq.ft), so crossing the threshold would
+      // raise the price rather than discount it."
+      //
+      // The customer-facing side already reads these correctly — see
+      // describeCalculationError in useCalculatorWizard.ts. This is the same idea.
+      const fieldMessages = Array.isArray(err.details)
+        ? (err.details as ApiFieldError[])
+            .map((d) => d?.message)
+            .filter((m): m is string => Boolean(m))
+        : [];
+      if (fieldMessages.length > 0) {
+        return fieldMessages.join(' ');
       }
-      if (err.details && typeof err.details === 'string') {
+      if (typeof err.details === 'string' && err.details) {
         return err.details;
+      }
+      // 'Invalid input parameters' is the validator's generic envelope; it says
+      // nothing a reader can act on, so it loses to the caller's own fallback.
+      if (
+        err.message &&
+        err.message !== 'Internal Server Error' &&
+        err.message !== 'Invalid input parameters'
+      ) {
+        return err.message;
       }
     }
     if (err instanceof Error && err.message && err.message !== 'Internal Server Error') {

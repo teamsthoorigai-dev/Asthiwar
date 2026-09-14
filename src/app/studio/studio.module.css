@@ -77,8 +77,8 @@
 
 @media (min-width: 1024px) {
   .profileGrid {
-    grid-template-columns: minmax(0, 1.35fr) minmax(0, 0.9fr);
-    gap: clamp(3rem, 6vw, 6.5rem);
+    grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+    gap: clamp(2.5rem, 5vw, 5rem);
   }
 }
 
@@ -112,9 +112,9 @@
 @media (min-width: 1024px) {
   .pillarStickyCol {
     position: sticky;
-    top: calc(var(--header-height, 4.5rem) + 2rem);
+    top: calc(var(--header-height, 4.5rem) + 1.5rem);
     height: fit-content;
-    padding-block-start: 1rem;
+    padding-block-start: 0.5rem;
     padding-block-end: 2rem;
   }
 }
@@ -129,15 +129,15 @@
 .pillarMark {
   display: block;
   width: auto;
-  height: clamp(280px, 46vh, 380px);
+  height: clamp(340px, 52vh, 440px);
   color: var(--ink);
   transition: opacity 0.3s ease;
 }
 
 @media (min-width: 1024px) {
   .pillarMark {
-    height: clamp(420px, 60vh, 560px);
-    max-height: 85vh;
+    height: clamp(540px, 74vh, 700px);
+    max-height: 90vh;
   }
 }
 

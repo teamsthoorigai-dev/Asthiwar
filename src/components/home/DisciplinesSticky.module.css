@@ -15,9 +15,9 @@
 .link {
   display: grid;
   grid-template-columns: auto 1fr;
-  gap: var(--s-2) var(--s-3);
+  gap: 0.35rem var(--s-3);
   align-items: baseline;
-  padding: var(--s-3) 0 var(--s-3) var(--s-3);
+  padding: clamp(0.75rem, 1.2vh, 0.95rem) 0 clamp(0.75rem, 1.2vh, 0.95rem) var(--s-3);
   border-left: 2px solid transparent;
   transition:
     border-color var(--dur-fast) var(--ease-out),
@@ -34,7 +34,7 @@
 
 .title {
   color: var(--muted);
-  font-size: var(--fs-h3);
+  font-size: clamp(1.45rem, 1.25rem + 0.6vw, 1.85rem);
   font-weight: var(--fw-bold);
   letter-spacing: -0.015em;
   line-height: var(--lh-head);
@@ -112,7 +112,7 @@
 
   .sticky {
     position: sticky;
-    top: 22vh;
+    top: clamp(75px, 10.5vh, 105px);
   }
 
   /* Image-led: the media column carries the section, the list reads beside it.
@@ -122,7 +122,18 @@
     display: grid;
     grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
     gap: var(--s-7);
-    align-items: start;
+    align-items: stretch;
+  }
+
+  .list {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+  }
+
+  .row {
+    flex: 1;
+    display: flex;
   }
 
   /* The frame stills are 16:9. A portrait box cropped away most of each frame;
@@ -152,10 +163,15 @@
     display: none;
   }
 
-  /* Kept tight so the whole sticky list fits a short laptop viewport. At
-     --s-4 the five rows ran past the fold once the list stuck at top: 22vh. */
+  /* Distribute disciplines across the full height of the media with zero bottom gap */
   .link {
-    padding-block: var(--s-3);
+    width: 100%;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 0.35rem var(--s-3);
+    align-items: baseline;
+    align-content: center;
+    padding-block: clamp(0.4rem, 0.9vh, 0.75rem);
   }
 }
 
@@ -166,11 +182,10 @@
   }
 }
 
-/* Short laptop viewports: 22vh of offset pushes the last row past the fold
-   while the list is stuck. Pull the offset in rather than shrink the type. */
+/* Short laptop viewports: pull offset slightly so 6th item remains in view */
 @media (min-width: 1024px) and (max-height: 820px) {
   .sticky {
-    top: 12vh;
+    top: clamp(55px, 7.5vh, 75px);
   }
 }
 

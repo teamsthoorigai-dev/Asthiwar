@@ -47,8 +47,15 @@ export const createLocationSchema = z.object({
 });
 
 export const updateLocationSchema = z.object({
-  name: z.string().min(2).optional(),
-  priceMultiplier: z.coerce.number().min(0.5).max(2.0).optional(),
+  name: z.string().min(2, 'City name must be at least 2 characters').optional(),
+  // Same wording as createLocationSchema. These messages now reach the console —
+  // it used to collapse every field-level reason to "Invalid input parameters" —
+  // so an edit and a create should not explain the same bound differently.
+  priceMultiplier: z.coerce
+    .number()
+    .min(0.5, 'Multiplier must be between 0.5 and 2.0')
+    .max(2.0, 'Multiplier must be between 0.5 and 2.0')
+    .optional(),
   sortOrder: z.coerce.number().int().optional(),
   isActive: z.boolean().optional(),
 });

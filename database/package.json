@@ -13,7 +13,7 @@
     "db:seed": "tsx src/seeds/seed.ts",
     "db:clean": "tsx src/scripts/clean-db.ts",
     "db:verify": "tsx src/scripts/verify_integrity.ts",
-    "db:sanitize": "tsx src/scripts/sanitize_option_prices.ts",
+    "db:report-prices": "tsx src/scripts/sanitize_option_prices.ts",
     "db:backfill-leads": "tsx src/scripts/backfill_leads.ts"
   },
   "dependencies": {

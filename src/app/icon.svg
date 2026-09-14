@@ -1,7 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 161 570" role="img" aria-labelledby="asthiwar-mark-title">
   <title id="asthiwar-mark-title">ASTHIWAR building mark</title>
   <style>
-    :root { color: #19241D; }
+    :root { color: #1F5C24; }
     path { fill: currentColor; }
     @media (prefers-color-scheme: dark) {
       :root { color: #EFEAE3; }

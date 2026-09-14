@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { projects, projectCategories, type Project } from '@/data/site';
+import { gsap, ScrollTrigger, REDUCED } from '@/lib/gsap';
 import { ProjectCard } from './ProjectCard';
 import { ProjectCursorPreview } from './ProjectCursorPreview';
 import styles from './ProjectsArchive.module.css';
@@ -20,6 +21,7 @@ export function ProjectsArchive() {
   const [fading, setFading] = useState(false);
   const [hoveredProject, setHoveredProject] = useState<Project | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const gridRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => () => {
     if (timer.current) clearTimeout(timer.current);
@@ -27,6 +29,34 @@ export function ProjectsArchive() {
 
   const visible =
     active === ALL ? projects : projects.filter((p) => p.category === active);
+
+  // Scroll reveal animation for project cards: animates each project one by one as it enters viewport
+  useEffect(() => {
+    const grid = gridRef.current;
+    if (!grid || REDUCED() || viewMode !== 'grid') return;
+
+    const cards = Array.from(grid.querySelectorAll<HTMLElement>('[data-project-card]'));
+    if (cards.length === 0) return;
+
+    const ctx = gsap.context(() => {
+      cards.forEach((card) => {
+        gsap.from(card, {
+          y: 28,
+          opacity: 0,
+          duration: 0.75,
+          ease: 'power3.out',
+          scrollTrigger: {
+            trigger: card,
+            start: 'top 88%',
+            toggleActions: 'play none none none',
+            once: true,
+          },
+        });
+      });
+    }, grid);
+
+    return () => ctx.revert();
+  }, [visible, viewMode, fading]);
 
   const select = (category: string) => {
     if (category === active) return;
@@ -90,12 +120,18 @@ export function ProjectsArchive() {
       {visible.length === 0 ? (
         <p className={styles.empty}>No projects currently in this category.</p>
       ) : viewMode === 'grid' ? (
-        /* Editorial Grid View */
+        /* Editorial Grid View with Scroll Reveal */
         <div
+          ref={gridRef}
           className={[styles.grid, fading && styles.fading].filter(Boolean).join(' ')}
         >
-          {visible.map((project) => (
-            <ProjectCard key={project.slug} project={project} />
+          {visible.map((project, idx) => (
+            <ProjectCard
+              key={project.slug}
+              project={project}
+              index={idx}
+              total={visible.length}
+            />
           ))}
         </div>
       ) : (
