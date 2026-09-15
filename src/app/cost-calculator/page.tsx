@@ -25,7 +25,7 @@ export default function CostCalculatorPage() {
         <div className={styles.heroInner}>
           <p className={styles.eyebrow}>Cost Calculator</p>
           <h1 className={styles.title}>
-            A number is useful only when calculated with zero assumptions.
+            A number is useful only when calculated with <em className={styles.titleAccent}>zero assumptions</em>.
           </h1>
           
         </div>

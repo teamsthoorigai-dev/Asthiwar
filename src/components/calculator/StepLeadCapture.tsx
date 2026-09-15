@@ -141,8 +141,11 @@ export function StepLeadCapture({
         </div>
 
         <div className="flex items-center justify-center gap-2 pt-2 text-[11px] text-muted">
-          <Shield size={14} className="text-emerald-600 dark:text-emerald-400" />
+          
           <span className="calculator-privacy-message">
+            <span className="calculator-privacy-icon">
+              <Shield size={15} className="text-emerald-600 dark:text-emerald-400" />
+            </span>
             <strong className="calculator-privacy-emphasis">Your information</strong> is strictly
             protected and never shared with 3rd parties.
           </span>

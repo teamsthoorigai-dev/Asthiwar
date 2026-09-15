@@ -37,5 +37,11 @@ export const contact = {
   email: 'contact@asthiwar.com',
 } as const;
 
-/** Social URLs to be supplied. Empty until then — nothing is rendered. */
-export const socials: NavLink[] = [];
+export const socials: NavLink[] = [
+  {
+    label: 'Instagram',
+    href: 'https://www.instagram.com/akilesh_asthiwar?stkn=MXQxYXhiNjB0NjhvaA%3D%3D&utm_source=qr',
+  },
+  { label: 'Facebook', href: 'https://www.facebook.com/profile.php?id=61574865094636' },
+  { label: 'WhatsApp', href: 'https://wa.me/919488440123' },
+];

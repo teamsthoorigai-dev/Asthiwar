@@ -38,7 +38,7 @@ export const sustainablePage = {
       body:
         'Envelope, daylight, water strategy and material impact reviewed together rather than certified after the fact.',
       image: {
-        src: '/images/courtyard.jpg',
+        src: '/images/greenbuilding.png',
         alt: 'A planted courtyard opening to the sky.',
       },
     },

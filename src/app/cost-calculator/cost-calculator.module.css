@@ -57,6 +57,11 @@
   margin: 0;
 }
 
+.titleAccent {
+  font-style: italic;
+  color: var(--oxide-light);
+}
+
 .introRow {
   margin-top: 2rem;
   padding-top: 1.5rem;

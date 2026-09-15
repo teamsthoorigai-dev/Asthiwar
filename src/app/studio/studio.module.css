@@ -240,6 +240,7 @@
   max-width: 100%;
   aspect-ratio: 1 / 1;
   overflow: hidden;
+  border-radius: 4px;
   background: #181818;
 }
 
@@ -546,6 +547,7 @@
   text-decoration: none;
   transition: all 0.2s ease;
   border: 1px solid var(--ink);
+  border-radius: 4px;
 }
 
 .directionsButton:hover {
