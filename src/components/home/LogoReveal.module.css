@@ -128,18 +128,16 @@
 
 .highlightedCta {
   display: inline-flex;
-  min-height: 3rem;
   align-items: center;
-  gap: 0.75rem;
-  padding: 0.9rem 1.25rem;
-  border-radius: 4px;
-  background: var(--oxide);
+  gap: 0.65rem;
+  padding: 0.35rem 0.95rem 0.35rem 0.45rem;
+  border-radius: 999px;
+  background: var(--ink);
   color: var(--on-accent);
-  border: 1px solid var(--oxide);
-  font-size: 0.7rem;
-  font-weight: 700;
+  border: 1px solid var(--accent);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-medium);
   letter-spacing: 0.14em;
-  line-height: 1;
   text-transform: uppercase;
   text-decoration: none;
   box-shadow: 0 2px 8px rgba(25, 36, 29, 0.12);
@@ -151,35 +149,36 @@
 }
 
 .ctaBadge {
-  padding-inline-end: 0.75rem;
-  border-inline-end: 1px solid rgba(239, 234, 227, 0.35);
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  background: var(--oxide);
+  color: #ffffff;
+  font-size: 0.65rem;
   font-weight: 600;
   letter-spacing: 0.08em;
-  opacity: 0.85;
+  text-transform: uppercase;
 }
 
 .ctaLabel {
-  font-weight: 700;
+  font-weight: var(--fw-semibold);
   letter-spacing: 0.14em;
   color: var(--on-accent);
 }
 
 .ctaArrow {
   font-size: 0.85rem;
-  color: var(--on-accent);
+  color: var(--oxide-light);
   transition: transform var(--dur-fast) var(--ease-out);
 }
 
 .highlightedCta:hover,
 .highlightedCta:focus-visible {
-  background: var(--oxide-deep);
-  border-color: var(--oxide-deep);
+  background: var(--accent);
+  border-color: var(--oxide);
   box-shadow: 0 4px 16px rgba(25, 36, 29, 0.2);
   transform: translateY(-1px);
-}
-
-.highlightedCta:active {
-  transform: translateY(1px);
 }
 
 .highlightedCta:hover .ctaArrow,

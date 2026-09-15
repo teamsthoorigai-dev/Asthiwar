@@ -9,6 +9,13 @@
   min-width: 0;
 }
 
+@media (max-width: 767px) {
+  .faqSection {
+    /* The preceding card deck already supplies the mobile breathing room. */
+    padding-block-start: var(--s-3);
+  }
+}
+
 @media (min-width: 960px) {
   .layout {
     grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);

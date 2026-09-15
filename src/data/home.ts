@@ -130,7 +130,7 @@ export const lastingCards = {
       tabLabel: 'Site',
       title: 'Read the site first',
       body: 'Orientation, wind, shade and drainage are settled before a single wall is drawn. Comfort begins in plan and section.',
-      image: '/images/principles/1.jpeg',
+      image: '/images/principles/4.jpeg',
       imageAlt: 'Architectural team reviewing site plans, drawings, and material specifications with clients.',
       blueprint: {
         standard: 'ECBC / NBC 2016 Cl. 8',
@@ -145,7 +145,7 @@ export const lastingCards = {
       tabLabel: 'Load Path',
       title: 'One load path',
       body: 'Architecture asks what life needs; engineering asks what the idea demands. The grid is simplified until both answers agree.',
-      image: '/images/principles/2.jpeg',
+      image: '/images/principles/3.jpeg',
       imageAlt: 'Site engineer demonstrating concrete column integrity, surveying alignment, and masonry specimens.',
       blueprint: {
         standard: 'IS 456:2000 & IS 13920',
@@ -160,7 +160,7 @@ export const lastingCards = {
       tabLabel: 'Detailing',
       title: 'Detail before pour',
       body: 'Critical junctions are drawn and prototyped on paper. Coordination is cheaper on paper than under a poured slab.',
-      image: '/images/principles/3.jpeg',
+      image: '/images/principles/1.jpeg',
       imageAlt: 'Engineering team reviewing structural 3D CAD modeling and technical detailing on screen.',
       blueprint: {
         standard: 'DIN 18202 Class 4',
@@ -175,7 +175,7 @@ export const lastingCards = {
       tabLabel: 'Materials',
       title: 'Material honesty',
       body: 'Materials are selected for structural integrity, longevity, and how they weather over time. We build with verified, high-grade fundamentals that endure rather than cosmetic finishes that degrade.',
-      image: '/images/principles/4.jpeg',
+      image: '/images/principles/2.jpeg',
       imageAlt: 'Civil engineers conducting layout marking, leveling, and site measurements on open ground.',
       blueprint: {
         standard: 'IS 456:2000, IS 1786 & IS 269',
@@ -205,7 +205,7 @@ export const lastingCards = {
       tabLabel: 'As-Built',
       title: 'Final detail and Handover',
       body: 'Progress, quality checks and site decisions are written down and handed over with the building.',
-      image: '/images/principles/6.jpeg',
+      image: '/images/principles/5.jpeg',
       imageAlt: 'Drafting tables carrying marked-up drawings and site record sheets.',
       blueprint: {
         standard: 'ISO 9001 QA & As-Built Protocol',
@@ -400,7 +400,7 @@ export const scopeColumns = {
 /* ---- Section 11 · SustainabilityInterlude ---- */
 
 export const sustainabilityInterlude = {
-  title: 'Where cement ends, nature begins — walls breathe & energy flows',
+  title: 'Where cement ends, nature begins walls breathe & energy flows',
   body:
     'Natural cooling, low-cement and cement-free construction, and green-building methods are treated as structural decisions, not add-ons. The aim is to ask less material to do more useful work — and to reduce what the building needs from a machine.',
   items: [

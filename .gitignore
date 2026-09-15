@@ -54,7 +54,7 @@ next-env.d.ts
 
 # Working notes — build plans, audits and handoffs kept on disk for reference
 # but deliberately out of the repo. docs/ itself (the specs) is still tracked.
-/docs
+
 public/frames/*.jpg
 
 # Documents and office files

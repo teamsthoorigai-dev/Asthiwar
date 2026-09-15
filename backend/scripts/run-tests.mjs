@@ -40,6 +40,7 @@ function run(suite) {
       cwd: backendRoot,
       stdio: 'inherit',
       shell: process.platform === 'win32',
+      env: { ...process.env, NODE_ENV: 'test' },
     });
     child.on('close', (code) => resolve(code ?? 1));
   });

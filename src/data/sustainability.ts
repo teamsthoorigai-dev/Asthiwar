@@ -16,7 +16,7 @@ export const sustainablePage = {
       body:
         'Designing for the natural flow of air to keep interiors cooler and reduce reliance on artificial ventilation.',
       image: {
-        src: '/images/jaali.jpg',
+        src: '/images/natural-cooling.jpg',
         alt: 'A perforated brick screen casting shade across a modern facade.',
       },
     },
@@ -27,7 +27,7 @@ export const sustainablePage = {
       body:
         'Exploring lower-carbon construction methods and material choices while maintaining structural integrity.',
       image: {
-        src: '/images/materials.jpg',
+        src: '/images/low-cement.jpg',
         alt: 'Construction material samples and drawings laid out on a work surface.',
       },
     },

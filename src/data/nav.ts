@@ -44,4 +44,6 @@ export const socials: NavLink[] = [
   },
   { label: 'Facebook', href: 'https://www.facebook.com/profile.php?id=61574865094636' },
   { label: 'WhatsApp', href: 'https://wa.me/919488440123' },
+  { label: 'YouTube', href: 'https://www.youtube.com/@Asthiwar' },
+  { label: 'LinkedIn', href: 'https://www.linkedin.com/in/asthiwar-constructions-8b34bb437?trk=contact-info' },
 ];

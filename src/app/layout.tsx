@@ -42,10 +42,6 @@ export default function RootLayout({ children }: LayoutProps<'/'>) {
           reported, so real bugs continue to surface. */}
       <body suppressHydrationWarning>
         <JsonLd data={getOrganizationJsonLd()} />
-        <a href="#main-content" className="skip-link">
-          Skip to content
-        </a>
-
         <SiteChrome>{children}</SiteChrome>
       </body>
     </html>

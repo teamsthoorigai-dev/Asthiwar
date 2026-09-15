@@ -29,7 +29,7 @@ export function Faq({ content }: Props) {
     <>
       <JsonLd data={getFaqJsonLd()} />
 
-      <Section aria-labelledby="faq-title">
+      <Section className={styles.faqSection} aria-labelledby="faq-title">
         <div className={styles.layout}>
           <div className={styles.intro}>
             <SectionHeader id="faq-title" title={content.title} body={content.intro} />

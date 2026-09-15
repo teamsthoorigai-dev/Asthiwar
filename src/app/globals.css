@@ -14,6 +14,7 @@
    Falls back to 0px, which is correct for overlay-scrollbar platforms. */
 :root {
   --scrollbar: 0px;
+  --header-height: 4.5rem;
 }
 
 /* ------------------------------------------------------------------
@@ -235,6 +236,7 @@ html {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow-x: clip;
+  background: var(--bg);
 }
 
 body {

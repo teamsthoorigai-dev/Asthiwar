@@ -31,12 +31,17 @@ const envSchema = z.object({
     .string()
     .url('API_BASE_URL_INTERNAL must be a valid URL')
     .optional(),
+
+  NEXT_PUBLIC_WHATSAPP_NUMBER: z
+    .string()
+    .default('919488440123'),
 });
 
 const parsed = envSchema.safeParse({
   NEXT_PUBLIC_API_BASE_URL: process.env.NEXT_PUBLIC_API_BASE_URL || undefined,
   NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL || undefined,
   API_BASE_URL_INTERNAL: process.env.API_BASE_URL_INTERNAL || undefined,
+  NEXT_PUBLIC_WHATSAPP_NUMBER: process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || undefined,
 });
 
 if (!parsed.success) {
@@ -52,4 +57,5 @@ export const env = {
   NEXT_PUBLIC_SITE_URL: parsed.data.NEXT_PUBLIC_SITE_URL,
   API_BASE_URL_INTERNAL:
     parsed.data.API_BASE_URL_INTERNAL || parsed.data.NEXT_PUBLIC_API_BASE_URL,
+  NEXT_PUBLIC_WHATSAPP_NUMBER: parsed.data.NEXT_PUBLIC_WHATSAPP_NUMBER,
 };

@@ -41,6 +41,9 @@ function getClient(): Resend | null {
  * Returns true if RESEND_API_KEY is configured in the environment.
  */
 export function isResendConfigured(): boolean {
+  if (process.env.NODE_ENV === 'test') {
+    return false;
+  }
   return Boolean(env.RESEND_API_KEY && env.RESEND_API_KEY.trim().length > 0);
 }
 

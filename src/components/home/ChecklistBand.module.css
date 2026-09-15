@@ -1,0 +1,40 @@
+.section {
+  border-block-end: 1px solid var(--hairline);
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.inner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-width: var(--container-large);
+  min-height: clamp(8rem, 17vw, 15rem);
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+  text-align: center;
+}
+
+.label {
+  margin: 0;
+  color: var(--accent);
+  font-size: 30px;
+  font-weight: var(--fw-medium);
+  letter-spacing: -0.04em;
+  line-height: 0.9;
+  text-wrap: balance;
+}
+
+@media (max-width: 520px) {
+  .inner {
+    justify-content: flex-start;
+    min-height: 9rem;
+    text-align: left;
+  }
+
+  .label {
+    max-width: 6ch;
+    font-size: 30px;
+  }
+}

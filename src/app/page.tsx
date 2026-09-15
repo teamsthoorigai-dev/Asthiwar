@@ -3,6 +3,7 @@ import { LogoReveal } from '@/components/home/LogoReveal';
 import { SustainabilityHero } from '@/components/home/SustainabilityHero';
 import { WorkGallery } from '@/components/home/WorkGallery';
 import { EstimateBand } from '@/components/home/EstimateBand';
+import { ChecklistBand } from '@/components/home/ChecklistBand';
 import { LastingCards } from '@/components/home/LastingCards';
 import { DisciplinesSticky } from '@/components/home/DisciplinesSticky';
 import { Faq } from '@/components/home/Faq';
@@ -43,6 +44,7 @@ export default function HomePage() {
     <>
       <LogoReveal />
       <EstimateBand />
+      <ChecklistBand />
       <WorkGallery content={workGallery} />
       <SustainabilityHero />
       <LastingCards />

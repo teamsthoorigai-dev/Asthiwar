@@ -49,7 +49,7 @@ export function SustainabilityHero() {
           <div className={styles.copy} ref={copyRef}>
             <p className={styles.eyebrow}>Sustainable Construction</p>
             <h2 id="sustainability-hero-title" className={styles.title}>
-              Where cement ends, nature begins &mdash; walls breathe and energy flows like air, unspent.
+              Where cement ends, nature begins; Walls breathe and energy flows like air, unspent.
             </h2>
             <p className={styles.intro}>
               Natural cooling, lower-carbon material choices, and healthier spaces are considered

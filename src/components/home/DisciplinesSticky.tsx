@@ -54,7 +54,7 @@ export function DisciplinesSticky() {
   }, []);
 
   return (
-    <Section width="large" aria-labelledby="disciplines-title">
+    <Section width="large" aria-labelledby="disciplines-title" className={styles.disciplinesSection}>
       <SectionHeader
         id="disciplines-title"
         eyebrow={disciplines.eyebrow}

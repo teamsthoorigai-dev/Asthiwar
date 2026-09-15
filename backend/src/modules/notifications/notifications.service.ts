@@ -9,6 +9,7 @@ import {
 import { env } from '../../config/env.js';
 import { estimateRefCandidates, quotationPdfPath } from '../calculator/quotation.js';
 import { sendEmail, isResendConfigured } from '../../services/resend.service.js';
+import { sendWhatsAppMessage } from '../../services/whatsapp.service.js';
 import {
   renderQuotationEmail,
   renderAdminLeadAlertEmail,
@@ -147,6 +148,15 @@ export async function sendEstimateQuotationNotification(estimateIdOrNumber: stri
   if (channels.includes('WHATSAPP')) {
     const message = `🏗️ *ASTHIWAR DESIGN & BUILD*\n\nHello *${estimate.customerName}*,\n\nYour turnkey residential construction estimate is ready!\n\n📋 *Estimate #:* ${estimate.estimateNumber}\n📦 *Package:* ${estimate.packageSlug.toUpperCase()}\n📐 *Built-up Area:* ${estimate.totalBuiltupAreaSqft} sq.ft\n📍 *Location:* ${estimate.plotLocation}\n💰 *Total Cost:* ${formatINR(estimate.totalProjectCost)}\n\n📄 *Download Detailed Quotation & 10-Stage Milestone Schedule:*\n${pdfUrl}\n\nOur team is ready to assist with plot assessment and floor plan design. Reply to this message to connect with our senior architect.`;
 
+    const waResult = await sendWhatsAppMessage({
+      to: estimate.customerPhone,
+      message,
+    }).catch(() => ({ sent: false, reason: 'FAILED' as const }));
+
+    const waStatus = waResult.sent ? 'SENT' : DEFAULT_PENDING_STATUS;
+    const waSentAt = waResult.sent ? new Date() : null;
+    const waError = (waResult as any).error ?? null;
+
     const [waRecord] = await db
       .insert(schema.notifications)
       .values({
@@ -155,9 +165,15 @@ export async function sendEstimateQuotationNotification(estimateIdOrNumber: stri
         recipient: estimate.customerPhone,
         template: 'ESTIMATE_QUOTATION',
         subject: 'WhatsApp Quotation Dispatch',
-        payload: { message, customerPhone: estimate.customerPhone, estimateNumber: estimate.estimateNumber },
-        status: DEFAULT_PENDING_STATUS,
-        sentAt: null,
+        payload: {
+          message,
+          customerPhone: estimate.customerPhone,
+          estimateNumber: estimate.estimateNumber,
+          provider: (waResult as any).provider ?? null,
+        },
+        status: waStatus,
+        errorMessage: waError,
+        sentAt: waSentAt,
       })
       .returning();
 
@@ -239,6 +255,59 @@ export async function sendAdminNewLeadAlert(enquiryId: string) {
       sentAt,
     })
     .returning();
+
+  // Log WhatsApp Admin Notification row
+  const adminWhatsAppPhone =
+    env.WHATSAPP_RECIPIENT_PHONE ||
+    process.env.WHATSAPP_RECIPIENT_PHONE ||
+    process.env.ADMIN_ALERT_PHONE ||
+    '919488440123';
+
+  const waLeadMessage =
+    `🚨 *NEW ASTHIWAR LEAD ALERT*\n\n` +
+    `👤 *Client:* ${enquiry.fullName}\n` +
+    `📞 *Phone:* ${enquiry.phone}\n` +
+    `📧 *Email:* ${enquiry.email ?? 'N/A'}\n` +
+    `📍 *Site Location:* ${enquiry.plotLocation}\n` +
+    `⏰ *Preferred Time:* ${enquiry.preferredContactTime || 'Anytime'}\n` +
+    `📝 *Requirement:* ${enquiry.requirementNotes || 'Standard consultation'}\n` +
+    (enquiry.estimateNumber ? `📋 *Linked Estimate:* ${enquiry.estimateNumber}\n` : '');
+
+  // 2. Dispatch WhatsApp Admin Notification directly in background
+  const waResult = await sendWhatsAppMessage({
+    to: adminWhatsAppPhone,
+    message: waLeadMessage,
+  }).catch((err) => {
+    console.error('[Notifications] WhatsApp background dispatch error:', err);
+    return { sent: false, reason: 'FAILED' as const, error: String(err), provider: undefined };
+  });
+
+  const waStatus = waResult.sent ? 'SENT' : (waResult.reason === 'FAILED' ? 'FAILED' : DEFAULT_PENDING_STATUS);
+  const waSentAt = waResult.sent ? new Date() : null;
+  const waError = waResult.error ?? null;
+
+  await db
+    .insert(schema.notifications)
+    .values({
+      enquiryId: enquiry.id,
+      estimateId: enquiry.estimateId,
+      channel: 'WHATSAPP',
+      recipient: adminWhatsAppPhone,
+      template: 'NEW_LEAD_ALERT',
+      subject: 'WhatsApp Admin Lead Alert',
+      payload: {
+        message: waLeadMessage,
+        whatsappUrl: `https://wa.me/${adminWhatsAppPhone}?text=${encodeURIComponent(waLeadMessage)}`,
+        enquiryDetails: enquiry,
+        provider: waResult.provider ?? null,
+      },
+      status: waStatus,
+      errorMessage: waError,
+      sentAt: waSentAt,
+    })
+    .catch((err) => {
+      console.error('[Notifications] Failed to record WhatsApp notification row:', err);
+    });
 
   return record;
 }

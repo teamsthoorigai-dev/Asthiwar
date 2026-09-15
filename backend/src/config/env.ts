@@ -19,6 +19,10 @@ const envSchema = z.object({
   RESEND_FROM_EMAIL: z.string().default('ASTHIWAR <onboarding@resend.dev>'),
   ADMIN_ALERT_EMAIL: z.string().email().default('contact@asthiwar.com'),
   CONTACT_RECIPIENT_EMAIL: z.string().email().optional(),
+  WHATSAPP_RECIPIENT_PHONE: z.string().default('919488440123'),
+  TWILIO_ACCOUNT_SID: z.string().optional(),
+  TWILIO_AUTH_TOKEN: z.string().optional(),
+  TWILIO_WHATSAPP_FROM: z.string().default('whatsapp:+14155238886'),
 });
 
 const parsedEnv = envSchema.safeParse(process.env);
