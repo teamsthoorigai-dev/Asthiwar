@@ -1,6 +1,10 @@
 import { Request, Response, NextFunction } from 'express';
 import { db, enquiries, estimates, eq } from '@asthiwar/database';
 import { CreateEnquiryDto } from './enquiries.schema.js';
+import {
+  sendAdminNewLeadAlert,
+  sendCustomerEnquiryConfirmation,
+} from '../notifications/notifications.service.js';
 
 export async function createEnquiry(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
@@ -42,6 +46,11 @@ export async function createEnquiry(req: Request, res: Response, next: NextFunct
           .where(eq(enquiries.id, existingEnquiry.id))
           .returning();
 
+        // Trigger instant email notification via Resend to configured email
+        sendAdminNewLeadAlert(updated.id).catch((err) => {
+          console.error('[Enquiries] Failed to send email alert for updated lead:', err);
+        });
+
         res.status(200).json({
           success: true,
           message: 'Consultation request submitted successfully. Our team will contact you shortly.',
@@ -73,6 +82,11 @@ export async function createEnquiry(req: Request, res: Response, next: NextFunct
         status: 'NEW',
       })
       .returning();
+
+    // Trigger instant email notification via Resend to configured email
+    sendAdminNewLeadAlert(newEnquiry.id).catch((err) => {
+      console.error('[Enquiries] Failed to send email alert for new lead:', err);
+    });
 
     res.status(201).json({
       success: true,

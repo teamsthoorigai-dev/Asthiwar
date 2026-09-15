@@ -55,17 +55,6 @@ export function SiteFooter() {
                 className={styles.logo}
               />
             </Link>
-            {socials.length > 0 ? (
-              <ul className={styles.list}>
-                {socials.map((s) => (
-                  <li key={s.href}>
-                    <Link href={s.href} className={styles.link}>
-                      {s.label}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            ) : null}
           </div>
 
           <nav className={styles.col} aria-labelledby="footer-navigate">

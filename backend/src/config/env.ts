@@ -15,6 +15,10 @@ const envSchema = z.object({
   // quotation links against it, so a wrong value sends dead links to customers.
   PUBLIC_BASE_URL: z.string().url().default('http://localhost:3000'),
   SESSION_SECRET: z.string().min(32, 'SESSION_SECRET must be at least 32 characters'),
+  RESEND_API_KEY: z.string().optional(),
+  RESEND_FROM_EMAIL: z.string().default('ASTHIWAR <onboarding@resend.dev>'),
+  ADMIN_ALERT_EMAIL: z.string().email().default('contact@asthiwar.com'),
+  CONTACT_RECIPIENT_EMAIL: z.string().email().optional(),
 });
 
 const parsedEnv = envSchema.safeParse(process.env);

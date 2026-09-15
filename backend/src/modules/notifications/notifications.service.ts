@@ -8,19 +8,23 @@ import {
 } from './notifications.types.js';
 import { env } from '../../config/env.js';
 import { estimateRefCandidates, quotationPdfPath } from '../calculator/quotation.js';
+import { sendEmail, isResendConfigured } from '../../services/resend.service.js';
+import {
+  renderQuotationEmail,
+  renderAdminLeadAlertEmail,
+  renderCustomerConfirmationEmail,
+} from '../email/email-templates.js';
 
 /**
- * Nothing in this service transmits anything.
+ * Asthiwar Notification Dispatch Service.
  *
- * There is no mail or WhatsApp transport in the dependency tree, so every
- * function here composes a message and records it. Rows are therefore written
- * PENDING — an outbox for a dispatcher that does not exist yet. They were
- * previously written `SENT` with a `sentAt` timestamp, which told operators in
- * the admin console that a customer had been contacted when nobody had.
+ * EMAIL channel: Dispatches live transactional emails via Resend when RESEND_API_KEY
+ * is configured. If not configured, records remain PENDING in the outbox table.
  *
- * When a real transport is added, send here and set SENT/FAILED on the result.
+ * WHATSAPP channel: WhatsApp provider transport is not yet connected, so WhatsApp
+ * messages remain PENDING in the outbox table for operator review or future webhook dispatch.
  */
-const NOTHING_IS_DISPATCHED_YET = 'PENDING' as const;
+const DEFAULT_PENDING_STATUS = 'PENDING' as const;
 
 /**
  * A link a customer can actually open.
@@ -83,51 +87,56 @@ export async function sendEstimateQuotationNotification(estimateIdOrNumber: stri
 
   // 1. Email Channel
   if (channels.includes('EMAIL')) {
-    const subject = `ASTHIWAR Construction Quotation — ${estimate.estimateNumber}`;
-    const html = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
-        <div style="background-color: #1e3a8a; padding: 16px; border-radius: 6px 6px 0 0; text-align: center; color: white;">
-          <h2 style="margin: 0;">ASTHIWAR DESIGN & BUILD</h2>
-          <p style="margin: 4px 0 0; font-size: 13px; color: #cbd5e1;">Turnkey Residential Construction</p>
-        </div>
-        <div style="padding: 20px 0;">
-          <p>Dear <strong>${estimate.customerName}</strong>,</p>
-          <p>Thank you for exploring our turnkey construction estimation for your project in <strong>${estimate.plotLocation}</strong>.</p>
-          
-          <div style="background-color: #f8fafc; padding: 15px; border-radius: 6px; margin: 15px 0;">
-            <p style="margin: 4px 0;"><strong>Estimate Reference:</strong> ${estimate.estimateNumber}</p>
-            <p style="margin: 4px 0;"><strong>Package Selected:</strong> ${estimate.packageSlug.toUpperCase()}</p>
-            <p style="margin: 4px 0;"><strong>Total Built-up Area:</strong> ${estimate.totalBuiltupAreaSqft} sq.ft (${estimate.floorCount})</p>
-            <p style="margin: 8px 0 0; font-size: 16px; color: #1e3a8a;"><strong>Total Estimated Cost: ${formatINR(estimate.totalProjectCost)}</strong></p>
-          </div>
+    const formattedCost = formatINR(estimate.totalProjectCost);
+    const emailContent = renderQuotationEmail({
+      customerName: estimate.customerName,
+      plotLocation: estimate.plotLocation,
+      estimateNumber: estimate.estimateNumber,
+      packageSlug: estimate.packageSlug,
+      totalBuiltupAreaSqft: estimate.totalBuiltupAreaSqft,
+      floorCount: estimate.floorCount,
+      totalProjectCostFormatted: formattedCost,
+      pdfUrl,
+    });
 
-          <p style="font-size: 13px; color: #64748b;">Includes 10-stage milestone schedule, brand-name materials, structural engineering, and daily site supervisor updates.</p>
-          
-          <div style="text-align: center; margin: 25px 0;">
-            <a href="${pdfUrl}" style="background-color: #0f766e; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold;">
-              Download Official Quotation PDF
-            </a>
-          </div>
-          
-          <p style="font-size: 12px; color: #94a3b8; text-align: center; margin-top: 30px;">
-            Asthiwar Design & Build • Coimbatore • Virudhunagar • Chennai • Tiruppur • Erode • Pollachi<br/>
-            Contact: +91 94884 40123 | contact@asthiwar.com
-          </p>
-        </div>
-      </div>
-    `;
+    const recipient = estimate.customerEmail?.trim() ?? '';
+    let emailStatus: 'PENDING' | 'SENT' | 'FAILED' = DEFAULT_PENDING_STATUS;
+    let sentAt: Date | null = null;
+    let errorMessage: string | null = null;
+
+    if (recipient && isResendConfigured()) {
+      const emailResult = await sendEmail({
+        to: recipient,
+        subject: emailContent.subject,
+        html: emailContent.html,
+        text: emailContent.text,
+      });
+
+      if (emailResult.sent) {
+        emailStatus = 'SENT';
+        sentAt = new Date();
+      } else if (emailResult.reason === 'FAILED') {
+        emailStatus = 'FAILED';
+        errorMessage = emailResult.error ?? 'Resend dispatch failed';
+      }
+    }
 
     const [emailRecord] = await db
       .insert(schema.notifications)
       .values({
         estimateId: estimate.id,
         channel: 'EMAIL',
-        recipient: estimate.customerEmail ?? '',
+        recipient,
         template: 'ESTIMATE_QUOTATION',
-        subject,
-        payload: { html, customerName: estimate.customerName, estimateNumber: estimate.estimateNumber },
-        status: NOTHING_IS_DISPATCHED_YET,
-        sentAt: null,
+        subject: emailContent.subject,
+        payload: {
+          html: emailContent.html,
+          customerName: estimate.customerName,
+          estimateNumber: estimate.estimateNumber,
+        },
+        status: emailStatus,
+        errorMessage,
+        sentAt,
       })
       .returning();
 
@@ -147,7 +156,7 @@ export async function sendEstimateQuotationNotification(estimateIdOrNumber: stri
         template: 'ESTIMATE_QUOTATION',
         subject: 'WhatsApp Quotation Dispatch',
         payload: { message, customerPhone: estimate.customerPhone, estimateNumber: estimate.estimateNumber },
-        status: NOTHING_IS_DISPATCHED_YET,
+        status: DEFAULT_PENDING_STATUS,
         sentAt: null,
       })
       .returning();
@@ -171,11 +180,44 @@ export async function sendAdminNewLeadAlert(enquiryId: string) {
     throw new NotificationError(404, 'ENQUIRY_NOT_FOUND', `Enquiry with ID ${enquiryId} not found`);
   }
 
-  const adminEmail = process.env.ADMIN_ALERT_EMAIL || 'contact@asthiwar.com';
-  const adminPhone = process.env.ADMIN_ALERT_PHONE || '9488440123';
+  const recipientEmail =
+    env.CONTACT_RECIPIENT_EMAIL ||
+    env.ADMIN_ALERT_EMAIL ||
+    process.env.CONTACT_RECIPIENT_EMAIL ||
+    process.env.ADMIN_ALERT_EMAIL ||
+    'contact@asthiwar.com';
 
-  const subject = `🚨 [NEW LEAD] Consultation Request: ${enquiry.fullName} (${enquiry.plotLocation})`;
-  const message = `🚨 *NEW ASTHIWAR LEAD ALERT*\n\n👤 *Client:* ${enquiry.fullName}\n📞 *Phone:* ${enquiry.phone}\n📧 *Email:* ${enquiry.email ?? 'N/A'}\n📍 *Site Location:* ${enquiry.plotLocation}\n⏰ *Preferred Time:* ${enquiry.preferredContactTime || 'Anytime'}\n📝 *Requirement:* ${enquiry.requirementNotes || 'Standard consultation'}\n${enquiry.estimateNumber ? `📋 *Linked Estimate:* ${enquiry.estimateNumber}` : ''}`;
+  const emailContent = renderAdminLeadAlertEmail({
+    fullName: enquiry.fullName,
+    phone: enquiry.phone,
+    email: enquiry.email,
+    plotLocation: enquiry.plotLocation,
+    preferredContactTime: enquiry.preferredContactTime,
+    requirementNotes: enquiry.requirementNotes,
+    estimateNumber: enquiry.estimateNumber,
+  });
+
+  let alertStatus: 'PENDING' | 'SENT' | 'FAILED' = DEFAULT_PENDING_STATUS;
+  let sentAt: Date | null = null;
+  let errorMessage: string | null = null;
+
+  if (isResendConfigured()) {
+    const emailResult = await sendEmail({
+      to: recipientEmail,
+      subject: emailContent.subject,
+      html: emailContent.html,
+      text: emailContent.text,
+      replyTo: enquiry.email || undefined,
+    });
+
+    if (emailResult.sent) {
+      alertStatus = 'SENT';
+      sentAt = new Date();
+    } else if (emailResult.reason === 'FAILED') {
+      alertStatus = 'FAILED';
+      errorMessage = emailResult.error ?? 'Resend dispatch failed';
+    }
+  }
 
   // Log Admin Notification
   const [record] = await db
@@ -184,14 +226,130 @@ export async function sendAdminNewLeadAlert(enquiryId: string) {
       enquiryId: enquiry.id,
       estimateId: enquiry.estimateId,
       channel: 'EMAIL',
-      recipient: adminEmail,
+      recipient: recipientEmail,
       template: 'NEW_LEAD_ALERT',
-      subject,
-      payload: { message, enquiryDetails: enquiry },
-      status: NOTHING_IS_DISPATCHED_YET,
-      sentAt: null,
+      subject: emailContent.subject,
+      payload: {
+        message: emailContent.text,
+        html: emailContent.html,
+        enquiryDetails: enquiry,
+      },
+      status: alertStatus,
+      errorMessage,
+      sentAt,
     })
     .returning();
 
   return record;
+}
+
+// ----------------------------------------------------
+// 3. CUSTOMER ENQUIRY CONFIRMATION DISPATCH
+// ----------------------------------------------------
+
+export async function sendCustomerEnquiryConfirmation(enquiryId: string) {
+  const enquiry = await db.query.enquiries.findFirst({
+    where: eq(schema.enquiries.id, enquiryId),
+  });
+
+  if (!enquiry || !enquiry.email) {
+    return null;
+  }
+
+  const emailContent = renderCustomerConfirmationEmail({
+    fullName: enquiry.fullName,
+    plotLocation: enquiry.plotLocation,
+    estimateNumber: enquiry.estimateNumber,
+  });
+
+  let status: 'PENDING' | 'SENT' | 'FAILED' = DEFAULT_PENDING_STATUS;
+  let sentAt: Date | null = null;
+  let errorMessage: string | null = null;
+
+  if (isResendConfigured()) {
+    const emailResult = await sendEmail({
+      to: enquiry.email,
+      subject: emailContent.subject,
+      html: emailContent.html,
+      text: emailContent.text,
+    });
+
+    if (emailResult.sent) {
+      status = 'SENT';
+      sentAt = new Date();
+    } else if (emailResult.reason === 'FAILED') {
+      status = 'FAILED';
+      errorMessage = emailResult.error ?? 'Resend dispatch failed';
+    }
+  }
+
+  const [record] = await db
+    .insert(schema.notifications)
+    .values({
+      enquiryId: enquiry.id,
+      estimateId: enquiry.estimateId,
+      channel: 'EMAIL',
+      recipient: enquiry.email,
+      template: 'CUSTOMER_CONFIRMATION',
+      subject: emailContent.subject,
+      payload: {
+        message: emailContent.text,
+        html: emailContent.html,
+      },
+      status,
+      errorMessage,
+      sentAt,
+    })
+    .returning();
+
+  return record;
+}
+
+// ----------------------------------------------------
+// 4. RETRY / DISPATCH PENDING NOTIFICATION
+// ----------------------------------------------------
+
+export async function resendNotification(notificationId: string) {
+  const notification = await db.query.notifications.findFirst({
+    where: eq(schema.notifications.id, notificationId),
+  });
+
+  if (!notification) {
+    throw new NotificationError(404, 'NOTIFICATION_NOT_FOUND', `Notification ${notificationId} not found`);
+  }
+
+  if (notification.channel !== 'EMAIL') {
+    throw new NotificationError(400, 'UNSUPPORTED_CHANNEL', `Resending channel ${notification.channel} is not currently supported`);
+  }
+
+  if (!notification.recipient) {
+    throw new NotificationError(400, 'MISSING_RECIPIENT', 'Notification does not have a recipient email');
+  }
+
+  const payload = (notification.payload as Record<string, unknown>) || {};
+  const html = typeof payload.html === 'string' ? payload.html : '';
+  const text = typeof payload.message === 'string' ? payload.message : undefined;
+
+  const result = await sendEmail({
+    to: notification.recipient,
+    subject: notification.subject || 'ASTHIWAR Notification',
+    html,
+    text,
+  });
+
+  const nextStatus = result.sent ? 'SENT' : (result.reason === 'FAILED' ? 'FAILED' : 'PENDING');
+  const sentAt = result.sent ? new Date() : null;
+  const errorMessage = result.error || null;
+
+  const [updated] = await db
+    .update(schema.notifications)
+    .set({
+      status: nextStatus,
+      errorMessage,
+      sentAt,
+    })
+    .where(eq(schema.notifications.id, notificationId))
+    .returning();
+
+  return updated;
 }

@@ -130,8 +130,8 @@ export const lastingCards = {
       tabLabel: 'Site',
       title: 'Read the site first',
       body: 'Orientation, wind, shade and drainage are settled before a single wall is drawn. Comfort begins in plan and section.',
-      image: '/images/courtyard.jpg',
-      imageAlt: 'Planted courtyard open to the sky, shaded on three sides by the building.',
+      image: '/images/principles/1.jpeg',
+      imageAlt: 'Architectural team reviewing site plans, drawings, and material specifications with clients.',
       blueprint: {
         standard: 'ECBC / NBC 2016 Cl. 8',
         tolerance: 'Solar azimuth verified ±1.5°',
@@ -145,8 +145,8 @@ export const lastingCards = {
       tabLabel: 'Load Path',
       title: 'One load path',
       body: 'Architecture asks what life needs; engineering asks what the idea demands. The grid is simplified until both answers agree.',
-      image: '/images/asthivar-villa.jpg',
-      imageAlt: 'Stone villa at dusk, its upper floor carried on a deep cantilever over the terrace.',
+      image: '/images/principles/2.jpeg',
+      imageAlt: 'Site engineer demonstrating concrete column integrity, surveying alignment, and masonry specimens.',
       blueprint: {
         standard: 'IS 456:2000 & IS 13920',
         tolerance: 'Axis deviation < 2mm / 3m height',
@@ -160,8 +160,8 @@ export const lastingCards = {
       tabLabel: 'Detailing',
       title: 'Detail before pour',
       body: 'Critical junctions are drawn and prototyped on paper. Coordination is cheaper on paper than under a poured slab.',
-      image: '/images/materials.jpg',
-      imageAlt: 'Masonry and timber samples laid out beside working drawings.',
+      image: '/images/principles/3.jpeg',
+      imageAlt: 'Engineering team reviewing structural 3D CAD modeling and technical detailing on screen.',
       blueprint: {
         standard: 'DIN 18202 Class 4',
         tolerance: 'Cast rebate ±0.5mm threshold',
@@ -175,8 +175,8 @@ export const lastingCards = {
       tabLabel: 'Materials',
       title: 'Material honesty',
       body: 'Materials are selected for structural integrity, longevity, and how they weather over time. We build with verified, high-grade fundamentals that endure rather than cosmetic finishes that degrade.',
-      image: '/images/materials.jpg',
-      imageAlt: 'High-grade architectural construction materials and masonry specimens.',
+      image: '/images/principles/4.jpeg',
+      imageAlt: 'Civil engineers conducting layout marking, leveling, and site measurements on open ground.',
       blueprint: {
         standard: 'IS 456:2000, IS 1786 & IS 269',
         tolerance: 'TMT yield ≥ 550 N/mm² · Silt < 3% · Slump 100±25mm',
@@ -205,7 +205,7 @@ export const lastingCards = {
       tabLabel: 'As-Built',
       title: 'Final detail and Handover',
       body: 'Progress, quality checks and site decisions are written down and handed over with the building.',
-      image: '/images/workshop.jpg',
+      image: '/images/principles/6.jpeg',
       imageAlt: 'Drafting tables carrying marked-up drawings and site record sheets.',
       blueprint: {
         standard: 'ISO 9001 QA & As-Built Protocol',
