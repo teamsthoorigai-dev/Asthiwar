@@ -103,7 +103,7 @@ export const services: readonly Service[] = [
       'Close every detail',
     ],
     image: {
-      src: '/images/disciplines/construction.jpeg',
+      src: '/images/disciplines/Construction.jpeg',
       alt: 'Architectural drafting tables, masonry specimens, and precision execution instruments.',
     },
   },
@@ -250,7 +250,7 @@ export const projects: readonly Project[] = [
     video: '/Ather/AetherLandscape.mp4',
     gallery: [
       { src: '/Ather/1.jpg', alt: 'Exterior facade with glass balcony railing' },
-      { src: '/Ather/2.jpg ', alt: 'Exterior envelope nearing completion under scaffolding' },
+      { src: '/Ather/2.jpg', alt: 'Exterior envelope nearing completion under scaffolding' },
       { src: '/Ather/3.jpeg', alt: 'Concrete frame and masonry shell mid-construction' },
       { src: '/Ather/4.jpeg', alt: 'Rooftop terrace under construction at sunset' },
       { src: '/Ather/5.jpeg', alt: 'Interior textured plaster finish being applied' },

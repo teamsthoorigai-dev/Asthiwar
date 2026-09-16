@@ -52,10 +52,6 @@ next-env.d.ts
 # lead + estimate records written by the API routes
 /.data/
 
-# Working notes — build plans, audits and handoffs kept on disk for reference
-# but deliberately out of the repo. docs/ itself (the specs) is still tracked.
-
-public/frames/*.jpg
 
 # Documents and office files
 *.docx

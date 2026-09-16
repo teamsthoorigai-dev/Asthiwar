@@ -6,9 +6,9 @@ import { db, schema, eq } from '@asthiwar/database';
 import { estimateRefCandidates } from '../calculator/quotation.js';
 
 const LOGO_FILE = fileURLToPath(
-  new URL('../../../assets/brand/asthiwar-logo-white.png', import.meta.url)
+  new URL('../../../assets/brand/asthiwar-logo-duotone.png', import.meta.url)
 );
-const LOGO_FALLBACK = path.resolve(process.cwd(), 'assets/brand/asthiwar-logo-white.png');
+const LOGO_FALLBACK = path.resolve(process.cwd(), 'assets/brand/asthiwar-logo-duotone.png');
 const LOGO_PATH = existsSync(LOGO_FILE)
   ? LOGO_FILE
   : existsSync(LOGO_FALLBACK)
@@ -30,9 +30,8 @@ export class PdfGenerationError extends Error {
 const CARBON = '#19241D';          // ASTHIWAR forest deep / carbon
 const CARBON_SURFACE = '#243228';  // Carbon surface / badge ground
 const OXIDE = '#B8854F';           // Warm architectural oxide
-const OXIDE_LIGHT = '#D9A971';     // Lifted oxide for text on dark backgrounds
 const OXIDE_DEEP = '#76522F';      // Deep oxide accent
-const OXIDE_WASH = '#F9F5EE';      // Subtle warm oxide highlight
+const OXIDE_WASH = '#F9F5EE';      // Subtle warm oxide highlight — letterhead cream ground
 const PAPER = '#EFEAE3';           // On-accent architectural paper
 const CARD_BG = '#F7F5F0';         // Warm card & section fill
 const ROW_ALT_BG = '#FAF8F5';      // Subtle warm zebra row fill
@@ -78,6 +77,157 @@ function cleanUnit(unit: string | null | undefined): string {
   if (u === 'per_sqft') return 'per sqft';
   if (u === 'per_rft') return 'per rft';
   return unit.replace(/_/g, ' ');
+}
+
+type FooterIconKind = 'phone' | 'mail' | 'globe' | 'pin';
+
+/**
+ * Line-icon paths traced from the same Lucide set already used across the
+ * site (Phone/Mail/Globe/MapPin) so the letterhead-style footer needs no
+ * bundled icon font or raster assets — just PDFKit's own vector path/stroke.
+ */
+const FOOTER_ICON_DEFS: Record<
+  FooterIconKind,
+  { paths: string[]; rect?: [number, number, number, number, number]; circle?: [number, number, number] }
+> = {
+  phone: {
+    paths: [
+      'M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z',
+    ],
+  },
+  mail: {
+    paths: ['M2 7l8.97 5.7a1.94 1.94 0 0 0 2.06 0L22 7'],
+    rect: [2, 4, 20, 16, 2],
+  },
+  globe: {
+    paths: ['M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20', 'M2 12h20'],
+    circle: [12, 12, 10],
+  },
+  pin: {
+    paths: ['M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0'],
+    circle: [12, 10, 3],
+  },
+};
+
+/** Draws one 24x24-viewBox line icon at (x, y), scaled to `size` points. */
+function drawFooterIcon(
+  doc: PDFKit.PDFDocument,
+  icon: FooterIconKind,
+  x: number,
+  y: number,
+  size: number,
+  color: string
+): void {
+  const def = FOOTER_ICON_DEFS[icon];
+  const scale = size / 24;
+  doc.save();
+  doc.translate(x, y).scale(scale);
+  doc.lineCap('round').lineJoin('round').lineWidth(2).strokeColor(color);
+  if (def.rect) doc.roundedRect(...def.rect);
+  for (const d of def.paths) doc.path(d);
+  if (def.circle) doc.circle(...def.circle);
+  doc.stroke();
+  doc.restore();
+}
+
+const FOOTER_CONTACT_ITEMS: Array<{ icon: FooterIconKind; text: string }> = [
+  { icon: 'phone', text: '+91 94884 40123' },
+  { icon: 'mail', text: 'Contact@akileshastiwar.com' },
+  { icon: 'globe', text: 'Akileshastiwar.com' },
+  { icon: 'pin', text: 'Coimbatore | Virudhunagar' },
+];
+
+/** The letterhead's icon + phone/email/website/location bar, distributed symmetrically between margins. */
+function drawFooterContactBar(doc: PDFKit.PDFDocument, y: number): void {
+  const iconSize = 7.5;
+  const gapAfterIcon = 4;
+  doc.font('Helvetica').fontSize(7.5);
+
+  const leftMargin = 36;
+  const rightMargin = doc.page.width - 36;
+  const totalAvailableWidth = rightMargin - leftMargin;
+
+  // Pre-calculate width of each item to distribute remaining space evenly
+  const itemWidths = FOOTER_CONTACT_ITEMS.map((item) => {
+    return iconSize + gapAfterIcon + doc.widthOfString(item.text);
+  });
+  const sumItemsWidth = itemWidths.reduce((a, b) => a + b, 0);
+  const totalGapSpace = totalAvailableWidth - sumItemsWidth;
+  const gapBetweenItems = FOOTER_CONTACT_ITEMS.length > 1
+    ? totalGapSpace / (FOOTER_CONTACT_ITEMS.length - 1)
+    : 0;
+
+  let x = leftMargin;
+  FOOTER_CONTACT_ITEMS.forEach((item, idx) => {
+    // Icon visual centerline matches Helvetica 7.5pt cap-height midpoint at (y - 1.0)
+    drawFooterIcon(doc, item.icon, x, y - 1.0, iconSize, OXIDE);
+    const textX = x + iconSize + gapAfterIcon;
+    doc.fillColor(OXIDE_DEEP).text(item.text, textX, y, { lineBreak: false });
+
+    const itemW = itemWidths[idx];
+    if (idx < FOOTER_CONTACT_ITEMS.length - 1) {
+      const dividerX = x + itemW + gapBetweenItems / 2;
+      doc
+        .strokeColor(BORDER_HAIRLINE)
+        .lineWidth(0.5)
+        .moveTo(dividerX, y + 0.5)
+        .lineTo(dividerX, y + 7.5)
+        .stroke();
+    }
+    x += itemW + gapBetweenItems;
+  });
+}
+
+/**
+ * Vertices traced from the letterhead's own background graphic (a 1812x2564
+ * source, the same A4 ratio as this document), in source pixel coordinates.
+ * Two flat, untinted "tower" silhouettes bottom-right — matching the letterhead.
+ */
+const MASTHEAD_WATERMARK_SOURCE_SIZE = 1812;
+const MASTHEAD_WATERMARK_TOWERS: Array<Array<[number, number]>> = [
+  [
+    [1569, 980],
+    [1273, 1280],
+    [1273, 2564],
+    [1569, 2564],
+  ],
+  [
+    [1620, 1440],
+    [1762, 1600],
+    [1762, 2564],
+    [1619, 2564],
+  ],
+];
+
+/**
+ * Draws the letterhead's building-silhouette watermark in the background of the page.
+ */
+function drawMastheadWatermark(doc: PDFKit.PDFDocument): void {
+  const scale = doc.page.width / MASTHEAD_WATERMARK_SOURCE_SIZE;
+  doc.save();
+  doc.fillColor('#F2EBE5');
+  for (const tower of MASTHEAD_WATERMARK_TOWERS) {
+    const [[startX, startY], ...rest] = tower;
+    doc.moveTo(startX * scale, startY * scale);
+    for (const [px, py] of rest) {
+      doc.lineTo(px * scale, py * scale);
+    }
+    doc.lineTo(startX * scale, startY * scale);
+    doc.fill();
+  }
+  doc.restore();
+}
+
+/** The cream continuation banner (logo + reference) drawn at the top of any page a table spills onto. */
+function drawContinuationBanner(doc: PDFKit.PDFDocument, estimateNumber: string): void {
+  doc.rect(0, 0, doc.page.width, 30).fill(OXIDE_WASH);
+  doc.rect(0, 30, doc.page.width, 1).fill(OXIDE);
+  let textX = 36;
+  if (LOGO_PATH) {
+    doc.image(LOGO_PATH, 36, 10, { width: 64 });
+    textX = 112;
+  }
+  doc.fillColor(OXIDE_DEEP).font('Helvetica-Bold').fontSize(9).text(`Quotation ${estimateNumber} (Continued)`, textX, 11);
 }
 
 const DEFAULT_MILESTONES = [
@@ -168,16 +318,22 @@ export async function generateEstimatePdf(estimateNumberOrId: string): Promise<B
       doc.on('end', () => resolve(Buffer.concat(chunks)));
       doc.on('error', (err: Error) => reject(err));
 
+      // Draw watermark on page 1 background
+      drawMastheadWatermark(doc);
+
+      // Ensure every subsequent page (Page 2, continuation pages) automatically gets
+      // the watermark rendered in the background before any content is placed.
+      doc.on('pageAdded', () => {
+        drawMastheadWatermark(doc);
+      });
+
       const tblX = 36;
       const tblW = doc.page.width - 72;
 
       const checkPageBreak = (neededHeight = 35) => {
         if (doc.y + neededHeight > doc.page.height - 40) {
           doc.addPage();
-          doc.rect(0, 0, doc.page.width, 30).fill(CARBON);
-          doc.rect(0, 30, doc.page.width, 1.5).fill(OXIDE);
-          doc.fillColor(OXIDE_LIGHT).font('Helvetica-Bold').fontSize(9);
-          doc.text(`ASTHIWAR • Quotation ${estimate.estimateNumber} (Continued)`, 36, 10);
+          drawContinuationBanner(doc, estimate.estimateNumber);
           doc.y = 42;
           return true;
         }
@@ -188,25 +344,26 @@ export async function generateEstimatePdf(estimateNumberOrId: string): Promise<B
       // PAGE 1: MASTHEAD & DETAILS
       // =========================================================================
 
-      // 1. Header Bar
-      doc.rect(0, 0, doc.page.width, 92).fill(CARBON);
-      doc.rect(0, 92, doc.page.width, 1.5).fill(OXIDE);
+      // 1. Header Bar — cream ground with the oxide-accented wordmark, matching
+      // the ASTHIWAR letterhead (logo top-left, hairline rule under the header).
+      doc.rect(0, 0, doc.page.width, 92).fill(OXIDE_WASH);
+      doc.rect(0, 92, doc.page.width, 1).fill(OXIDE);
       if (LOGO_PATH) {
-        doc.image(LOGO_PATH, 36, 18, { width: 145 });
+        doc.image(LOGO_PATH, 36, 22, { width: 138 });
       } else {
-        doc.fillColor(PAPER).font('Helvetica-Bold').fontSize(18).text('ASTHIWAR DESIGN & BUILD', 36, 22);
+        doc.fillColor(CARBON).font('Helvetica-Bold').fontSize(18).text('ASTHIWAR DESIGN & BUILD', 36, 26);
       }
-      doc.font('Helvetica').fontSize(8.5).fillColor(OXIDE_LIGHT).text('Turnkey Residential Construction & Civil Engineering • Tamil Nadu', 36, 46);
-      doc.fontSize(7.5).fillColor('#B0ABA1').text('Coimbatore • Virudhunagar • Chennai • Tiruppur • Erode • Pollachi • Madurai | Web: asthiwar.com', 36, 60);
+      doc.font('Helvetica').fontSize(8.5).fillColor(OXIDE_DEEP).text('Turnkey Residential Construction & Civil Engineering • Tamil Nadu', 36, 52);
+      doc.fontSize(7.5).fillColor(MUTED_INK).text('Coimbatore • Virudhunagar • Chennai • Tiruppur • Erode • Pollachi • Madurai | Web: asthiwar.com', 36, 66);
 
       // Top Right Official Quotation Badge
-      const badgeWidth = 175;
+      const badgeWidth = 178;
       const badgeX = doc.page.width - 36 - badgeWidth;
-      doc.roundedRect(badgeX, 16, badgeWidth, 60, 6).fill(CARBON_SURFACE);
-      doc.strokeColor(OXIDE).lineWidth(0.75).stroke();
-      doc.fillColor(OXIDE_LIGHT).font('Helvetica-Bold').fontSize(8).text('OFFICIAL QUOTATION', badgeX + 10, 24);
-      doc.fillColor(PAPER).font('Helvetica-Bold').fontSize(11).text(estimate.estimateNumber, badgeX + 10, 38);
-      doc.fillColor('#A8A298').font('Helvetica').fontSize(7.5).text(`Generated: ${formatGeneratedDate(estimate.createdAt)}`, badgeX + 10, 56);
+      doc.lineWidth(0.75);
+      doc.roundedRect(badgeX, 16, badgeWidth, 60, 6).fillAndStroke(CARD_BG, OXIDE);
+      doc.fillColor(OXIDE_DEEP).font('Helvetica-Bold').fontSize(8).text('OFFICIAL QUOTATION', badgeX + 12, 25, { characterSpacing: 0.5 });
+      doc.fillColor(CARBON).font('Helvetica-Bold').fontSize(11).text(estimate.estimateNumber, badgeX + 12, 39);
+      doc.fillColor(MUTED_INK).font('Helvetica').fontSize(7.5).text(`Generated: ${formatGeneratedDate(estimate.createdAt)}`, badgeX + 12, 57);
 
       // 2. Client & Project Info Card
       doc.y = 106;
@@ -289,10 +446,7 @@ export async function generateEstimatePdf(estimateNumberOrId: string): Promise<B
         items.forEach((item, idx) => {
           if (curY + 16 > doc.page.height - 40) {
             doc.addPage();
-            doc.rect(0, 0, doc.page.width, 30).fill(CARBON);
-            doc.rect(0, 30, doc.page.width, 1.5).fill(OXIDE);
-            doc.fillColor(OXIDE_LIGHT).font('Helvetica-Bold').fontSize(9);
-            doc.text(`ASTHIWAR • Quotation ${estimate.estimateNumber} (Continued)`, 36, 10);
+            drawContinuationBanner(doc, estimate.estimateNumber);
             curY = 42;
             doc.roundedRect(tblX, curY, tblW, 16, 3).fill(CARBON_SURFACE);
             doc.fillColor(PAPER).font('Helvetica-Bold').fontSize(7.5);
@@ -344,10 +498,7 @@ export async function generateEstimatePdf(estimateNumberOrId: string): Promise<B
         addons.forEach((addon, idx) => {
           if (addY + 16 > doc.page.height - 40) {
             doc.addPage();
-            doc.rect(0, 0, doc.page.width, 30).fill(CARBON);
-            doc.rect(0, 30, doc.page.width, 1.5).fill(OXIDE);
-            doc.fillColor(OXIDE_LIGHT).font('Helvetica-Bold').fontSize(9);
-            doc.text(`ASTHIWAR • Quotation ${estimate.estimateNumber} (Continued)`, 36, 10);
+            drawContinuationBanner(doc, estimate.estimateNumber);
             addY = 42;
             doc.roundedRect(tblX, addY, tblW, 16, 3).fill(CARBON_SURFACE);
             doc.fillColor(PAPER).font('Helvetica-Bold').fontSize(7.5);
@@ -415,9 +566,14 @@ export async function generateEstimatePdf(estimateNumberOrId: string): Promise<B
       // PAGE 2: 10-STAGE MILESTONES, TERMS & EXCLUSIONS
       // =========================================================================
       doc.addPage();
-      doc.rect(0, 0, doc.page.width, 50).fill(CARBON);
-      doc.rect(0, 50, doc.page.width, 1.5).fill(OXIDE);
-      doc.fillColor(PAPER).font('Helvetica-Bold').fontSize(12.5).text('10-STAGE CIVIL MILESTONE PAYMENT SCHEDULE', 36, 18);
+      doc.rect(0, 0, doc.page.width, 50).fill(OXIDE_WASH);
+      doc.rect(0, 50, doc.page.width, 1).fill(OXIDE);
+      let milestoneTitleX = 36;
+      if (LOGO_PATH) {
+        doc.image(LOGO_PATH, 36, 18, { width: 92 });
+        milestoneTitleX = 144;
+      }
+      doc.fillColor(CARBON).font('Helvetica-Bold').fontSize(12.5).text('10-STAGE CIVIL MILESTONE PAYMENT SCHEDULE', milestoneTitleX, 20);
 
       doc.y = 60;
       doc.fillColor(BODY_INK).font('Helvetica').fontSize(8).text(
@@ -511,18 +667,24 @@ export async function generateEstimatePdf(estimateNumberOrId: string): Promise<B
       doc.font('Helvetica-Bold').fontSize(7.5).fillColor(CARBON).text('Customer Acknowledgment', doc.page.width - 220, sigY + 6);
       doc.font('Helvetica').fontSize(6.5).fillColor(MUTED_INK).text('Signature / Acceptance Date: ___________________', doc.page.width - 220, sigY + 18);
 
-      // Dynamic Page Footers
+      // Dynamic Page Footers — the letterhead's hairline + phone/email/website/
+      // location bar, with the quotation reference and page count underneath.
       const pageRange = doc.bufferedPageRange();
       const totalPages = pageRange.count;
 
       for (let i = 0; i < totalPages; i++) {
         doc.switchToPage(i);
         doc.page.margins.bottom = 0;
-        doc.font('Helvetica').fontSize(7).fillColor(MUTED_INK);
+
+        const footerRuleY = doc.page.height - 40;
+        doc.strokeColor(OXIDE).lineWidth(0.75).moveTo(36, footerRuleY).lineTo(doc.page.width - 36, footerRuleY).stroke();
+        drawFooterContactBar(doc, footerRuleY + 8);
+
+        doc.font('Helvetica').fontSize(6.5).fillColor(MUTED_INK);
         doc.text(
           `ASTHIWAR Quotation • ${estimate.estimateNumber} • Page ${i + 1} of ${totalPages}`,
           36,
-          doc.page.height - 18,
+          footerRuleY + 22,
           { align: 'center', width: doc.page.width - 72, lineBreak: false }
         );
       }
