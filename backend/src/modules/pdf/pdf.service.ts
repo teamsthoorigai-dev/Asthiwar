@@ -15,6 +15,42 @@ const LOGO_PATH = existsSync(LOGO_FILE)
   ? LOGO_FALLBACK
   : undefined;
 
+// Satoshi Font Family resolution (TrueType for PDFKit subsetting & vector glyph outlines)
+const FONT_REGULAR_FILE = fileURLToPath(
+  new URL('../../../assets/fonts/Satoshi-Regular.ttf', import.meta.url)
+);
+const FONT_REGULAR_FALLBACK = path.resolve(process.cwd(), 'assets/fonts/Satoshi-Regular.ttf');
+const FONT_REGULAR_PATH = existsSync(FONT_REGULAR_FILE)
+  ? FONT_REGULAR_FILE
+  : existsSync(FONT_REGULAR_FALLBACK)
+  ? FONT_REGULAR_FALLBACK
+  : undefined;
+
+const FONT_MEDIUM_FILE = fileURLToPath(
+  new URL('../../../assets/fonts/Satoshi-Medium.ttf', import.meta.url)
+);
+const FONT_MEDIUM_FALLBACK = path.resolve(process.cwd(), 'assets/fonts/Satoshi-Medium.ttf');
+const FONT_MEDIUM_PATH = existsSync(FONT_MEDIUM_FILE)
+  ? FONT_MEDIUM_FILE
+  : existsSync(FONT_MEDIUM_FALLBACK)
+  ? FONT_MEDIUM_FALLBACK
+  : undefined;
+
+const FONT_BOLD_FILE = fileURLToPath(
+  new URL('../../../assets/fonts/Satoshi-Bold.ttf', import.meta.url)
+);
+const FONT_BOLD_FALLBACK = path.resolve(process.cwd(), 'assets/fonts/Satoshi-Bold.ttf');
+const FONT_BOLD_PATH = existsSync(FONT_BOLD_FILE)
+  ? FONT_BOLD_FILE
+  : existsSync(FONT_BOLD_FALLBACK)
+  ? FONT_BOLD_FALLBACK
+  : undefined;
+
+const HAS_SATOSHI = !!(FONT_REGULAR_PATH && FONT_BOLD_PATH);
+export const FONT_REG = HAS_SATOSHI ? 'Satoshi' : 'Helvetica';
+export const FONT_MED = HAS_SATOSHI && FONT_MEDIUM_PATH ? 'Satoshi-Medium' : (HAS_SATOSHI ? 'Satoshi' : 'Helvetica');
+export const FONT_BLD = HAS_SATOSHI ? 'Satoshi-Bold' : 'Helvetica-Bold';
+
 export class PdfGenerationError extends Error {
   constructor(
     public statusCode: number,
@@ -141,7 +177,7 @@ const FOOTER_CONTACT_ITEMS: Array<{ icon: FooterIconKind; text: string }> = [
 function drawFooterContactBar(doc: PDFKit.PDFDocument, y: number): void {
   const iconSize = 7.5;
   const gapAfterIcon = 4;
-  doc.font('Helvetica').fontSize(7.5);
+  doc.font(FONT_REG).fontSize(7.5);
 
   const leftMargin = 36;
   const rightMargin = doc.page.width - 36;
@@ -218,16 +254,9 @@ function drawMastheadWatermark(doc: PDFKit.PDFDocument): void {
   doc.restore();
 }
 
-/** The cream continuation banner (logo + reference) drawn at the top of any page a table spills onto. */
+/** Clean continuation reference (no colored header bar on consecutive pages per user request) */
 function drawContinuationBanner(doc: PDFKit.PDFDocument, estimateNumber: string): void {
-  doc.rect(0, 0, doc.page.width, 30).fill(OXIDE_WASH);
-  doc.rect(0, 30, doc.page.width, 1).fill(OXIDE);
-  let textX = 36;
-  if (LOGO_PATH) {
-    doc.image(LOGO_PATH, 36, 10, { width: 64 });
-    textX = 112;
-  }
-  doc.fillColor(OXIDE_DEEP).font('Helvetica-Bold').fontSize(9).text(`Quotation ${estimateNumber} (Continued)`, textX, 11);
+  doc.fillColor(MUTED_INK).font(FONT_REG).fontSize(7.5).text(`ASTHIWAR Quotation • ${estimateNumber} (Continued)`, 36, 22);
 }
 
 const DEFAULT_MILESTONES = [
@@ -313,6 +342,14 @@ export async function generateEstimatePdf(estimateNumberOrId: string): Promise<B
         },
       });
 
+      if (HAS_SATOSHI && FONT_REGULAR_PATH && FONT_BOLD_PATH) {
+        doc.registerFont('Satoshi', FONT_REGULAR_PATH);
+        if (FONT_MEDIUM_PATH) {
+          doc.registerFont('Satoshi-Medium', FONT_MEDIUM_PATH);
+        }
+        doc.registerFont('Satoshi-Bold', FONT_BOLD_PATH);
+      }
+
       const chunks: Buffer[] = [];
       doc.on('data', (chunk: Buffer) => chunks.push(chunk));
       doc.on('end', () => resolve(Buffer.concat(chunks)));
@@ -351,275 +388,280 @@ export async function generateEstimatePdf(estimateNumberOrId: string): Promise<B
       if (LOGO_PATH) {
         doc.image(LOGO_PATH, 36, 22, { width: 138 });
       } else {
-        doc.fillColor(CARBON).font('Helvetica-Bold').fontSize(18).text('ASTHIWAR DESIGN & BUILD', 36, 26);
+        doc.fillColor(CARBON).font(FONT_BLD).fontSize(18).text('ASTHIWAR DESIGN & BUILD', 36, 26);
       }
-      doc.font('Helvetica').fontSize(8.5).fillColor(OXIDE_DEEP).text('Turnkey Residential Construction & Civil Engineering • Tamil Nadu', 36, 52);
-      doc.fontSize(7.5).fillColor(MUTED_INK).text('Coimbatore • Virudhunagar • Chennai • Tiruppur • Erode • Pollachi • Madurai | Web: asthiwar.com', 36, 66);
+      doc.font(FONT_REG).fontSize(7.5).fillColor(MUTED_INK).text('Coimbatore • Virudhunagar • Chennai • Tiruppur • Erode • Pollachi • Madurai | Web: asthiwar.com', 36, 58);
 
-      // Top Right Official Quotation Badge
-      const badgeWidth = 178;
+      // Top Right Official Quotation Badge (Refined and reduced in size per user request)
+      const badgeWidth = 170;
       const badgeX = doc.page.width - 36 - badgeWidth;
       doc.lineWidth(0.75);
-      doc.roundedRect(badgeX, 16, badgeWidth, 60, 6).fillAndStroke(CARD_BG, OXIDE);
-      doc.fillColor(OXIDE_DEEP).font('Helvetica-Bold').fontSize(8).text('OFFICIAL QUOTATION', badgeX + 12, 25, { characterSpacing: 0.5 });
-      doc.fillColor(CARBON).font('Helvetica-Bold').fontSize(11).text(estimate.estimateNumber, badgeX + 12, 39);
-      doc.fillColor(MUTED_INK).font('Helvetica').fontSize(7.5).text(`Generated: ${formatGeneratedDate(estimate.createdAt)}`, badgeX + 12, 57);
+      doc.roundedRect(badgeX, 17, badgeWidth, 58, 6).fillAndStroke(CARD_BG, OXIDE);
+      doc.fillColor(OXIDE_DEEP).font(FONT_BLD).fontSize(6.5).text('OFFICIAL QUOTATION', badgeX + 12, 26, { characterSpacing: 0.8 });
+      doc.fillColor(CARBON).font(FONT_BLD).fontSize(10.5).text(estimate.estimateNumber, badgeX + 12, 38);
+      doc.fillColor(MUTED_INK).font(FONT_REG).fontSize(7).text(`Generated: ${formatGeneratedDate(estimate.createdAt)}`, badgeX + 12, 55);
 
-      // 2. Client & Project Info Card
-      doc.y = 106;
+      // 2. Client & Project Info Card (Expanded vertical padding & row spacing)
+      doc.y = 108;
       const infoCardY = doc.y;
-      const cardHeight = 72;
+      const cardHeight = 88;
       doc.roundedRect(36, infoCardY, tblW, cardHeight, 6)
         .strokeColor(BORDER_HAIRLINE)
         .fillAndStroke(CARD_BG, BORDER_HAIRLINE);
 
       // Left Column: Client Information
-      doc.fillColor(OXIDE_DEEP).font('Helvetica-Bold').fontSize(8.5).text('CLIENT INFORMATION', 50, infoCardY + 9);
-      doc.fillColor(CARBON).font('Helvetica-Bold').fontSize(8).text('Customer Name: ', 50, infoCardY + 23);
-      doc.font('Helvetica').fillColor(BODY_INK).text(cleanText(estimate.customerName) || 'Valued Client', 125, infoCardY + 23);
+      doc.fillColor(OXIDE_DEEP).font(FONT_BLD).fontSize(8.5).text('CLIENT INFORMATION', 50, infoCardY + 11);
+      doc.fillColor(CARBON).font(FONT_BLD).fontSize(8).text('Customer Name: ', 50, infoCardY + 29);
+      doc.font(FONT_REG).fontSize(8.5).fillColor(BODY_INK).text(cleanText(estimate.customerName) || 'Valued Client', 125, infoCardY + 29);
 
-      doc.font('Helvetica-Bold').fillColor(CARBON).text('Contact Phone: ', 50, infoCardY + 37);
-      doc.font('Helvetica').fillColor(BODY_INK).text(estimate.customerPhone || '—', 125, infoCardY + 37);
+      doc.font(FONT_BLD).fontSize(8).fillColor(CARBON).text('Contact Phone: ', 50, infoCardY + 47);
+      doc.font(FONT_REG).fontSize(8.5).fillColor(BODY_INK).text(estimate.customerPhone || '—', 125, infoCardY + 47);
 
-      doc.font('Helvetica-Bold').fillColor(CARBON).text('Email Address: ', 50, infoCardY + 51);
-      doc.font('Helvetica').fillColor(BODY_INK).text(estimate.customerEmail || '', 125, infoCardY + 51);
+      doc.font(FONT_BLD).fontSize(8).fillColor(CARBON).text('Email Address: ', 50, infoCardY + 65);
+      doc.font(FONT_REG).fontSize(8.5).fillColor(BODY_INK).text(estimate.customerEmail || '—', 125, infoCardY + 65);
 
       // Right Column: Project Specifications
       const col2X = 310;
-      doc.fillColor(OXIDE_DEEP).font('Helvetica-Bold').fontSize(8.5).text('PROJECT SPECIFICATIONS', col2X, infoCardY + 9);
-      doc.fillColor(CARBON).font('Helvetica-Bold').fontSize(8).text('Plot Location: ', col2X, infoCardY + 23);
-      doc.font('Helvetica').fillColor(BODY_INK).text(cleanText(estimate.plotLocation) || 'Coimbatore', col2X + 80, infoCardY + 23);
+      doc.fillColor(OXIDE_DEEP).font(FONT_BLD).fontSize(8.5).text('PROJECT SPECIFICATIONS', col2X, infoCardY + 11);
+      doc.fillColor(CARBON).font(FONT_BLD).fontSize(8).text('Plot Location: ', col2X, infoCardY + 29);
+      doc.font(FONT_REG).fontSize(8.5).fillColor(BODY_INK).text(cleanText(estimate.plotLocation) || 'Coimbatore', col2X + 80, infoCardY + 29);
 
-      doc.font('Helvetica-Bold').fillColor(CARBON).text('Floors & Plot: ', col2X, infoCardY + 37);
+      doc.font(FONT_BLD).fontSize(8).fillColor(CARBON).text('Floors & Plot: ', col2X, infoCardY + 47);
       const floorCountRaw = String(estimate.floorCount || '1');
       const floorStr = floorCountRaw.startsWith('G') ? floorCountRaw : `G+${floorCountRaw}`;
       const plotStr = `${floorStr} • Plot: ${formatNumber(estimate.plotAreaSqft, 2)} Sq.Ft`;
-      doc.font('Helvetica').fillColor(BODY_INK).text(plotStr, col2X + 80, infoCardY + 37);
+      doc.font(FONT_REG).fontSize(8.5).fillColor(BODY_INK).text(plotStr, col2X + 80, infoCardY + 47);
 
-      doc.font('Helvetica-Bold').fillColor(CARBON).text('Total Built-Up: ', col2X, infoCardY + 51);
-      doc.font('Helvetica-Bold').fillColor(OXIDE_DEEP).text(`${formatNumber(estimate.totalBuiltupAreaSqft)} Sq.Ft`, col2X + 80, infoCardY + 51);
+      doc.font(FONT_BLD).fontSize(8).fillColor(CARBON).text('Total Built-Up: ', col2X, infoCardY + 65);
+      doc.font(FONT_BLD).fontSize(8.5).fillColor(OXIDE_DEEP).text(`${formatNumber(estimate.totalBuiltupAreaSqft)} Sq.Ft`, col2X + 80, infoCardY + 65);
 
-      doc.y = infoCardY + cardHeight + 14;
+      doc.y = infoCardY + cardHeight + 22;
 
       // =========================================================================
       // SECTION 1: PACKAGE & BASE CONSTRUCTION COST
       // =========================================================================
-      doc.fillColor(CARBON).font('Helvetica-Bold').fontSize(10).text('1. PACKAGE & BASE CONSTRUCTION COST', 36, doc.y);
-      doc.y += 5;
+      doc.fillColor(CARBON).font(FONT_BLD).fontSize(10).text('1. PACKAGE & BASE CONSTRUCTION COST', 36, doc.y);
+      doc.y += 6;
 
       const pkgTableY = doc.y;
-      doc.roundedRect(tblX, pkgTableY, tblW, 20, 3).fill(CARBON);
-      doc.fillColor(PAPER).font('Helvetica-Bold').fontSize(8);
-      doc.text('Selected Package Tier', tblX + 8, pkgTableY + 6);
-      doc.text('Total Built-up Area', tblX + 160, pkgTableY + 6);
-      doc.text('Effective Rate / Sq.Ft', tblX + 280, pkgTableY + 6);
-      doc.text('Base Amount (INR)', tblX + tblW - 110, pkgTableY + 6, { align: 'right', width: 100 });
+      doc.roundedRect(tblX, pkgTableY, tblW, 26, 3).fill(CARBON_SURFACE);
+      doc.fillColor(PAPER).font(FONT_BLD).fontSize(8.5);
+      doc.text('Selected Package Tier', tblX + 8, pkgTableY + 8.5);
+      doc.text('Total Built-up Area', tblX + 160, pkgTableY + 8.5);
+      doc.text('Effective Rate / Sq.Ft', tblX + 280, pkgTableY + 8.5);
+      doc.text('Base Amount (INR)', tblX + tblW - 110, pkgTableY + 8.5, { align: 'right', width: 100 });
 
-      const pkgRowY = pkgTableY + 20;
-      doc.rect(tblX, pkgRowY, tblW, 20).fill('#FFFFFF').strokeColor(BORDER_HAIRLINE).stroke();
-      doc.fillColor(CARBON).font('Helvetica-Bold').fontSize(8);
+      const pkgRowY = pkgTableY + 26;
+      doc.rect(tblX, pkgRowY, tblW, 28).fill('#FFFFFF').strokeColor(BORDER_HAIRLINE).stroke();
+      doc.fillColor(CARBON).font(FONT_BLD).fontSize(8.5);
       const packageLabel = estimate.packageSlug ? `${String(estimate.packageSlug).toUpperCase()} PACKAGE` : 'STANDARD PACKAGE';
-      doc.text(packageLabel, tblX + 8, pkgRowY + 5);
-      doc.font('Helvetica').fillColor(BODY_INK).text(`${formatNumber(estimate.totalBuiltupAreaSqft)} Sq.Ft`, tblX + 160, pkgRowY + 5);
-      doc.text(`${formatINR(estimate.packageRatePerSqft)} / sq.ft`, tblX + 280, pkgRowY + 5);
-      doc.font('Helvetica-Bold').fillColor(CARBON).text(formatINR(estimate.baseConstructionCost), tblX + tblW - 110, pkgRowY + 5, { align: 'right', width: 100 });
+      doc.text(packageLabel, tblX + 8, pkgRowY + 9);
+      doc.font(FONT_REG).fontSize(8.5).fillColor(BODY_INK).text(`${formatNumber(estimate.totalBuiltupAreaSqft)} Sq.Ft`, tblX + 160, pkgRowY + 9);
+      doc.text(`${formatINR(estimate.packageRatePerSqft)} / sq.ft`, tblX + 280, pkgRowY + 9);
+      doc.font(FONT_BLD).fontSize(9).fillColor(CARBON).text(formatINR(estimate.baseConstructionCost), tblX + tblW - 110, pkgRowY + 9, { align: 'right', width: 100 });
 
-      doc.y = pkgRowY + 26;
+      doc.y = pkgRowY + 28 + 24;
 
       // =========================================================================
       // SECTION 2: BRAND CUSTOMIZATIONS & SPECIFICATION UPGRADES
       // =========================================================================
-      checkPageBreak(40);
-      doc.fillColor(CARBON).font('Helvetica-Bold').fontSize(10).text('2. BRAND CUSTOMIZATIONS & SPECIFICATION UPGRADES', 36, doc.y);
-      doc.y += 5;
+      checkPageBreak(50);
+      doc.fillColor(CARBON).font(FONT_BLD).fontSize(10).text('2. BRAND CUSTOMIZATIONS & SPECIFICATION UPGRADES', 36, doc.y);
+      doc.y += 6;
 
       const custTableY = doc.y;
-      doc.roundedRect(tblX, custTableY, tblW, 16, 3).fill(CARBON_SURFACE);
-      doc.fillColor(PAPER).font('Helvetica-Bold').fontSize(7.5);
-      doc.text('Item Category', tblX + 8, custTableY + 4);
-      doc.text('Selected Brand / Option', tblX + 155, custTableY + 4);
-      doc.text('Rate Delta', tblX + 355, custTableY + 4, { width: 75, align: 'right' });
-      doc.text('Amount Addition', tblX + tblW - 90, custTableY + 4, { align: 'right', width: 80 });
+      doc.roundedRect(tblX, custTableY, tblW, 24, 3).fill(CARBON_SURFACE);
+      doc.fillColor(PAPER).font(FONT_BLD).fontSize(8);
+      doc.text('Item Category', tblX + 8, custTableY + 7.5);
+      doc.text('Selected Brand / Option', tblX + 155, custTableY + 7.5);
+      doc.text('Rate Delta', tblX + 355, custTableY + 7.5, { width: 75, align: 'right' });
+      doc.text('Amount Addition', tblX + tblW - 90, custTableY + 7.5, { align: 'right', width: 80 });
 
-      let curY = custTableY + 16;
+      let curY = custTableY + 24;
       if (items.length > 0) {
         items.forEach((item, idx) => {
-          if (curY + 16 > doc.page.height - 40) {
+          if (curY + 24 > doc.page.height - 40) {
             doc.addPage();
             drawContinuationBanner(doc, estimate.estimateNumber);
             curY = 42;
-            doc.roundedRect(tblX, curY, tblW, 16, 3).fill(CARBON_SURFACE);
-            doc.fillColor(PAPER).font('Helvetica-Bold').fontSize(7.5);
-            doc.text('Item Category', tblX + 8, curY + 4);
-            doc.text('Selected Brand / Option', tblX + 155, curY + 4);
-            doc.text('Rate Delta', tblX + 355, curY + 4, { width: 75, align: 'right' });
-            doc.text('Amount Addition', tblX + tblW - 90, curY + 4, { align: 'right', width: 80 });
-            curY += 16;
+            doc.roundedRect(tblX, curY, tblW, 24, 3).fill(CARBON_SURFACE);
+            doc.fillColor(PAPER).font(FONT_BLD).fontSize(8);
+            doc.text('Item Category', tblX + 8, curY + 7.5);
+            doc.text('Selected Brand / Option', tblX + 155, curY + 7.5);
+            doc.text('Rate Delta', tblX + 355, curY + 7.5, { width: 75, align: 'right' });
+            doc.text('Amount Addition', tblX + tblW - 90, curY + 7.5, { align: 'right', width: 80 });
+            curY += 24;
           }
           const rowBg = idx % 2 === 0 ? '#FFFFFF' : ROW_ALT_BG;
-          doc.rect(tblX, curY, tblW, 15).fill(rowBg).strokeColor(BORDER_HAIRLINE).stroke();
-          doc.fillColor(BODY_INK).font('Helvetica').fontSize(7);
-          doc.text(cleanText(item.itemName), tblX + 8, curY + 4, { width: 142, lineBreak: false, ellipsis: true });
-          doc.font('Helvetica-Bold').fillColor(CARBON).text(cleanText(item.selectedOptionName), tblX + 155, curY + 4, { width: 195, lineBreak: false, ellipsis: true });
+          doc.rect(tblX, curY, tblW, 24).fill(rowBg).strokeColor(BORDER_HAIRLINE).stroke();
+          doc.fillColor(BODY_INK).font(FONT_REG).fontSize(8);
+          doc.text(cleanText(item.itemName), tblX + 8, curY + 7.5, { width: 142, lineBreak: false, ellipsis: true });
+          doc.font(FONT_MED).fontSize(8.5).fillColor(CARBON).text(cleanText(item.selectedOptionName), tblX + 155, curY + 7.5, { width: 195, lineBreak: false, ellipsis: true });
           const delta = Number(item.unitPriceDelta) || 0;
-          doc.font('Helvetica').fillColor(delta > 0 ? OXIDE_DEEP : BODY_INK).text(delta > 0 ? `+${formatINR(delta)} / sq.ft` : 'Included', tblX + 355, curY + 4, { width: 75, align: 'right', lineBreak: false });
+          doc.font(FONT_REG).fontSize(8).fillColor(delta > 0 ? OXIDE_DEEP : BODY_INK).text(delta > 0 ? `+${formatINR(delta)} / sq.ft` : 'Included', tblX + 355, curY + 7.5, { width: 75, align: 'right', lineBreak: false });
           const price = Number(item.calculatedPrice) || 0;
-          doc.font('Helvetica-Bold').fillColor(CARBON).text(price > 0 ? formatINR(price) : 'Rs. 0', tblX + tblW - 90, curY + 4, { align: 'right', width: 80, lineBreak: false });
-          curY += 15;
+          doc.font(FONT_BLD).fontSize(8.5).fillColor(CARBON).text(price > 0 ? formatINR(price) : 'Rs. 0', tblX + tblW - 90, curY + 7.5, { align: 'right', width: 80, lineBreak: false });
+          curY += 24;
         });
       } else {
-        doc.rect(tblX, curY, tblW, 15).fill('#FFFFFF').strokeColor(BORDER_HAIRLINE).stroke();
-        doc.fillColor(MUTED_INK).font('Helvetica').fontSize(7);
-        doc.text('Standard Package Specifications Included', tblX + 8, curY + 4);
-        doc.text('Included', tblX + 355, curY + 4, { width: 75, align: 'right' });
-        doc.text('Rs. 0', tblX + tblW - 90, curY + 4, { align: 'right', width: 80 });
-        curY += 15;
+        doc.rect(tblX, curY, tblW, 24).fill('#FFFFFF').strokeColor(BORDER_HAIRLINE).stroke();
+        doc.fillColor(MUTED_INK).font(FONT_REG).fontSize(8);
+        doc.text('Standard Package Specifications Included', tblX + 8, curY + 7.5);
+        doc.text('Included', tblX + 355, curY + 7.5, { width: 75, align: 'right' });
+        doc.text('Rs. 0', tblX + tblW - 90, curY + 7.5, { align: 'right', width: 80 });
+        curY += 24;
       }
 
-      doc.y = curY + 10;
+      doc.y = curY + 18;
 
       // =========================================================================
       // SECTION 3: SELECTED ADD-ONS & INFRASTRUCTURE
       // =========================================================================
       if (addons.length > 0) {
-        checkPageBreak(40);
-        doc.fillColor(CARBON).font('Helvetica-Bold').fontSize(10).text('3. SELECTED ADD-ONS & INFRASTRUCTURE', 36, doc.y);
-        doc.y += 5;
+        checkPageBreak(50);
+        doc.fillColor(CARBON).font(FONT_BLD).fontSize(10).text('3. SELECTED ADD-ONS & INFRASTRUCTURE', 36, doc.y);
+        doc.y += 6;
 
         const addonTableY = doc.y;
-        doc.roundedRect(tblX, addonTableY, tblW, 16, 3).fill(CARBON_SURFACE);
-        doc.fillColor(PAPER).font('Helvetica-Bold').fontSize(7.5);
-        doc.text('Add-On Name', tblX + 8, addonTableY + 4);
-        doc.text('Variant / Specification', tblX + 155, addonTableY + 4);
-        doc.text('Quantity / Unit', tblX + 355, addonTableY + 4, { width: 75, align: 'right' });
-        doc.text('Total Cost', tblX + tblW - 90, addonTableY + 4, { align: 'right', width: 80 });
+        doc.roundedRect(tblX, addonTableY, tblW, 24, 3).fill(CARBON_SURFACE);
+        doc.fillColor(PAPER).font(FONT_BLD).fontSize(8);
+        doc.text('Add-On Name', tblX + 8, addonTableY + 7.5);
+        doc.text('Variant / Specification', tblX + 155, addonTableY + 7.5);
+        doc.text('Quantity / Unit', tblX + 355, addonTableY + 7.5, { width: 75, align: 'right' });
+        doc.text('Total Cost', tblX + tblW - 90, addonTableY + 7.5, { align: 'right', width: 80 });
 
-        let addY = addonTableY + 16;
+        let addY = addonTableY + 24;
         addons.forEach((addon, idx) => {
-          if (addY + 16 > doc.page.height - 40) {
+          if (addY + 24 > doc.page.height - 40) {
             doc.addPage();
             drawContinuationBanner(doc, estimate.estimateNumber);
             addY = 42;
-            doc.roundedRect(tblX, addY, tblW, 16, 3).fill(CARBON_SURFACE);
-            doc.fillColor(PAPER).font('Helvetica-Bold').fontSize(7.5);
-            doc.text('Add-On Name', tblX + 8, addY + 4);
-            doc.text('Variant / Specification', tblX + 155, addY + 4);
-            doc.text('Quantity / Unit', tblX + 355, addY + 4, { width: 75, align: 'right' });
-            doc.text('Total Cost', tblX + tblW - 90, addY + 4, { align: 'right', width: 80 });
-            addY += 16;
+            doc.roundedRect(tblX, addY, tblW, 24, 3).fill(CARBON_SURFACE);
+            doc.fillColor(PAPER).font(FONT_BLD).fontSize(8);
+            doc.text('Add-On Name', tblX + 8, addY + 7.5);
+            doc.text('Variant / Specification', tblX + 155, addY + 7.5);
+            doc.text('Quantity / Unit', tblX + 355, addY + 7.5, { width: 75, align: 'right' });
+            doc.text('Total Cost', tblX + tblW - 90, addY + 7.5, { align: 'right', width: 80 });
+            addY += 24;
           }
           const rowBg = idx % 2 === 0 ? '#FFFFFF' : ROW_ALT_BG;
-          doc.rect(tblX, addY, tblW, 15).fill(rowBg).strokeColor(BORDER_HAIRLINE).stroke();
-          doc.fillColor(BODY_INK).font('Helvetica').fontSize(7);
-          doc.text(cleanText(addon.addonName), tblX + 8, addY + 4, { width: 142, lineBreak: false, ellipsis: true });
-          doc.font('Helvetica-Bold').fillColor(CARBON).text(cleanText(addon.selectedVariant).toUpperCase(), tblX + 155, addY + 4, { width: 195, lineBreak: false, ellipsis: true });
+          doc.rect(tblX, addY, tblW, 24).fill(rowBg).strokeColor(BORDER_HAIRLINE).stroke();
+          doc.fillColor(BODY_INK).font(FONT_REG).fontSize(8);
+          doc.text(cleanText(addon.addonName), tblX + 8, addY + 7.5, { width: 142, lineBreak: false, ellipsis: true });
+          doc.font(FONT_MED).fontSize(8.5).fillColor(CARBON).text(cleanText(addon.selectedVariant).toUpperCase(), tblX + 155, addY + 7.5, { width: 195, lineBreak: false, ellipsis: true });
           const unitFormatted = cleanUnit(addon.unit);
-          doc.font('Helvetica').fillColor(BODY_INK).text(`${formatNumber(addon.quantity, 2)} ${unitFormatted}`, tblX + 355, addY + 4, { width: 75, align: 'right', lineBreak: false });
-          doc.font('Helvetica-Bold').fillColor(CARBON).text(formatINR(addon.totalPrice), tblX + tblW - 90, addY + 4, { align: 'right', width: 80, lineBreak: false });
-          addY += 15;
+          doc.font(FONT_REG).fontSize(8).fillColor(BODY_INK).text(`${formatNumber(addon.quantity, 2)} ${unitFormatted}`, tblX + 355, addY + 7.5, { width: 75, align: 'right', lineBreak: false });
+          doc.font(FONT_BLD).fontSize(8.5).fillColor(CARBON).text(formatINR(addon.totalPrice), tblX + tblW - 90, addY + 7.5, { align: 'right', width: 80, lineBreak: false });
+          addY += 24;
         });
 
-        doc.y = addY + 10;
+        doc.y = addY + 18;
       }
 
       // =========================================================================
       // COMMERCIAL SUMMARY CARD
       // =========================================================================
-      const sumBoxW = 260;
+      const sumBoxW = 280;
       const sumBoxX = doc.page.width - 36 - sumBoxW;
       const hasUpgrades = Number(estimate.upgradesCost) > 0;
       const hasAddons = Number(estimate.addonsCost) > 0;
       const sumRowCount = 1 + (hasUpgrades ? 1 : 0) + (hasAddons ? 1 : 0);
-      const sumBoxH = sumRowCount * 14 + 36;
+      const sumRowH = 20;
+      const sumBoxH = sumRowCount * sumRowH + 46;
 
-      checkPageBreak(sumBoxH + 15);
-      const sumBoxY = doc.y + 2;
+      checkPageBreak(sumBoxH + 20);
+      const sumBoxY = doc.y + 4;
 
       doc.roundedRect(sumBoxX, sumBoxY, sumBoxW, sumBoxH, 6)
         .strokeColor(BORDER_HAIRLINE)
         .fillAndStroke(CARD_BG, BORDER_HAIRLINE);
 
-      let currentSumY = sumBoxY + 7;
-      doc.fillColor(BODY_INK).font('Helvetica').fontSize(8).text('Base Construction Cost:', sumBoxX + 10, currentSumY);
-      doc.font('Helvetica-Bold').fillColor(CARBON).text(formatINR(estimate.baseConstructionCost), sumBoxX + sumBoxW - 110, currentSumY, { align: 'right', width: 100 });
-      currentSumY += 14;
+      let currentSumY = sumBoxY + 11;
+      doc.fillColor(BODY_INK).font(FONT_REG).fontSize(8.5).text('Base Construction Cost:', sumBoxX + 14, currentSumY);
+      doc.font(FONT_BLD).fontSize(9).fillColor(CARBON).text(formatINR(estimate.baseConstructionCost), sumBoxX + sumBoxW - 110, currentSumY, { align: 'right', width: 96 });
+      currentSumY += sumRowH;
 
       if (hasUpgrades) {
-        doc.fillColor(BODY_INK).font('Helvetica').fontSize(8).text('Specification Upgrades:', sumBoxX + 10, currentSumY);
-        doc.font('Helvetica-Bold').fillColor(CARBON).text(formatINR(estimate.upgradesCost), sumBoxX + sumBoxW - 110, currentSumY, { align: 'right', width: 100 });
-        currentSumY += 14;
+        doc.fillColor(BODY_INK).font(FONT_REG).fontSize(8.5).text('Specification Upgrades:', sumBoxX + 14, currentSumY);
+        doc.font(FONT_BLD).fontSize(9).fillColor(CARBON).text(formatINR(estimate.upgradesCost), sumBoxX + sumBoxW - 110, currentSumY, { align: 'right', width: 96 });
+        currentSumY += sumRowH;
       }
 
       if (hasAddons) {
-        doc.fillColor(BODY_INK).font('Helvetica').fontSize(8).text('Add-Ons Subtotal:', sumBoxX + 10, currentSumY);
-        doc.font('Helvetica-Bold').fillColor(CARBON).text(formatINR(estimate.addonsCost), sumBoxX + sumBoxW - 110, currentSumY, { align: 'right', width: 100 });
-        currentSumY += 14;
+        doc.fillColor(BODY_INK).font(FONT_REG).fontSize(8.5).text('Add-Ons Subtotal:', sumBoxX + 14, currentSumY);
+        doc.font(FONT_BLD).fontSize(9).fillColor(CARBON).text(formatINR(estimate.addonsCost), sumBoxX + sumBoxW - 110, currentSumY, { align: 'right', width: 96 });
+        currentSumY += sumRowH;
       }
 
-      currentSumY += 2;
-      doc.rect(sumBoxX, currentSumY - 2, sumBoxW, 22).fill(OXIDE_WASH);
-      doc.strokeColor(OXIDE).lineWidth(0.5).stroke();
-      doc.fillColor(CARBON).font('Helvetica-Bold').fontSize(8.5).text('TOTAL PROJECT COST:', sumBoxX + 10, currentSumY + 3);
-      doc.fillColor(OXIDE_DEEP).font('Helvetica-Bold').fontSize(10.5).text(formatINR(estimate.totalProjectCost), sumBoxX + sumBoxW - 120, currentSumY + 2, { align: 'right', width: 110 });
+      // Clean divider line above total project cost per user request
+      currentSumY += 4;
+      doc
+        .strokeColor(BORDER_HAIRLINE)
+        .lineWidth(0.75)
+        .moveTo(sumBoxX + 14, currentSumY)
+        .lineTo(sumBoxX + sumBoxW - 14, currentSumY)
+        .stroke();
+      currentSumY += 7;
+
+      doc.fillColor(CARBON).font(FONT_BLD).fontSize(9.5).text('TOTAL PROJECT COST:', sumBoxX + 14, currentSumY);
+      doc.fillColor(OXIDE_DEEP).font(FONT_BLD).fontSize(11.5).text(formatINR(estimate.totalProjectCost), sumBoxX + sumBoxW - 120, currentSumY - 1, { align: 'right', width: 106 });
 
       // =========================================================================
       // PAGE 2: 10-STAGE MILESTONES, TERMS & EXCLUSIONS
       // =========================================================================
       doc.addPage();
-      doc.rect(0, 0, doc.page.width, 50).fill(OXIDE_WASH);
-      doc.rect(0, 50, doc.page.width, 1).fill(OXIDE);
-      let milestoneTitleX = 36;
-      if (LOGO_PATH) {
-        doc.image(LOGO_PATH, 36, 18, { width: 92 });
-        milestoneTitleX = 144;
-      }
-      doc.fillColor(CARBON).font('Helvetica-Bold').fontSize(12.5).text('10-STAGE CIVIL MILESTONE PAYMENT SCHEDULE', milestoneTitleX, 20);
+      // No colored header bar on consecutive pages per user request; title placed cleanly below top margin
+      doc.y = 40;
+      doc.fillColor(CARBON).font(FONT_BLD).fontSize(12.5).text('10-STAGE CIVIL MILESTONE PAYMENT SCHEDULE', 36, doc.y, { characterSpacing: 0.5 });
 
-      doc.y = 60;
-      doc.fillColor(BODY_INK).font('Helvetica').fontSize(8).text(
+      doc.y += 18;
+      doc.fillColor(BODY_INK).font(FONT_REG).fontSize(8.5).text(
         'Payments are strictly linked to on-site civil completion stages with zero front-loading. Each stage requires engineer sign-off:',
         36,
         doc.y
       );
-      doc.y += 10;
+      doc.y += 14;
 
       const msTableY = doc.y;
-      doc.roundedRect(tblX, msTableY, tblW, 16, 3).fill(CARBON);
-      doc.fillColor(PAPER).font('Helvetica-Bold').fontSize(7.5);
-      doc.text('Stage', tblX + 8, msTableY + 4);
-      doc.text('Milestone Description & Work Scope', tblX + 45, msTableY + 4);
-      doc.text('Share %', tblX + 375, msTableY + 4, { width: 45, align: 'center' });
-      doc.text('Amount (INR)', tblX + tblW - 100, msTableY + 4, { align: 'right', width: 92 });
+      doc.roundedRect(tblX, msTableY, tblW, 24, 3).fill(CARBON_SURFACE);
+      doc.fillColor(PAPER).font(FONT_BLD).fontSize(8);
+      doc.text('Stage', tblX + 8, msTableY + 7.5);
+      doc.text('Milestone Description & Work Scope', tblX + 42, msTableY + 7.5);
+      doc.text('Share %', tblX + tblW - 128, msTableY + 7.5, { width: 44, align: 'center' });
+      doc.text('Amount (INR)', tblX + tblW - 80, msTableY + 7.5, { align: 'right', width: 72 });
 
-      let msY = msTableY + 16;
+      let msY = msTableY + 24;
+      const msRowH = 26;
       milestoneList.forEach((m, idx) => {
         const rowBg = idx % 2 === 0 ? '#FFFFFF' : ROW_ALT_BG;
-        doc.rect(tblX, msY, tblW, 17).fill(rowBg).strokeColor(BORDER_HAIRLINE).stroke();
-        doc.fillColor(CARBON).font('Helvetica-Bold').fontSize(7.5);
-        doc.text(`Stage ${m.stageNumber}`, tblX + 8, msY + 4);
-        doc.fillColor(CARBON).font('Helvetica-Bold').fontSize(7.5);
-        doc.text(m.stageName, tblX + 45, msY + 4, { width: 122, lineBreak: false, ellipsis: true });
+        doc.rect(tblX, msY, tblW, msRowH).fill(rowBg).strokeColor(BORDER_HAIRLINE).stroke();
+        doc.fillColor(CARBON).font(FONT_BLD).fontSize(8);
+        doc.text(`Stage ${m.stageNumber}`, tblX + 8, msY + 8.5);
+        doc.fillColor(CARBON).font(FONT_BLD).fontSize(8);
+        doc.text(m.stageName, tblX + 42, msY + 8.5, { width: 128, lineBreak: false, ellipsis: true });
         if (m.keyDeliverables) {
-          doc.font('Helvetica').fontSize(6.5).fillColor(MUTED_INK);
-          doc.text(m.keyDeliverables, tblX + 171, msY + 4.5, { width: 202, lineBreak: false });
+          doc.font(FONT_REG).fontSize(7).fillColor(MUTED_INK);
+          doc.text(m.keyDeliverables, tblX + 172, msY + 9, { width: 220, lineBreak: false, ellipsis: true });
         }
-        doc.font('Helvetica').fontSize(7.5).fillColor(BODY_INK).text(`${m.percentage}%`, tblX + 375, msY + 4, { width: 45, align: 'center' });
-        doc.font('Helvetica-Bold').fillColor(CARBON).text(formatINR(m.amount), tblX + tblW - 100, msY + 4, { align: 'right', width: 92 });
-        msY += 17;
+        doc.font(FONT_REG).fontSize(8).fillColor(BODY_INK).text(`${m.percentage}%`, tblX + tblW - 128, msY + 8.5, { width: 44, align: 'center' });
+        doc.font(FONT_BLD).fontSize(8.5).fillColor(CARBON).text(formatINR(m.amount), tblX + tblW - 80, msY + 8.5, { align: 'right', width: 72 });
+        msY += msRowH;
       });
 
       // Total Row
-      doc.rect(tblX, msY, tblW, 19).fill('#EAE6DE').strokeColor(BORDER_HAIRLINE).stroke();
-      doc.fillColor(CARBON).font('Helvetica-Bold').fontSize(8);
-      doc.text('TOTAL CONTRACT VALUE', tblX + 45, msY + 5);
-      doc.text('100.00%', tblX + 375, msY + 5, { width: 45, align: 'center' });
-      doc.text(formatINR(estimate.totalProjectCost), tblX + tblW - 100, msY + 5, { align: 'right', width: 92 });
+      const totalRowH = 26;
+      doc.rect(tblX, msY, tblW, totalRowH).fill('#EAE6DE').strokeColor(BORDER_HAIRLINE).stroke();
+      doc.fillColor(CARBON).font(FONT_BLD).fontSize(8.5);
+      doc.text('TOTAL CONTRACT VALUE', tblX + 42, msY + 8.5);
+      doc.text('100.00%', tblX + tblW - 128, msY + 8.5, { width: 44, align: 'center', lineBreak: false });
+      doc.text(formatINR(estimate.totalProjectCost), tblX + tblW - 80, msY + 8.5, { align: 'right', width: 72 });
 
-      doc.y = msY + 22;
+      // Generous 26pt clear separation between Total Contract Value and Terms
+      doc.y = msY + totalRowH + 26;
 
       // Terms & Conditions
-      doc.fillColor(CARBON).font('Helvetica-Bold').fontSize(8.5).text('TERMS & STANDARD CONDITIONS', 36, doc.y);
-      doc.y += 5;
+      doc.fillColor(CARBON).font(FONT_BLD).fontSize(9).text('TERMS & STANDARD CONDITIONS', 36, doc.y);
+      doc.y += 8;
       const terms = [
         '1. Quotation Validity: This estimate is valid for 30 calendar days from the date of generation.',
         '2. Rate Basis: Built-up area is calculated outer-to-outer including balconies and parking as specified.',
@@ -628,14 +670,14 @@ export async function generateEstimatePdf(estimateNumberOrId: string): Promise<B
         '5. Payment Guarantee: Zero advance beyond Stage 1 booking fee; milestone payments only upon site stage verification.',
       ];
       terms.forEach((t) => {
-        doc.fillColor(BODY_INK).font('Helvetica').fontSize(6.5).text(t, 42, doc.y);
-        doc.y += 9;
+        doc.fillColor(BODY_INK).font(FONT_REG).fontSize(7.5).text(t, 42, doc.y);
+        doc.y += 11;
       });
 
       // Standard Exclusions
-      doc.y += 4;
-      doc.fillColor(CARBON).font('Helvetica-Bold').fontSize(8).text('STANDARD EXCLUSIONS & CLIENT SCOPE (Out of Scope for Civil Contract):', 36, doc.y);
-      doc.y += 4;
+      doc.y += 10;
+      doc.fillColor(CARBON).font(FONT_BLD).fontSize(8.5).text('STANDARD EXCLUSIONS & CLIENT SCOPE (Out of Scope for Civil Contract):', 36, doc.y);
+      doc.y += 7;
       const exclusionsCol1 = [
         '• Elevation Work (Special exterior stone/HPL claddings)',
         '• Outer Area Development (Setbacks, paving & landscape)',
@@ -653,19 +695,19 @@ export async function generateEstimatePdf(estimateNumberOrId: string): Promise<B
       ];
       const exclY = doc.y;
       exclusionsCol1.forEach((t, i) => {
-        doc.fillColor(MUTED_INK).font('Helvetica').fontSize(6.5).text(t, 42, exclY + (i * 9));
+        doc.fillColor(MUTED_INK).font(FONT_REG).fontSize(7.5).text(t, 42, exclY + (i * 11));
       });
       exclusionsCol2.forEach((t, i) => {
-        doc.fillColor(MUTED_INK).font('Helvetica').fontSize(6.5).text(t, 290, exclY + (i * 9));
+        doc.fillColor(MUTED_INK).font(FONT_REG).fontSize(7.5).text(t, 290, exclY + (i * 11));
       });
-      doc.y = exclY + (exclusionsCol1.length * 9) + 4;
+      doc.y = exclY + (exclusionsCol1.length * 11) + 8;
 
       // Sign-off Block
       const sigY = 740;
-      doc.fillColor(CARBON).font('Helvetica-Bold').fontSize(7.5).text('For Asthiwar Design & Build', 36, sigY + 6);
-      doc.font('Helvetica').fontSize(6.5).fillColor(MUTED_INK).text('Authorized Engineering Signatory', 36, sigY + 18);
-      doc.font('Helvetica-Bold').fontSize(7.5).fillColor(CARBON).text('Customer Acknowledgment', doc.page.width - 220, sigY + 6);
-      doc.font('Helvetica').fontSize(6.5).fillColor(MUTED_INK).text('Signature / Acceptance Date: ___________________', doc.page.width - 220, sigY + 18);
+      doc.fillColor(CARBON).font(FONT_BLD).fontSize(7.5).text('For Asthiwar Design & Build', 36, sigY + 6);
+      doc.font(FONT_REG).fontSize(6.5).fillColor(MUTED_INK).text('Authorized Engineering Signatory', 36, sigY + 18);
+      doc.font(FONT_BLD).fontSize(7.5).fillColor(CARBON).text('Customer Acknowledgment', doc.page.width - 220, sigY + 6);
+      doc.font(FONT_REG).fontSize(6.5).fillColor(MUTED_INK).text('Signature / Acceptance Date: ___________________', doc.page.width - 220, sigY + 18);
 
       // Dynamic Page Footers — the letterhead's hairline + phone/email/website/
       // location bar, with the quotation reference and page count underneath.
@@ -680,7 +722,7 @@ export async function generateEstimatePdf(estimateNumberOrId: string): Promise<B
         doc.strokeColor(OXIDE).lineWidth(0.75).moveTo(36, footerRuleY).lineTo(doc.page.width - 36, footerRuleY).stroke();
         drawFooterContactBar(doc, footerRuleY + 8);
 
-        doc.font('Helvetica').fontSize(6.5).fillColor(MUTED_INK);
+        doc.font(FONT_REG).fontSize(6.5).fillColor(MUTED_INK);
         doc.text(
           `ASTHIWAR Quotation • ${estimate.estimateNumber} • Page ${i + 1} of ${totalPages}`,
           36,

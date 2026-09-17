@@ -39,7 +39,6 @@ export function SustainabilityHero() {
           src="/images/sustainable.jpg"
           alt="Earthen masonry and a perforated screen shown in direct sunlight"
           fill
-          priority
           sizes="100vw"
           className={styles.image}
         />

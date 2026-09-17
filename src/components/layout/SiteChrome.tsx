@@ -5,11 +5,13 @@ import type { ReactNode } from 'react';
 import { SmoothScroll } from './SmoothScroll';
 import { SiteHeader } from './SiteHeader';
 import { SiteFooter } from './SiteFooter';
+import { SiteLoader } from './SiteLoader';
 import { ArchitecturalCursor } from '@/components/ui/ArchitecturalCursor';
 import { ScrollbarWidth } from './ScrollbarWidth';
 
 /**
- * The marketing chrome — header, footer, architectural cursor, and Lenis smooth scroll.
+ * The marketing chrome — first-visit loader, header, footer, architectural
+ * cursor, and Lenis smooth scroll.
  *
  * /admin is a tool, not a page: it gets none of these. Doing this here rather
  * than with route groups keeps every existing route path untouched.
@@ -29,6 +31,8 @@ export function SiteChrome({ children }: { children: ReactNode }) {
 
   return (
     <SmoothScroll>
+      {/* First in the markup, so it is painted before any of the page it covers. */}
+      <SiteLoader />
       <ScrollbarWidth />
       <ArchitecturalCursor />
       <SiteHeader />

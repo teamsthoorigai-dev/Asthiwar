@@ -268,7 +268,6 @@ export function LastingCards() {
                           fill
                           sizes="(min-width: 1024px) 440px, 90vw"
                           className={styles.cardImage}
-                          priority={i === 0}
                         />
                         <div className={styles.photoOverlay}>
                           <span className={styles.overlayPrompt}>

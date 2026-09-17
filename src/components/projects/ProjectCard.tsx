@@ -4,6 +4,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { isUnconfirmed, type Project } from '@/data/site';
+import { PROJECT_SHOT_SIZES } from '@/lib/imageSizes';
 import styles from './ProjectCard.module.css';
 
 const CYCLE_MS = 700;
@@ -46,6 +47,21 @@ export function ProjectCard({
     };
   }, [hovering, project.gallery.length]);
 
+  const startHover = () => {
+    setHovering(true);
+    if (project.video && typeof document !== 'undefined') {
+      const linkId = `preload-video-${project.slug}`;
+      if (!document.getElementById(linkId)) {
+        const link = document.createElement('link');
+        link.id = linkId;
+        link.rel = 'preload';
+        link.as = 'video';
+        link.href = project.video;
+        document.head.appendChild(link);
+      }
+    }
+  };
+
   const stop = () => {
     setHovering(false);
     setFrame(0);
@@ -74,9 +90,9 @@ export function ProjectCard({
       <Link
         href={`/projects/${project.slug}`}
         className={styles.link}
-        onMouseEnter={() => setHovering(true)}
+        onMouseEnter={startHover}
         onMouseLeave={stop}
-        onFocus={() => setHovering(true)}
+        onFocus={startHover}
         onBlur={stop}
       >
         <div className={styles.media}>
@@ -92,7 +108,7 @@ export function ProjectCard({
                 src={shot.src}
                 alt={i === 0 ? shot.alt || `${project.title}` : ''}
                 fill
-                sizes="(min-width: 768px) 50vw, 100vw"
+                sizes={PROJECT_SHOT_SIZES}
                 className={styles.image}
               />
             </div>

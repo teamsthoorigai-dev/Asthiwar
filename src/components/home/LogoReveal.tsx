@@ -141,6 +141,11 @@ export function LogoReveal() {
     }, section);
 
     ScrollTrigger.refresh();
+    if (typeof document !== 'undefined' && document.fonts) {
+      void document.fonts.ready.then(() => {
+        ScrollTrigger.refresh();
+      });
+    }
 
     return () => {
       ctx.revert();

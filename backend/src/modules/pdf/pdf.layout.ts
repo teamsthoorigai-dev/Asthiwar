@@ -34,6 +34,9 @@ export const C = {
   navy: '#0E1726',
 } as const;
 
+export const FONT_REG = 'Satoshi';
+export const FONT_BLD = 'Satoshi-Bold';
+
 /** PDFKit's standard fonts are WinAnsi — the Rupee sign has no glyph there. */
 export function cleanText(text: string | null | undefined): string {
   if (text === null || text === undefined) return '';
@@ -71,7 +74,7 @@ export function ensureSpace(doc: Doc, needed: number): void {
 export function sectionLabel(doc: Doc, text: string, opts: { accent?: boolean } = {}): void {
   ensureSpace(doc, 30);
   doc
-    .font('Helvetica-Bold')
+    .font(FONT_BLD)
     .fontSize(7.5)
     .fillColor(opts.accent ? C.accent : C.muted)
     .text(text.toUpperCase(), MARGIN, doc.y, { characterSpacing: 1.1, width: CONTENT_W });
@@ -119,7 +122,7 @@ export function table(
     let x = MARGIN;
     for (const col of columns) {
       doc
-        .font('Helvetica-Bold')
+        .font(FONT_BLD)
         .fontSize(7)
         .fillColor(C.inkSoft)
         .text(col.label.toUpperCase(), x + 7, top + 6.5, {
@@ -139,7 +142,7 @@ export function table(
     // Measure the tallest cell so multi-line text does not overlap the next row.
     let cellHeight = 0;
     for (const col of columns) {
-      const h = doc.font('Helvetica').fontSize(fontSize).heightOfString(row[col.key] ?? '', {
+      const h = doc.font(FONT_REG).fontSize(fontSize).heightOfString(row[col.key] ?? '', {
         width: col.width - 14,
       });
       if (h > cellHeight) cellHeight = h;
@@ -159,7 +162,7 @@ export function table(
     let x = MARGIN;
     for (const col of columns) {
       doc
-        .font(col.emphasis ? 'Helvetica-Bold' : 'Helvetica')
+        .font(col.emphasis ? FONT_BLD : FONT_REG)
         .fontSize(fontSize)
         .fillColor(col.emphasis ? C.ink : C.inkSoft)
         .text(row[col.key] ?? '', x + 7, top + rowPadding, {
@@ -189,12 +192,12 @@ export function stackedField(
   width: number
 ): number {
   doc
-    .font('Helvetica')
+    .font(FONT_REG)
     .fontSize(6.5)
     .fillColor(C.muted)
     .text(label.toUpperCase(), x, y, { width, characterSpacing: 0.7, lineBreak: false });
   doc
-    .font('Helvetica-Bold')
+    .font(FONT_BLD)
     .fontSize(9)
     .fillColor(C.ink)
     .text(value || '—', x, y + 10, { width });

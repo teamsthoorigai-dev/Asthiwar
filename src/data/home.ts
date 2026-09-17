@@ -526,6 +526,8 @@ export const workGallery = {
         src: '/Ather/ather-08.png',
         alt: 'Aether  — contemporary duplex facade in Cheran ma nagar, Coimbatore.',
         fit: 'contain',
+        width: 1086,
+        height: 1448,
       },
     },
     {
@@ -538,6 +540,8 @@ export const workGallery = {
         src: '/Trevea/trivara-1.jpeg',
         alt: 'Trivara Townhouses — exterior superstructure under scaffolding.',
         fit: 'contain',
+        width: 1600,
+        height: 900,
       },
     },
     {

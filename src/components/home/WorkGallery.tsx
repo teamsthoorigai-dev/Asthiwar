@@ -12,9 +12,14 @@ import styles from './WorkGallery.module.css';
 export type WorkGalleryImage = {
   src: string;
   alt: string;
-  /** 'contain' shows the photo at its full, uncropped proportions. Defaults to 'cover'. */
-  fit?: 'cover' | 'contain';
-};
+} & (
+  | { fit?: 'cover' }
+  /**
+   * 'contain' shows the photo at its full, uncropped proportions, so it needs
+   * the file's pixel size to reserve that shape before the image arrives.
+   */
+  | { fit: 'contain'; width: number; height: number }
+);
 
 export type WorkGalleryItem = {
   id: string;
@@ -96,10 +101,12 @@ export function WorkGallery({ content }: WorkGalleryProps) {
             <Link href={tile.href} className={styles.link}>
               {tile.image.fit === 'contain' ? (
                 <span className={styles.mediaNatural}>
-                  {/* eslint-disable-next-line @next/next/no-img-element -- natural aspect ratio, unknown at build time */}
-                  <img
+                  <Image
                     src={tile.image.src}
                     alt={tile.image.alt}
+                    width={tile.image.width}
+                    height={tile.image.height}
+                    sizes={imageSizes[index] ?? fallbackImageSize}
                     className={styles.imageNatural}
                   />
                 </span>

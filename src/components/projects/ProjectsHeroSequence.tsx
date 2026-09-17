@@ -3,16 +3,19 @@
 import Link from 'next/link';
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { ArrowUpRight, ArrowDown, SlidersHorizontal } from 'lucide-react';
+import {
+  FRAME_COUNT,
+  getFrame,
+  isFrameReady,
+  loadFrame,
+  onFrameReady,
+  readConnection,
+  warmFrames,
+} from '@/lib/frameSequence';
 import { gsap, ScrollTrigger, REDUCED } from '@/lib/gsap';
 import styles from './ProjectsHeroSequence.module.css';
 
-const FRAME_COUNT = 300;
 const CONCURRENCY = 6;
-
-type NetworkInformationLike = {
-  saveData?: boolean;
-  effectiveType?: 'slow-2g' | '2g' | '3g' | '4g';
-};
 
 // The full sequence is ~300 webp frames (~20MB). Prefetching all of it in the
 // background is fine on a normal connection, but on a throttled/metered one
@@ -20,9 +23,7 @@ type NetworkInformationLike = {
 // the archive images below) — which is what made the whole page feel stuck
 // for the better part of a minute under DevTools 3G throttling.
 function isConstrainedConnection(): boolean {
-  if (typeof navigator === 'undefined') return false;
-  const conn = (navigator as unknown as { connection?: NetworkInformationLike }).connection;
-  if (!conn) return false;
+  const conn = readConnection();
   if (conn.saveData) return true;
   if (conn.effectiveType && conn.effectiveType !== '4g') return true;
   return false;
@@ -72,25 +73,6 @@ function getStageIndex(progress: number): number {
   if (progress >= 0.52) return 2;
   if (progress >= 0.26) return 1;
   return 0;
-}
-
-function getSparsePriorityList(count: number): number[] {
-  const result: number[] = [];
-  const seen = new Set<number>();
-  const add = (i: number) => {
-    if (i >= 0 && i < count && !seen.has(i)) {
-      seen.add(i);
-      result.push(i);
-    }
-  };
-
-  add(0);
-  add(count - 1);
-  const step = Math.max(4, Math.round(count / 20));
-  for (let i = step; i < count - 1; i += step) add(i);
-  for (let i = 1; i < count - 1; i += 1) add(i);
-
-  return result;
 }
 
 export function ProjectsHeroSequence() {
@@ -155,11 +137,12 @@ export function ProjectsHeroSequence() {
     const ctx2d = canvas.getContext('2d', { alpha: false });
     if (!ctx2d) return;
 
-    const images: HTMLImageElement[] = new Array(FRAME_COUNT);
-    const loaded: boolean[] = new Array(FRAME_COUNT).fill(false);
     let currentFrame = -1;
     let targetFrame = 0;
     let cancelled = false;
+    // Stops this page's download queue on unmount. Frames already in flight
+    // still land in the shared store, so leaving early wastes nothing.
+    const warmup = new AbortController();
 
     const sizeCanvas = () => {
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -193,7 +176,6 @@ export function ProjectsHeroSequence() {
         const dh = Math.round(sh * scale);
         const dx = Math.round((canvas.width - dw) / 2);
         const dy = Math.round((canvas.height - dh) / 2);
-        ctx2d.clearRect(0, 0, canvas.width, canvas.height);
         ctx2d.drawImage(img, 0, 0, sw, sh, dx, dy, dw, dh);
       } else {
         // Desktop: cover fit for cinematic viewport bleed
@@ -215,10 +197,10 @@ export function ProjectsHeroSequence() {
     };
 
     const nearestLoaded = (index: number) => {
-      if (loaded[index]) return index;
+      if (isFrameReady(index)) return index;
       for (let d = 1; d < FRAME_COUNT; d += 1) {
-        if (index - d >= 0 && loaded[index - d]) return index - d;
-        if (index + d < FRAME_COUNT && loaded[index + d]) return index + d;
+        if (index - d >= 0 && isFrameReady(index - d)) return index - d;
+        if (index + d < FRAME_COUNT && isFrameReady(index + d)) return index + d;
       }
       return -1;
     };
@@ -226,37 +208,34 @@ export function ProjectsHeroSequence() {
     const render = (index: number) => {
       targetFrame = index;
       const use = nearestLoaded(index);
-      if (use === -1) return;
+      const img = use === -1 ? undefined : getFrame(use);
+      if (!img) return;
       currentFrame = use;
-      paint(images[use]);
+      paint(img);
     };
 
-    const load = (index: number): Promise<void> => {
-      if (index < 0 || index >= FRAME_COUNT) return Promise.resolve();
-      if (loaded[index] && images[index]) return Promise.resolve();
-      return new Promise<void>((resolve) => {
-        const img = new Image();
-        img.decoding = 'async';
-        if (index === 0) img.fetchPriority = 'high';
-        img.src = `/frames/frame-${String(index + 1).padStart(3, '0')}.webp`;
-        images[index] = img;
-        img.onload = () => {
-          loaded[index] = true;
-          if (!cancelled) {
-            const curDist = currentFrame === -1 ? Infinity : Math.abs(currentFrame - targetFrame);
-            const newDist = Math.abs(index - targetFrame);
-            if (newDist <= curDist) {
-              render(targetFrame);
-            }
+    // Stabalized frame listener: prevents violent oscillation/strobing when
+    // multiple frames settle simultaneously during background warm-up.
+    const stopListening = onFrameReady((index) => {
+      if (cancelled) return;
+      if (index === targetFrame) {
+        render(targetFrame);
+      } else if (currentFrame !== -1) {
+        const curDist = Math.abs(currentFrame - targetFrame);
+        const newDist = Math.abs(index - targetFrame);
+        if (newDist < curDist) {
+          const curSide = currentFrame - targetFrame;
+          const newSide = index - targetFrame;
+          // Only update if frame is on the same side of the scrub target, preventing oscillation
+          if ((curSide > 0 && newSide > 0) || (curSide < 0 && newSide < 0)) {
+            render(targetFrame);
           }
-          resolve();
-        };
-        img.onerror = () => resolve();
-      });
-    };
+        }
+      }
+    });
 
     // Load first frame immediately for initial paint
-    load(0).then(() => {
+    void loadFrame(0, 'high').then(() => {
       if (cancelled) return;
       setCanvasReady(true);
       sizeCanvas();
@@ -270,36 +249,24 @@ export function ProjectsHeroSequence() {
         return;
       }
 
-      // Progressively fetch sparse frames first across the full sequence, then remaining
-      const priorityQueue = getSparsePriorityList(FRAME_COUNT);
-      let queueIdx = 0;
-
-      const worker = async (): Promise<void> => {
-        while (!cancelled && queueIdx < priorityQueue.length) {
-          const nextFrame = priorityQueue[queueIdx];
-          queueIdx += 1;
-          if (!loaded[nextFrame]) {
-            await load(nextFrame);
-          }
-        }
-      };
-
-      void Promise.all(Array.from({ length: CONCURRENCY }, worker));
+      // The rest, coarse to fine across the whole sequence. Anything the
+      // homepage already warmed is skipped.
+      void warmFrames({ concurrency: CONCURRENCY, signal: warmup.signal, priority: 'auto' });
     });
 
     const updateFrame = (frameIndex: number) => {
       targetFrame = frameIndex;
       render(frameIndex);
 
-      if (!loaded[frameIndex]) {
-        void load(frameIndex);
+      if (!isFrameReady(frameIndex)) {
+        void loadFrame(frameIndex);
       }
       for (let offset = 1; offset <= 3; offset += 1) {
-        if (frameIndex + offset < FRAME_COUNT && !loaded[frameIndex + offset]) {
-          void load(frameIndex + offset);
+        if (frameIndex + offset < FRAME_COUNT && !isFrameReady(frameIndex + offset)) {
+          void loadFrame(frameIndex + offset);
         }
-        if (frameIndex - offset >= 0 && !loaded[frameIndex - offset]) {
-          void load(frameIndex - offset);
+        if (frameIndex - offset >= 0 && !isFrameReady(frameIndex - offset)) {
+          void loadFrame(frameIndex - offset);
         }
       }
 
@@ -542,8 +509,8 @@ export function ProjectsHeroSequence() {
       if (progressLineRef.current) {
         progressLineRef.current.style.transform = `scaleX(${newFrame / (FRAME_COUNT - 1)})`;
       }
-      if (!loaded[newFrame]) {
-        void load(newFrame);
+      if (!isFrameReady(newFrame)) {
+        void loadFrame(newFrame);
       }
     };
 
@@ -607,13 +574,8 @@ export function ProjectsHeroSequence() {
       window.removeEventListener('scroll', onWindowScroll);
       window.removeEventListener('resize', onResize);
       if (trigger) trigger.kill();
-      images.forEach((img) => {
-        if (img) {
-          img.onload = null;
-          img.onerror = null;
-          if (!img.complete) img.src = '';
-        }
-      });
+      warmup.abort();
+      stopListening();
     };
   }, []);
 
@@ -734,7 +696,7 @@ export function ProjectsHeroSequence() {
                 ))}
               </div>
               <p className={styles.stageEyebrow}>
-                {currentStageData.index} // {currentStageData.label}
+                {currentStageData.index} {' // '} {currentStageData.label}
               </p>
               <h2 className={styles.stageTitle}>{currentStageData.title}</h2>
               <p className={styles.stageNote}>{currentStageData.note}</p>

@@ -38,6 +38,9 @@ export const metadata: Metadata = {
  *
  * DisciplinesSticky is the one sticky set-piece left on the page; everything
  * below the hero otherwise scrolls at its natural rate.
+ *
+ * On a first visit SiteLoader (in SiteChrome) holds the page until every photo
+ * on it has downloaded, then warms the /projects frames and project photos.
  */
 export default function HomePage() {
   return (

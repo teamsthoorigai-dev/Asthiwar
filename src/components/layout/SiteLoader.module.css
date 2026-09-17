@@ -1,0 +1,70 @@
+/* Full-screen preloader overlay covering the viewport until content is loaded */
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg);
+  color: var(--ink);
+  transition:
+    opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+    visibility 0.5s linear;
+  animation: loader-failsafe 0s linear 6s forwards;
+}
+
+.overlay[data-phase='leaving'] {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.overlay[data-phase='gone'] {
+  display: none;
+}
+
+@keyframes loader-failsafe {
+  to {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+
+/* Centered loader cluster */
+.loaderBox {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5rem;
+}
+
+/* Smooth spinning circular loader */
+.spinner {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 2.5px solid var(--hairline, rgba(0, 0, 0, 0.1));
+  border-top-color: var(--ink, #111111);
+  animation: spin 0.75s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Brand label below the spinner */
+.brand {
+  font-size: var(--fs-xs, 0.75rem);
+  font-weight: var(--fw-medium, 500);
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--muted, #666666);
+}

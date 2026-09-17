@@ -2,6 +2,7 @@
 
 import Image from 'next/image';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { PROJECT_SHOT_SIZES } from '@/lib/imageSizes';
 import { lockScroll, unlockScroll } from '@/lib/lenis';
 import styles from './ProjectGallery.module.css';
 
@@ -99,7 +100,7 @@ export function ProjectGallery({ shots, title }: { shots: readonly Shot[]; title
               src={shot.src}
               alt={shot.alt || ''}
               fill
-              sizes="(min-width: 768px) 50vw, 100vw"
+              sizes={PROJECT_SHOT_SIZES}
               className={styles.image}
             />
           </button>
