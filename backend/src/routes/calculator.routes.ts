@@ -10,6 +10,7 @@ import {
   getComparisonMatrix,
 } from '../modules/calculator/calculator.controller.js';
 import { validateRequest } from '../middleware/validate.js';
+import { clientIp } from '../middleware/client-ip.js';
 import { calculateEstimateSchema } from '../modules/calculator/calculator.schema.js';
 
 import { downloadEstimatePdfController } from '../modules/pdf/pdf.controller.js';
@@ -39,6 +40,7 @@ const tooManyRequests = (message: string) => ({
 const estimateSubmissionLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
   max: 10,
+  keyGenerator: (req) => clientIp(req),
   message: tooManyRequests(
     'Too many estimates submitted from this connection. Please try again in an hour, ' +
       'or call us directly and we will prepare your quotation.'
@@ -55,7 +57,27 @@ const estimateSubmissionLimiter = rateLimit({
 const previewLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 300,
+  keyGenerator: (req) => clientIp(req),
   message: tooManyRequests('Too many pricing previews. Please wait a moment and try again.'),
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+/**
+ * Reading a quotation back — the JSON snapshot or the PDF.
+ *
+ * Both were unlimited, and a PDF render is ~150 ms of CPU on the event loop.
+ * Anyone can obtain a valid link by submitting one estimate, so a loop over their
+ * own PDF was enough to slow every other request: twenty parallel clients took
+ * /health from 3 ms to 319 ms locally. Renders are also cached (pdf.controller.ts),
+ * so this mostly bounds bandwidth; the limit is far above a customer re-opening
+ * their quotation.
+ */
+const quotationReadLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 60,
+  keyGenerator: (req) => clientIp(req),
+  message: tooManyRequests('Too many quotation downloads. Please wait a few minutes and try again.'),
   standardHeaders: true,
   legacyHeaders: false,
 });
@@ -89,9 +111,9 @@ router.post(
 );
 
 // GET /api/v1/calculator/estimate/:estimateNumber — View historical estimate snapshot
-router.get('/estimate/:estimateNumber', getEstimateByNumber);
+router.get('/estimate/:estimateNumber', quotationReadLimiter, getEstimateByNumber);
 
 // GET /api/v1/calculator/estimate/:estimateNumber/pdf — Download/View Branded Estimate Quotation PDF
-router.get('/estimate/:estimateNumber/pdf', downloadEstimatePdfController);
+router.get('/estimate/:estimateNumber/pdf', quotationReadLimiter, downloadEstimatePdfController);
 
 export default router;

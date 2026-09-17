@@ -15,6 +15,9 @@ const envSchema = z.object({
   // quotation links against it, so a wrong value sends dead links to customers.
   PUBLIC_BASE_URL: z.string().url().default('http://localhost:3000'),
   SESSION_SECRET: z.string().min(32, 'SESSION_SECRET must be at least 32 characters'),
+  // Shared with the Next.js frontend. When its proxy presents this, the client IP
+  // it forwards is trusted for rate limiting and audit records. See client-ip.ts.
+  API_PROXY_SECRET: z.string().min(32, 'API_PROXY_SECRET must be at least 32 characters').optional(),
   RESEND_API_KEY: z.string().optional(),
   RESEND_FROM_EMAIL: z.string().default('ASTHIWAR <onboarding@resend.dev>'),
   ADMIN_ALERT_EMAIL: z.string().email().default('contact@asthiwar.com'),

@@ -16,6 +16,7 @@
 import { createApp } from '../../app.js';
 import { db, adminSessions, eq, pool } from '@asthiwar/database';
 import http from 'http';
+import crypto from 'crypto';
 
 let testsPassed = 0;
 let testsFailed = 0;
@@ -161,11 +162,11 @@ async function runAuthTests() {
     });
     assert(logoutRes.status === 200, 'Status code is 200 (Logged out)');
 
-    // Verify session token is removed from database
+    // Verify session token is removed from database (only its SHA-256 is stored)
     const dbSession = await db
       .select()
       .from(adminSessions)
-      .where(eq(adminSessions.token, activeToken));
+      .where(eq(adminSessions.token, crypto.createHash('sha256').update(activeToken).digest('hex')));
     assert(dbSession.length === 0, 'Session token was deleted from Neon PostgreSQL');
 
     // Verify old token can no longer access /me

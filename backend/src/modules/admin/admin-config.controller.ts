@@ -83,6 +83,7 @@ export async function getPackagesController(req: Request, res: Response, next: N
 }
 
 import { logAuditEvent } from '../../services/audit.service.js';
+import { clientIp } from '../../middleware/client-ip.js';
 
 export async function updatePackagePriceController(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
@@ -106,7 +107,7 @@ export async function updatePackagePriceController(req: Request, res: Response, 
         volumePricePerSqft: dto.volumePricePerSqft,
         volumeDiscountThresholdSqft: dto.volumeDiscountThresholdSqft,
       },
-      ipAddress: req.ip || req.socket?.remoteAddress,
+      ipAddress: clientIp(req),
       userAgent: req.headers['user-agent'],
     }).catch(() => {});
 
@@ -223,7 +224,7 @@ export async function deleteLocationController(req: Request, res: Response, next
       httpMethod: req.method,
       statusCode: 200,
       metadata: { locationId },
-      ipAddress: req.ip || req.socket?.remoteAddress,
+      ipAddress: clientIp(req),
       userAgent: req.headers['user-agent'],
     }).catch(() => {});
 
@@ -320,7 +321,7 @@ export async function createAddonController(req: Request, res: Response, next: N
       httpMethod: req.method,
       statusCode: 201,
       metadata: { addonId: created.id, slug: created.slug, variants: dto.variants.length },
-      ipAddress: req.ip || req.socket?.remoteAddress,
+      ipAddress: clientIp(req),
       userAgent: req.headers['user-agent'],
     }).catch(() => {});
 
@@ -349,7 +350,7 @@ export async function deleteAddonController(req: Request, res: Response, next: N
       httpMethod: req.method,
       statusCode: 200,
       metadata: { addonId },
-      ipAddress: req.ip || req.socket?.remoteAddress,
+      ipAddress: clientIp(req),
       userAgent: req.headers['user-agent'],
     }).catch(() => {});
 
@@ -527,7 +528,7 @@ export async function createCategoryController(req: Request, res: Response, next
       httpMethod: req.method,
       statusCode: 201,
       metadata: { categoryId: created.id, slug: created.slug },
-      ipAddress: req.ip || req.socket?.remoteAddress,
+      ipAddress: clientIp(req),
       userAgent: req.headers['user-agent'],
     }).catch(() => {});
 
@@ -571,7 +572,7 @@ export async function deleteCategoryController(req: Request, res: Response, next
       httpMethod: req.method,
       statusCode: 200,
       metadata: { categoryId, deletedItems: result.deletedItems },
-      ipAddress: req.ip || req.socket?.remoteAddress,
+      ipAddress: clientIp(req),
       userAgent: req.headers['user-agent'],
     }).catch(() => {});
 
@@ -600,7 +601,7 @@ export async function createItemController(req: Request, res: Response, next: Ne
       httpMethod: req.method,
       statusCode: 201,
       metadata: { itemId: created.id, slug: created.slug, categoryId: created.categoryId },
-      ipAddress: req.ip || req.socket?.remoteAddress,
+      ipAddress: clientIp(req),
       userAgent: req.headers['user-agent'],
     }).catch(() => {});
 
@@ -644,7 +645,7 @@ export async function deleteItemController(req: Request, res: Response, next: Ne
       httpMethod: req.method,
       statusCode: 200,
       metadata: { itemId, deletedOptions: result.deletedOptions },
-      ipAddress: req.ip || req.socket?.remoteAddress,
+      ipAddress: clientIp(req),
       userAgent: req.headers['user-agent'],
     }).catch(() => {});
 

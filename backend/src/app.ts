@@ -73,6 +73,13 @@ export function createApp(): Express {
   app.use(cookieParser());
 
   if (env.NODE_ENV !== 'test') {
+    // Strip query parameters from Morgan access logs so sensitive query tokens
+    // (such as ?t=... bearer tokens for quotation PDFs) are not written to stdout or cloud log stores.
+    morgan.token('url', (req: Request) => {
+      const url = req.originalUrl || req.url || '';
+      const qIdx = url.indexOf('?');
+      return qIdx >= 0 ? url.substring(0, qIdx) : url;
+    });
     app.use(morgan(env.NODE_ENV === 'production' ? 'combined' : 'dev'));
   }
 

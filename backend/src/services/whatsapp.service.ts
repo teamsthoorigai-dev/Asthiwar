@@ -154,9 +154,15 @@ export async function sendWhatsAppMessage(options: SendWhatsAppOptions): Promise
     }
   }
 
+function maskPhone(phone: string): string {
+  const digits = phone.replace(/\D/g, '');
+  if (digits.length < 6) return '***';
+  return digits.substring(0, 3) + '****' + digits.substring(digits.length - 3);
+}
+
   // 4. No provider credentials configured
   console.info(
-    `[WhatsApp] Background message prepared for +${recipient}. Server gateway keys (TWILIO_ACCOUNT_SID, WHATSAPP_API_URL, or CALLMEBOT_API_KEY) not set in environment. Saved as PENDING outbox.`
+    `[WhatsApp] Background message prepared for +${maskPhone(recipient)}. Server gateway keys (TWILIO_ACCOUNT_SID, WHATSAPP_API_URL, or CALLMEBOT_API_KEY) not set in environment. Saved as PENDING outbox.`
   );
 
   return {

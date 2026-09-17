@@ -13,6 +13,7 @@ import {
   getAdminAuditLogById,
 } from './admin.service.js';
 import { logAuditEvent } from '../../services/audit.service.js';
+import { clientIp } from '../../middleware/client-ip.js';
 import {
   EnquiriesQuery,
   UpdateEnquiryDto,
@@ -101,7 +102,7 @@ export async function deleteEnquiryController(req: Request, res: Response, next:
       httpMethod: req.method,
       statusCode: 200,
       metadata: { enquiryId: id, estimateNumber: result.estimateNumber },
-      ipAddress: req.ip || req.socket?.remoteAddress,
+      ipAddress: clientIp(req),
       userAgent: req.headers['user-agent'],
     }).catch(() => {});
 

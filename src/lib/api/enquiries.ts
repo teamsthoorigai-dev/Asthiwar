@@ -6,6 +6,8 @@ export interface EnquiryInput {
   email?: string;
   plotLocation: string;
   estimateNumber?: string;
+  /** Required alongside estimateNumber for the enquiry to be linked to that estimate. */
+  accessToken?: string;
   preferredContactTime?: string;
   requirementNotes?: string;
 }

@@ -1,34 +1,36 @@
 import { Request, Response, NextFunction } from 'express';
-import { db, enquiries, estimates, eq } from '@asthiwar/database';
+import { db, enquiries, eq } from '@asthiwar/database';
 import { CreateEnquiryDto } from './enquiries.schema.js';
-import {
-  sendAdminNewLeadAlert,
-  sendCustomerEnquiryConfirmation,
-} from '../notifications/notifications.service.js';
+import { sendAdminNewLeadAlert } from '../notifications/notifications.service.js';
+import { findEstimateByRef, tokensMatch } from '../calculator/quotation.js';
+
+/**
+ * The estimate this enquiry may attach to, or null.
+ *
+ * Only the estimate's access token authorises it. Every persisted estimate raises
+ * a CRM lead, and estimate numbers are a sequence, so a number alone would let
+ * anyone rewrite a stranger's lead. A matching phone number was accepted here too,
+ * but a phone number is not a secret — and answering 200 for a match and 201 for a
+ * miss told a caller which phone number belonged to which quotation.
+ */
+async function resolveLinkedEstimate(data: CreateEnquiryDto) {
+  const token = data.accessToken?.trim();
+  if (!data.estimateNumber || !token) return null;
+
+  const estimate = await findEstimateByRef(data.estimateNumber);
+  if (!estimate || !tokensMatch(token, estimate.accessToken)) return null;
+
+  return { id: estimate.id, estimateNumber: estimate.estimateNumber };
+}
 
 export async function createEnquiry(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const data = req.body as CreateEnquiryDto;
+    const linkedEstimate = await resolveLinkedEstimate(data);
 
-    let estimateId: string | null = null;
-    if (data.estimateNumber) {
-      const estRows = await db
-        .select({ id: estimates.id })
-        .from(estimates)
-        .where(eq(estimates.estimateNumber, data.estimateNumber.toUpperCase().trim()))
-        .limit(1);
-
-      if (estRows.length > 0) {
-        estimateId = estRows[0].id;
-      }
-    }
-
-    // Check if an enquiry record already exists for this estimate
-    if (estimateId || data.estimateNumber) {
+    if (linkedEstimate) {
       const existingEnquiry = await db.query.enquiries.findFirst({
-        where: data.estimateNumber
-          ? eq(enquiries.estimateNumber, data.estimateNumber.toUpperCase().trim())
-          : eq(enquiries.estimateId, estimateId!),
+        where: eq(enquiries.estimateId, linkedEstimate.id),
       });
 
       if (existingEnquiry) {
@@ -75,8 +77,8 @@ export async function createEnquiry(req: Request, res: Response, next: NextFunct
         phone: data.phone,
         email: data.email,
         plotLocation: data.plotLocation,
-        estimateId,
-        estimateNumber: data.estimateNumber ? data.estimateNumber.toUpperCase().trim() : null,
+        estimateId: linkedEstimate?.id ?? null,
+        estimateNumber: linkedEstimate?.estimateNumber ?? null,
         preferredContactTime: data.preferredContactTime ?? null,
         requirementNotes: data.requirementNotes ?? null,
         status: 'NEW',

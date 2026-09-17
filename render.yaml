@@ -27,3 +27,14 @@ services:
         sync: false
       - key: PUBLIC_BASE_URL
         sync: false
+      # The seed runs on every start. Without these it will not create an admin
+      # account in production, and it moves any account still on the default
+      # password published in the source onto ADMIN_SEED_PASSWORD.
+      - key: ADMIN_SEED_EMAIL
+        sync: false
+      - key: ADMIN_SEED_PASSWORD
+        sync: false
+      # Same value as API_PROXY_SECRET on the Vercel project. Lets rate limits see
+      # each visitor's IP instead of Vercel's. At least 32 characters.
+      - key: API_PROXY_SECRET
+        sync: false

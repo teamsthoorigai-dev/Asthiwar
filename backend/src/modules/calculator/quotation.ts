@@ -160,7 +160,7 @@ export async function findEstimateByRef(ref: string) {
  * property that makes a 64-character token guessable one character at a time.
  * Lengths are compared first because timingSafeEqual throws on a mismatch.
  */
-function tokensMatch(supplied: string, stored: string): boolean {
+export function tokensMatch(supplied: string, stored: string): boolean {
   const a = Buffer.from(supplied, 'utf8');
   const b = Buffer.from(stored, 'utf8');
   if (a.length !== b.length) return false;

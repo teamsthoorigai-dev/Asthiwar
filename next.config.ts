@@ -31,6 +31,16 @@ const nextConfig: NextConfig = {
     const immutable = [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }];
     const monthLong = [{ key: 'Cache-Control', value: `public, max-age=${THIRTY_DAYS}` }];
     return [
+      // No other site may frame these pages. The admin console could be loaded
+      // invisibly inside an attacker's page and its buttons clicked through it.
+      // The site embeds maps itself; nothing embeds the site.
+      {
+        source: '/:path*',
+        headers: [
+          { key: 'X-Frame-Options', value: 'DENY' },
+          { key: 'Content-Security-Policy', value: "frame-ancestors 'none'" },
+        ],
+      },
       { source: '/frames/:file*', headers: immutable },
       { source: '/fonts/:file*', headers: immutable },
       // Raw photos and project video, as fetched directly (video posters, the

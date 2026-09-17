@@ -3,6 +3,7 @@ import { AuthError } from './auth.service.js';
 import { listAdminUsers, createAdminUser, updateAdminUser } from './users.service.js';
 import { CreateAdminUserDto, UpdateAdminUserDto } from './users.schema.js';
 import { logAuditEvent } from '../../services/audit.service.js';
+import { clientIp } from '../../middleware/client-ip.js';
 
 function relayAuthError(error: unknown, res: Response, next: NextFunction): void {
   if (error instanceof AuthError) {
@@ -40,7 +41,7 @@ export async function createAdminUserController(req: Request, res: Response, nex
       // The password is deliberately absent — a new credential must not be
       // copied into a table the console can read back.
       metadata: { createdUserId: created.id, email: created.email, role: created.role },
-      ipAddress: req.ip || req.socket?.remoteAddress,
+      ipAddress: clientIp(req),
       userAgent: req.headers['user-agent'],
     }).catch(() => {});
 
@@ -78,7 +79,7 @@ export async function updateAdminUserController(req: Request, res: Response, nex
       httpMethod: req.method,
       statusCode: 200,
       metadata: { targetUserId: userId, changes: dto },
-      ipAddress: req.ip || req.socket?.remoteAddress,
+      ipAddress: clientIp(req),
       userAgent: req.headers['user-agent'],
     }).catch(() => {});
 

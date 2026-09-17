@@ -85,6 +85,8 @@ export function StepEstimateReport({ result, onReset }: StepEstimateReportProps)
         email: customer.email || undefined,
         plotLocation: customer.location,
         estimateNumber: result.estimateNumber,
+        // The server links the booking to this estimate's lead only with its token.
+        accessToken: result.accessToken,
         preferredContactTime: preferredTime,
         requirementNotes: notes || 'Booked site assessment via web calculator report',
       });
@@ -467,6 +469,7 @@ export function StepEstimateReport({ result, onReset }: StepEstimateReportProps)
                   <textarea
                     id="notes"
                     rows={3}
+                    maxLength={5000}
                     className="form-input text-xs"
                     placeholder="e.g. Seeking vastu consultation, specific courtyard orientation, or sustainable lime plaster..."
                     value={notes}

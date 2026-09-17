@@ -8,6 +8,7 @@ import {
 } from '../modules/auth/auth.controller.js';
 import { validateRequest } from '../middleware/validate.js';
 import { requireAdminAuth, requireRole } from '../middleware/auth.js';
+import { clientIp } from '../middleware/client-ip.js';
 import { changePasswordSchema, loginSchema } from '../modules/auth/auth.schema.js';
 import {
   createAdminUserSchema,
@@ -45,7 +46,7 @@ const loginAccountLimiter = rateLimit({
     const email = (req.body as { email?: unknown } | undefined)?.email;
     return typeof email === 'string' && email.trim()
       ? `account:${email.trim().toLowerCase()}`
-      : `ip:${req.ip ?? 'unknown'}`;
+      : `ip:${clientIp(req)}`;
   },
   message: tooManyRequests(
     'Too many login attempts for this account, please try again after 15 minutes'
@@ -62,7 +63,22 @@ const loginAccountLimiter = rateLimit({
 const loginFloodLimiter = rateLimit({
   windowMs: LOGIN_WINDOW_MS,
   max: 100,
+  keyGenerator: (req) => clientIp(req),
   message: tooManyRequests('Too many login attempts, please try again after 15 minutes'),
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+/**
+ * Keyed on the signed-in account. It used to share the login flood limiter —
+ * the same counter, not just the same numbers — so a login flood from anyone in
+ * that bucket also blocked every admin from changing their password.
+ */
+const passwordChangeLimiter = rateLimit({
+  windowMs: LOGIN_WINDOW_MS,
+  max: 10,
+  keyGenerator: (req) => `user:${req.user?.id ?? clientIp(req)}`,
+  message: tooManyRequests('Too many password change attempts, please try again after 15 minutes'),
   standardHeaders: true,
   legacyHeaders: false,
 });
@@ -88,13 +104,13 @@ router.get('/me', requireAdminAuth, meController);
  * The controller and service for this were written, tested against, and never
  * routed, so the only way to change an admin password was to reach into the
  * database — while the login screen advertised the seeded default. Rate-limited
- * on the same flood budget as login: it takes the current password, so it is
- * another place an attacker with a session could grind at one.
+ * per account: it takes the current password, so it is another place an
+ * attacker with a session could grind at one.
  */
 router.post(
   '/password',
-  loginFloodLimiter,
   requireAdminAuth,
+  passwordChangeLimiter,
   validateRequest({ body: changePasswordSchema }),
   changePasswordController
 );

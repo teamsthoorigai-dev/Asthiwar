@@ -401,6 +401,9 @@ export function EnquiryForm({ content, variant = 'home', locations = [] }: Enqui
             aria-invalid={getVisibleError('message') ? true : undefined}
             className={`${styles.control} ${styles.message}`}
             id={messageId}
+            // The API caps notes at 5000 characters; this leaves room for the
+            // project-type line prepended on submit.
+            maxLength={4800}
             name="message"
             onBlur={handleBlur}
             onChange={handleChange}

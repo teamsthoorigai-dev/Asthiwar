@@ -404,6 +404,7 @@ export async function getPackageConfig(req: Request, res: Response, next: NextFu
 // ---------------------------------------------------------------------------
 
 import { logAuditEvent } from '../../services/audit.service.js';
+import { clientIp } from '../../middleware/client-ip.js';
 
 export async function previewEstimate(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
@@ -423,7 +424,7 @@ export async function previewEstimate(req: Request, res: Response, next: NextFun
         location: input.plotLocation,
         totalCost: result.breakdown.totalProjectCost,
       },
-      ipAddress: req.ip || req.socket?.remoteAddress,
+      ipAddress: clientIp(req),
       userAgent: req.headers['user-agent'],
     }).catch(() => {});
 
@@ -462,7 +463,7 @@ export async function createEstimate(req: Request, res: Response, next: NextFunc
         location: input.plotLocation,
         totalCost: result.breakdown.totalProjectCost,
       },
-      ipAddress: req.ip || req.socket?.remoteAddress,
+      ipAddress: clientIp(req),
       userAgent: req.headers['user-agent'],
     }).catch(() => {});
 

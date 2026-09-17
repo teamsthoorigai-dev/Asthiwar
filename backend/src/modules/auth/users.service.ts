@@ -1,6 +1,6 @@
 import { db, adminUsers, adminSessions, eq, asc } from '@asthiwar/database';
 import bcrypt from 'bcrypt';
-import { AuthError } from './auth.service.js';
+import { AuthError, assertNotPublishedDefault } from './auth.service.js';
 import { CreateAdminUserDto, UpdateAdminUserDto } from './users.schema.js';
 
 /** Never select password_hash. Nothing outside login has any business reading it. */
@@ -28,6 +28,8 @@ export async function createAdminUser(dto: CreateAdminUserDto) {
   if (existing) {
     throw new AuthError(`An account already exists for ${email}`, 409, 'USER_ALREADY_EXISTS');
   }
+
+  assertNotPublishedDefault(dto.password);
 
   // Cost 12, matching login and the change-password path.
   const passwordHash = await bcrypt.hash(dto.password, 12);

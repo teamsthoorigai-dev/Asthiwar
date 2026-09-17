@@ -13,8 +13,8 @@ import { ADMIN_ROLES } from '../../middleware/auth.js';
 export const roleField = z.enum(ADMIN_ROLES);
 
 export const createAdminUserSchema = z.object({
-  email: z.string().email('Invalid email address'),
-  fullName: z.string().min(2, 'Full name must be at least 2 characters'),
+  email: z.string().max(254).email('Invalid email address'),
+  fullName: z.string().min(2, 'Full name must be at least 2 characters').max(120),
   // The same floor the change-password route enforces, so an account cannot be
   // created weaker than it is allowed to become.
   password: z
@@ -26,7 +26,7 @@ export const createAdminUserSchema = z.object({
 
 export const updateAdminUserSchema = z
   .object({
-    fullName: z.string().min(2).optional(),
+    fullName: z.string().min(2).max(120).optional(),
     role: roleField.optional(),
     isActive: z.boolean().optional(),
   })

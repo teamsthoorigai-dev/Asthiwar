@@ -187,12 +187,14 @@ async function runAdminTests() {
         email: 'lead@asthiwar.com',
         plotLocation: 'coimbatore',
         estimateNumber: testEstimateNumber,
+        // Linking to an estimate's lead requires that estimate's access token.
+        accessToken: createEstimateRes.body.data.accessToken,
         preferredContactTime: 'Evening 5 PM',
         requirementNotes: 'Need turnkey construction within 8 months',
       },
     });
     // 200: persisting the estimate above already auto-created its CRM enquiry, so
-    // posting the same estimateNumber folds into that row instead of opening a
+    // posting the same estimateNumber with its token folds into that row instead of opening a
     // second lead for one quotation.
     assert(createEnquiryRes.status === 200, `Public enquiry folded into the estimate enquiry (got ${createEnquiryRes.status})`);
     testEnquiryId = createEnquiryRes.body.data.id;

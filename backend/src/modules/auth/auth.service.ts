@@ -1,10 +1,49 @@
-import { db, adminUsers, adminSessions, eq, and, gt, lt } from '@asthiwar/database';
+import {
+  db,
+  adminUsers,
+  adminSessions,
+  eq,
+  and,
+  gt,
+  lt,
+  PUBLISHED_DEFAULT_ADMIN_PASSWORD,
+} from '@asthiwar/database';
 import bcrypt from 'bcrypt';
 import crypto from 'crypto';
+import { env } from '../../config/env.js';
 import { AdminUserDto, SessionResult } from './auth.types.js';
 import { LoginDto, ChangePasswordDto } from './auth.schema.js';
 
 const SESSION_DURATION_DAYS = 7;
+
+/**
+ * Only the SHA-256 of a session token is stored, and only the hash is ever looked
+ * up. A lookup that also matched the raw value accepted the stored hash itself as
+ * a bearer token, so anyone who could read admin_sessions could sign in with what
+ * they read — the exposure hashing exists to prevent. Sessions issued before
+ * hashing no longer match anything and simply lapse.
+ */
+function hashSessionToken(token: string): string {
+  return crypto.createHash('sha256').update(token).digest('hex');
+}
+
+/**
+ * Compared against when an email matches no account, at the same cost as a real
+ * hash. Returning before bcrypt ran made an unknown email answer in ~5ms and a
+ * real one in ~270ms, which listed the admin accounts to anyone who asked.
+ */
+const DUMMY_PASSWORD_HASH = bcrypt.hashSync(crypto.randomBytes(32).toString('hex'), 12);
+
+/** The seed default is public; production does not accept it as a password. */
+export function assertNotPublishedDefault(password: string): void {
+  if (env.NODE_ENV === 'production' && password === PUBLISHED_DEFAULT_ADMIN_PASSWORD) {
+    throw new AuthError(
+      'That password is published in the source code and cannot be used.',
+      400,
+      'PASSWORD_NOT_ALLOWED'
+    );
+  }
+}
 
 export class AuthError extends Error {
   statusCode: number;
@@ -30,45 +69,47 @@ export async function login(
     .where(eq(adminUsers.email, normalizedEmail))
     .limit(1);
 
-  if (userRows.length === 0) {
+  const user = userRows[0];
+
+  // 2. Verify password with bcrypt — always, so a missing account costs the same
+  const isPasswordValid = await bcrypt.compare(
+    credentials.password,
+    user?.passwordHash ?? DUMMY_PASSWORD_HASH
+  );
+  if (!user || !isPasswordValid) {
     throw new AuthError('Invalid email or password', 401, 'INVALID_CREDENTIALS');
   }
 
-  const user = userRows[0];
-
+  // Only after the password: saying "disabled" to a wrong password confirmed the
+  // account exists to someone who does not know its password.
   if (!user.isActive) {
     throw new AuthError('Account is disabled. Please contact administrator.', 403, 'ACCOUNT_DISABLED');
   }
 
-  // 2. Verify password with bcrypt
-  const isPasswordValid = await bcrypt.compare(credentials.password, user.passwordHash);
-  if (!isPasswordValid) {
-    throw new AuthError('Invalid email or password', 401, 'INVALID_CREDENTIALS');
+  if (env.NODE_ENV === 'production' && credentials.password === PUBLISHED_DEFAULT_ADMIN_PASSWORD) {
+    throw new AuthError(
+      'This account still uses the default password published in the source code, so sign-in ' +
+        'is blocked. Set ADMIN_SEED_PASSWORD on the server and redeploy to replace it.',
+      403,
+      'DEFAULT_PASSWORD_BLOCKED'
+    );
   }
 
   // 3. Generate secure random session token
   const token = crypto.randomBytes(32).toString('hex');
+  const tokenHash = hashSessionToken(token);
   const expiresAt = new Date(Date.now() + SESSION_DURATION_DAYS * 24 * 60 * 60 * 1000);
 
   // Sweep sessions that have already expired.
-  //
-  // `admin_sessions` only ever shrank on an explicit logout, so every login that
-  // ended by closing the tab left a row behind for good — dead credentials
-  // accumulating in a table indefinitely. Done here rather than on a schedule so
-  // there is nothing extra to deploy or keep running: a login is exactly when new
-  // rows appear, and verifySession already refuses an expired one, so this only
-  // reclaims storage rather than changing who is signed in.
-  //
-  // Failure is not allowed to block a sign-in; the rows are simply swept next time.
   await db
     .delete(adminSessions)
     .where(lt(adminSessions.expiresAt, new Date()))
     .catch(() => undefined);
 
-  // 4. Save session in database
+  // 4. Save session in database (store SHA-256 hash so plaintext token is never at rest in DB)
   await db.insert(adminSessions).values({
     userId: user.id,
-    token,
+    token: tokenHash,
     expiresAt,
     ipAddress: metadata?.ipAddress ?? null,
     userAgent: metadata?.userAgent ?? null,
@@ -95,6 +136,8 @@ export async function verifySession(token: string): Promise<AdminUserDto> {
     throw new AuthError('Authentication session token is required', 401, 'SESSION_REQUIRED');
   }
 
+  const tokenHash = hashSessionToken(token);
+
   const sessionRows = await db
     .select({
       sessionId: adminSessions.id,
@@ -110,7 +153,7 @@ export async function verifySession(token: string): Promise<AdminUserDto> {
     .innerJoin(adminUsers, eq(adminUsers.id, adminSessions.userId))
     .where(
       and(
-        eq(adminSessions.token, token),
+        eq(adminSessions.token, tokenHash),
         gt(adminSessions.expiresAt, new Date())
       )
     )
@@ -138,7 +181,7 @@ export async function verifySession(token: string): Promise<AdminUserDto> {
 
 export async function logout(token: string): Promise<void> {
   if (!token) return;
-  await db.delete(adminSessions).where(eq(adminSessions.token, token));
+  await db.delete(adminSessions).where(eq(adminSessions.token, hashSessionToken(token)));
 }
 
 export async function changePassword(
@@ -162,6 +205,8 @@ export async function changePassword(
   if (!isMatch) {
     throw new AuthError('Current password is incorrect', 400, 'INCORRECT_CURRENT_PASSWORD');
   }
+
+  assertNotPublishedDefault(dto.newPassword);
 
   // Hash new password
   const newHash = await bcrypt.hash(dto.newPassword, 12);

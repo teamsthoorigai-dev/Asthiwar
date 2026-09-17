@@ -27,10 +27,31 @@ export interface CustomerConfirmationParams {
 }
 
 /**
+ * Safely escapes HTML special characters to prevent stored HTML injection and email XSS.
+ */
+export function escapeHtml(str: string | number | null | undefined): string {
+  if (str === null || str === undefined) return '';
+  const s = String(str);
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+/**
  * Renders a branded HTML email for customer quotation delivery.
  */
 export function renderQuotationEmail(params: QuotationEmailParams): { subject: string; html: string; text: string } {
   const subject = `ASTHIWAR Construction Quotation — ${params.estimateNumber}`;
+  const customerName = escapeHtml(params.customerName);
+  const plotLocation = escapeHtml(params.plotLocation);
+  const estimateNumber = escapeHtml(params.estimateNumber);
+  const packageSlug = escapeHtml(params.packageSlug);
+  const totalBuiltupAreaSqft = escapeHtml(Number(params.totalBuiltupAreaSqft).toLocaleString('en-IN'));
+  const floorCount = escapeHtml(params.floorCount);
+  const totalProjectCostFormatted = escapeHtml(params.totalProjectCostFormatted);
 
   const html = `<!DOCTYPE html>
 <html lang="en">
@@ -50,10 +71,10 @@ export function renderQuotationEmail(params: QuotationEmailParams): { subject: s
 
     <!-- Main Content -->
     <div style="padding: 28px 24px;">
-      <p style="margin: 0 0 16px; font-size: 15px; line-height: 1.6;">Dear <strong>${params.customerName}</strong>,</p>
+      <p style="margin: 0 0 16px; font-size: 15px; line-height: 1.6;">Dear <strong>${customerName}</strong>,</p>
       
       <p style="margin: 0 0 20px; font-size: 14px; line-height: 1.6; color: #475569;">
-        Thank you for exploring our turnkey construction estimation for your project in <strong>${params.plotLocation}</strong>. Below is your preliminary project summary:
+        Thank you for exploring our turnkey construction estimation for your project in <strong>${plotLocation}</strong>. Below is your preliminary project summary:
       </p>
 
       <!-- Cost Card -->
@@ -61,23 +82,23 @@ export function renderQuotationEmail(params: QuotationEmailParams): { subject: s
         <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
           <tr>
             <td style="padding: 6px 0; color: #64748b;">Estimate Reference</td>
-            <td style="padding: 6px 0; text-align: right; font-weight: 700; font-family: monospace; color: #0f172a;">${params.estimateNumber}</td>
+            <td style="padding: 6px 0; text-align: right; font-weight: 700; font-family: monospace; color: #0f172a;">${estimateNumber}</td>
           </tr>
           <tr>
             <td style="padding: 6px 0; color: #64748b;">Package Tier</td>
-            <td style="padding: 6px 0; text-align: right; font-weight: 700; color: #0f766e; text-transform: uppercase;">${params.packageSlug}</td>
+            <td style="padding: 6px 0; text-align: right; font-weight: 700; color: #0f766e; text-transform: uppercase;">${packageSlug}</td>
           </tr>
           <tr>
             <td style="padding: 6px 0; color: #64748b;">Built-up Area</td>
-            <td style="padding: 6px 0; text-align: right; font-weight: 600; color: #1e293b;">${Number(params.totalBuiltupAreaSqft).toLocaleString('en-IN')} sq.ft (${params.floorCount})</td>
+            <td style="padding: 6px 0; text-align: right; font-weight: 600; color: #1e293b;">${totalBuiltupAreaSqft} sq.ft (${floorCount})</td>
           </tr>
           <tr>
             <td style="padding: 6px 0; color: #64748b;">Location</td>
-            <td style="padding: 6px 0; text-align: right; font-weight: 600; color: #1e293b;">${params.plotLocation}</td>
+            <td style="padding: 6px 0; text-align: right; font-weight: 600; color: #1e293b;">${plotLocation}</td>
           </tr>
           <tr style="border-top: 1px solid #cbd5e1;">
             <td style="padding: 12px 0 4px; font-size: 14px; font-weight: 700; color: #0f172a;">Total Estimated Cost</td>
-            <td style="padding: 12px 0 4px; text-align: right; font-size: 17px; font-weight: 800; color: #0f766e;">${params.totalProjectCostFormatted}</td>
+            <td style="padding: 12px 0 4px; text-align: right; font-size: 17px; font-weight: 800; color: #0f766e;">${totalProjectCostFormatted}</td>
           </tr>
         </table>
       </div>
@@ -140,6 +161,14 @@ Contact: +91 94884 40123 | contact@asthiwar.com
  */
 export function renderAdminLeadAlertEmail(params: AdminLeadAlertParams): { subject: string; html: string; text: string } {
   const subject = `🚨 [NEW LEAD] Consultation Request: ${params.fullName} (${params.plotLocation})`;
+  const fullName = escapeHtml(params.fullName);
+  const phone = escapeHtml(params.phone);
+  const email = params.email ? escapeHtml(params.email) : null;
+  const plotLocation = escapeHtml(params.plotLocation);
+  const preferredContactTime = escapeHtml(params.preferredContactTime || 'Anytime');
+  const requirementNotes = escapeHtml(params.requirementNotes || 'Standard consultation requested.');
+  const estimateNumber = params.estimateNumber ? escapeHtml(params.estimateNumber) : null;
+  const pdfUrl = params.pdfUrl;
 
   const html = `<!DOCTYPE html>
 <html lang="en">
@@ -160,43 +189,43 @@ export function renderAdminLeadAlertEmail(params: AdminLeadAlertParams): { subje
       <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
         <tr style="border-bottom: 1px solid #f1f5f9;">
           <td style="padding: 10px 0; color: #64748b; width: 140px; font-weight: 600;">Client Name</td>
-          <td style="padding: 10px 0; font-weight: 700; color: #0f172a;">${params.fullName}</td>
+          <td style="padding: 10px 0; font-weight: 700; color: #0f172a;">${fullName}</td>
         </tr>
         <tr style="border-bottom: 1px solid #f1f5f9;">
           <td style="padding: 10px 0; color: #64748b; font-weight: 600;">Phone Number</td>
           <td style="padding: 10px 0;">
-            <a href="tel:${params.phone}" style="color: #0f766e; font-weight: 700; text-decoration: none;">${params.phone}</a>
+            <a href="tel:${phone}" style="color: #0f766e; font-weight: 700; text-decoration: none;">${phone}</a>
             <span style="font-size: 12px; color: #94a3b8; margin-left: 8px;">(Click to call)</span>
           </td>
         </tr>
         <tr style="border-bottom: 1px solid #f1f5f9;">
           <td style="padding: 10px 0; color: #64748b; font-weight: 600;">Email</td>
           <td style="padding: 10px 0;">
-            ${params.email ? `<a href="mailto:${params.email}" style="color: #0f766e; text-decoration: none;">${params.email}</a>` : '<span style="color: #94a3b8;">Not provided</span>'}
+            ${email ? `<a href="mailto:${email}" style="color: #0f766e; text-decoration: none;">${email}</a>` : '<span style="color: #94a3b8;">Not provided</span>'}
           </td>
         </tr>
         <tr style="border-bottom: 1px solid #f1f5f9;">
           <td style="padding: 10px 0; color: #64748b; font-weight: 600;">Site Location</td>
-          <td style="padding: 10px 0; font-weight: 600; color: #1e293b;">${params.plotLocation}</td>
+          <td style="padding: 10px 0; font-weight: 600; color: #1e293b;">${plotLocation}</td>
         </tr>
         <tr style="border-bottom: 1px solid #f1f5f9;">
           <td style="padding: 10px 0; color: #64748b; font-weight: 600;">Preferred Time</td>
-          <td style="padding: 10px 0; color: #1e293b;">${params.preferredContactTime || 'Anytime'}</td>
+          <td style="padding: 10px 0; color: #1e293b;">${preferredContactTime}</td>
         </tr>
-        ${params.estimateNumber ? `
+        ${estimateNumber ? `
         <tr style="border-bottom: 1px solid #f1f5f9;">
           <td style="padding: 10px 0; color: #64748b; font-weight: 600;">Linked Estimate</td>
-          <td style="padding: 10px 0; font-family: monospace; font-weight: 700; color: #0f766e;">${params.estimateNumber}</td>
+          <td style="padding: 10px 0; font-family: monospace; font-weight: 700; color: #0f766e;">${estimateNumber}</td>
         </tr>` : ''}
         <tr>
           <td style="padding: 12px 0 0; color: #64748b; font-weight: 600; vertical-align: top;">Requirement Notes</td>
-          <td style="padding: 12px 0 0; color: #334155; line-height: 1.5; white-space: pre-wrap;">${params.requirementNotes || 'Standard consultation requested.'}</td>
+          <td style="padding: 12px 0 0; color: #334155; line-height: 1.5; white-space: pre-wrap;">${requirementNotes}</td>
         </tr>
       </table>
 
-      ${params.pdfUrl ? `
+      ${pdfUrl ? `
       <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid #e2e8f0;">
-        <a href="${params.pdfUrl}" style="display: inline-block; background-color: #0f766e; color: white; padding: 8px 16px; border-radius: 4px; text-decoration: none; font-size: 13px; font-weight: 600;">
+        <a href="${pdfUrl}" style="display: inline-block; background-color: #0f766e; color: white; padding: 8px 16px; border-radius: 4px; text-decoration: none; font-size: 13px; font-weight: 600;">
           Open Customer PDF Quotation
         </a>
       </div>` : ''}
@@ -228,6 +257,9 @@ ${params.estimateNumber ? `Linked Estimate: ${params.estimateNumber}` : ''}
  */
 export function renderCustomerConfirmationEmail(params: CustomerConfirmationParams): { subject: string; html: string; text: string } {
   const subject = `We've received your consultation request — ASTHIWAR Design & Build`;
+  const fullName = escapeHtml(params.fullName);
+  const plotLocation = escapeHtml(params.plotLocation);
+  const estimateNumber = params.estimateNumber ? escapeHtml(params.estimateNumber) : null;
 
   const html = `<!DOCTYPE html>
 <html lang="en">
@@ -245,20 +277,20 @@ export function renderCustomerConfirmationEmail(params: CustomerConfirmationPara
     </div>
 
     <div style="padding: 28px 24px;">
-      <p style="font-size: 15px; margin: 0 0 16px;">Dear <strong>${params.fullName}</strong>,</p>
+      <p style="font-size: 15px; margin: 0 0 16px;">Dear <strong>${fullName}</strong>,</p>
       
       <p style="font-size: 14px; line-height: 1.6; color: #475569; margin: 0 0 16px;">
-        Thank you for reaching out to ASTHIWAR for your construction project in <strong>${params.plotLocation}</strong>.
+        Thank you for reaching out to ASTHIWAR for your construction project in <strong>${plotLocation}</strong>.
       </p>
 
       <p style="font-size: 14px; line-height: 1.6; color: #475569; margin: 0 0 20px;">
         Our senior architectural engineering team has received your details. One of our engineers will contact you shortly to discuss your site specifications, architectural plans, and preliminary milestone schedules.
       </p>
 
-      ${params.estimateNumber ? `
+      ${estimateNumber ? `
       <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 14px 18px; margin-bottom: 20px;">
         <span style="font-size: 12px; color: #64748b;">Your Reference:</span>
-        <strong style="font-family: monospace; font-size: 14px; color: #0f172a; margin-left: 8px;">${params.estimateNumber}</strong>
+        <strong style="font-family: monospace; font-size: 14px; color: #0f172a; margin-left: 8px;">${estimateNumber}</strong>
       </div>` : ''}
 
       <p style="font-size: 13px; color: #64748b; line-height: 1.6; margin: 0 0 8px;">

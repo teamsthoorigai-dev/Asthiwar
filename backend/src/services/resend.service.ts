@@ -52,13 +52,27 @@ export function isResendConfigured(): boolean {
  * If RESEND_API_KEY is not configured, logs an advisory note and returns sent: false
  * with reason: 'NO_API_KEY' so the notification record stays PENDING as an outbox.
  */
+function maskEmail(email: string): string {
+  const parts = email.split('@');
+  if (parts.length !== 2) return '***';
+  const name = parts[0];
+  const domain = parts[1];
+  const maskedName = name.length > 2 ? name.substring(0, 2) + '****' : name[0] + '****';
+  return `${maskedName}@${domain}`;
+}
+
+function maskRecipients(to: string | string[]): string {
+  const list = Array.isArray(to) ? to : [to];
+  return list.map(maskEmail).join(', ');
+}
+
 export async function sendEmail(options: SendEmailOptions): Promise<SendEmailResult> {
   const client = getClient();
 
   if (!client) {
-    const recipients = Array.isArray(options.to) ? options.to.join(', ') : options.to;
+    const recipients = maskRecipients(options.to);
     console.info(
-      `[Resend] RESEND_API_KEY is not set. Email "${options.subject}" to [${recipients}] remains in PENDING outbox.`
+      `[Resend] RESEND_API_KEY is not set. Email dispatch to [${recipients}] remains in PENDING outbox.`
     );
     return {
       sent: false,
@@ -80,7 +94,7 @@ export async function sendEmail(options: SendEmailOptions): Promise<SendEmailRes
     });
 
     if (error) {
-      console.error(`[Resend] Failed to send email to ${options.to}:`, error);
+      console.error(`[Resend] Failed to send email to ${maskRecipients(options.to)}:`, error);
       return {
         sent: false,
         reason: 'FAILED',

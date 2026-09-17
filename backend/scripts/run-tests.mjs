@@ -24,6 +24,7 @@ const SUITES = [
   'src/modules/admin/admin-config.test.ts',
   'src/modules/notifications/notifications.test.ts',
   'src/modules/pdf/pdf.test.ts',
+  'src/modules/security.test.ts',
 ];
 
 const only = process.argv[2];

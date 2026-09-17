@@ -3,25 +3,29 @@ import { login, logout, changePassword, AuthError } from './auth.service.js';
 import { LoginDto, ChangePasswordDto } from './auth.schema.js';
 import { SESSION_COOKIE_NAME } from '../../middleware/auth.js';
 import { env } from '../../config/env.js';
+import { clientIp } from '../../middleware/client-ip.js';
 
 /**
- * In production the admin UI is served from a different origin than this API,
- * so the session cookie rides on cross-site requests. `sameSite: 'lax'` makes
- * the browser drop it on those XHRs — login succeeds, then every authenticated
- * call 401s. `none` is what lets it through, and it is only honoured alongside
- * `secure`, which is why local dev (plain http://localhost) stays on `lax`.
+ * The browser reaches this API through the site's own origin — src/lib/api/client.ts
+ * calls relative `/api/...` paths and the Next.js rewrite forwards them — so the
+ * session cookie is first-party and `lax` is enough.
+ *
+ * It was `none` in production, from when the admin UI called the API cross-origin.
+ * That no longer served a purpose and kept the cookie attached when the console
+ * was loaded inside another site's frame, which is what makes clickjacking an
+ * admin action work.
  */
 const sessionCookieOptions: CookieOptions = {
   httpOnly: true,
   secure: env.NODE_ENV === 'production',
-  sameSite: env.NODE_ENV === 'production' ? 'none' : 'lax',
+  sameSite: 'lax',
   path: '/',
 };
 
 export async function loginController(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const credentials = req.body as LoginDto;
-    const ipAddress = req.ip || req.socket.remoteAddress;
+    const ipAddress = clientIp(req);
     const userAgent = req.get('user-agent');
 
     const session = await login(credentials, { ipAddress, userAgent });

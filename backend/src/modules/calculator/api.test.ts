@@ -220,6 +220,8 @@ async function runApiTests() {
       email: 'aswin@example.com',
       plotLocation: 'Chennai',
       estimateNumber: createdEstimateNumber,
+      // The estimate's own link token: the number alone is a sequence and links nothing.
+      accessToken: createdAccessToken,
       preferredContactTime: 'Evening (4 PM - 7 PM)',
       requirementNotes: 'Need site visit this weekend for plot assessment',
     };
@@ -228,7 +230,7 @@ async function runApiTests() {
       body: JSON.stringify(enquiryPayload),
     });
     // 200, not 201: persisting an estimate already auto-creates its CRM enquiry,
-    // so posting the same estimateNumber updates that row rather than inserting a
+    // so posting the same estimateNumber (with its token) updates that row rather than inserting a
     // second lead for one quotation. 201 is the response when there is no
     // existing enquiry to fold into (covered by admin.test.ts).
     assert(enqRes.status === 200, 'Status code is 200 (folded into the existing enquiry)', `Got ${enqRes.status}`);

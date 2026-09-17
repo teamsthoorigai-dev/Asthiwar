@@ -21,8 +21,10 @@ import {
   addons,
   addonPrices,
   adminUsers,
+  adminSessions,
   milestoneStages,
 } from '../schema/index';
+import { PUBLISHED_DEFAULT_ADMIN_PASSWORD } from '../admin-defaults';
 import { eq, and } from 'drizzle-orm';
 import * as bcrypt from 'bcrypt';
 
@@ -1189,15 +1191,76 @@ async function seedAddons() {
 // 6. DEFAULT ADMIN USER
 // ---------------------------------------------------------------------------
 
+/**
+ * The first admin account, and the published default password kept out of use.
+ *
+ * render.yaml runs this seed on every start and never set ADMIN_SEED_PASSWORD,
+ * so a production deploy created a super_admin whose email and password are both
+ * readable in this public repository. Two rules now:
+ *
+ *   - production will not create an account on the published default; it waits
+ *     for ADMIN_SEED_PASSWORD instead.
+ *   - any existing account still on the default is moved to ADMIN_SEED_PASSWORD
+ *     when one is configured, and its sessions are ended. Setting the variable and
+ *     redeploying is the recovery path, since production login refuses the default.
+ */
 async function seedAdminUser() {
-  const existing = await db.select().from(adminUsers).limit(1);
+  const isProduction = process.env.NODE_ENV === 'production';
+  let configuredPassword = process.env.ADMIN_SEED_PASSWORD?.trim() || undefined;
+
+  if (configuredPassword === PUBLISHED_DEFAULT_ADMIN_PASSWORD && isProduction) {
+    console.error(
+      '  ❌ ADMIN_SEED_PASSWORD is set to the default published in the source code. Ignoring it.'
+    );
+    configuredPassword = undefined;
+  }
+
+  const existing = await db.select().from(adminUsers);
   if (existing.length > 0) {
-    console.log('  ⏭️  Admin user: already exists, skipped.');
+    const onDefault = [];
+    for (const account of existing) {
+      if (await bcrypt.compare(PUBLISHED_DEFAULT_ADMIN_PASSWORD, account.passwordHash)) {
+        onDefault.push(account);
+      }
+    }
+
+    if (onDefault.length === 0) {
+      console.log('  ⏭️  Admin user: already exists, skipped.');
+      return;
+    }
+
+    if (!configuredPassword) {
+      console.warn(
+        `  ⚠️  ${onDefault.length} admin account(s) still use the published default password.` +
+          (isProduction ? ' Sign-in with it is refused in production.' : '') +
+          ' Set ADMIN_SEED_PASSWORD and re-run the seed to replace it.'
+      );
+      return;
+    }
+
+    const rotatedHash = await bcrypt.hash(configuredPassword, 12);
+    for (const account of onDefault) {
+      await db
+        .update(adminUsers)
+        .set({ passwordHash: rotatedHash, updatedAt: new Date() })
+        .where(eq(adminUsers.id, account.id));
+      await db.delete(adminSessions).where(eq(adminSessions.userId, account.id));
+    }
+    console.log(
+      `  🔐 Admin user: moved ${onDefault.length} account(s) off the published default password.`
+    );
+    return;
+  }
+
+  if (!configuredPassword && isProduction) {
+    console.error(
+      '  ❌ Admin user: NOT seeded. Set ADMIN_SEED_EMAIL and ADMIN_SEED_PASSWORD and redeploy.'
+    );
     return;
   }
 
   const email = process.env.ADMIN_SEED_EMAIL ?? 'admin@asthiwar.com';
-  const plainPassword = process.env.ADMIN_SEED_PASSWORD ?? 'ChangeMe@2026!';
+  const plainPassword = configuredPassword ?? PUBLISHED_DEFAULT_ADMIN_PASSWORD;
 
   const passwordHash = await bcrypt.hash(plainPassword, 12);
 
