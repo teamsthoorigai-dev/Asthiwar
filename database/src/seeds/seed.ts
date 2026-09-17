@@ -6,6 +6,9 @@
  *   - temp/asthiwar_requirements_and_packages.md
  *
  * Run via: npm run db:seed (from database/ directory)
+ *
+ * `--bootstrap` (npm run db:bootstrap, run at every server start) writes the
+ * catalogue only into an empty database, and always runs the admin-account step.
  */
 
 import { db, pool } from '../db';
@@ -1205,7 +1208,9 @@ async function seedAddons() {
  *     redeploying is the recovery path, since production login refuses the default.
  */
 async function seedAdminUser() {
-  const isProduction = process.env.NODE_ENV === 'production';
+  // Anything not explicitly development or test is treated as production, so a
+  // deploy that forgets NODE_ENV cannot fall back to the published password.
+  const isProduction = !['development', 'test'].includes(process.env.NODE_ENV ?? '');
   let configuredPassword = process.env.ADMIN_SEED_PASSWORD?.trim() || undefined;
 
   if (configuredPassword === PUBLISHED_DEFAULT_ADMIN_PASSWORD && isProduction) {
@@ -1310,11 +1315,40 @@ async function seedMilestones() {
 // MAIN
 // ---------------------------------------------------------------------------
 
+/**
+ * Whether the start-up seed may write the catalogue.
+ *
+ * render.yaml ran the full seed on every start, and the seed updates the current
+ * package rates, package text and milestone stages to the values in this file.
+ * Every restart — including each wake from the free plan's idle spin-down —
+ * silently reverted whatever the team had changed in the admin console.
+ *
+ * At start-up the catalogue is now only written into a database that has none.
+ * Re-synchronising an existing catalogue to this file is still `npm run db:seed`,
+ * run deliberately.
+ */
+async function catalogueIsEmpty(): Promise<boolean> {
+  const existing = await db.select({ id: packages.id }).from(packages).limit(1);
+  return existing.length === 0;
+}
+
 async function main() {
-  console.log('\n🌱 ASTHIWAR Master Data Seed — Phase 3 (v4/v5 Specs)\n');
+  const bootstrapOnly = process.argv.includes('--bootstrap');
+  console.log(
+    `\n🌱 ASTHIWAR Master Data Seed — Phase 3 (v4/v5 Specs)${bootstrapOnly ? ' [bootstrap]' : ''}\n`
+  );
   console.log('----------------------------------------');
 
   try {
+    if (bootstrapOnly && !(await catalogueIsEmpty())) {
+      console.log('\n⏭️  Catalogue already present — left as the admin console has it.');
+      console.log('\n🔐 Seeding Admin User...');
+      await seedAdminUser();
+      console.log('\n----------------------------------------');
+      console.log('✅ Bootstrap complete.\n');
+      return;
+    }
+
     console.log('\n📍 Seeding Locations...');
     await seedLocations();
 

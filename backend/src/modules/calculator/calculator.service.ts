@@ -26,12 +26,14 @@ import {
 } from '@asthiwar/database';
 import { packageTierApplies, packageTierSpecificity } from '../../services/addon-tiers.js';
 import { isCurrentPrice } from '../../services/pricing-window.js';
+import { postgresErrorOf } from '../../services/db-errors.js';
 import {
   DRAFT_QUOTATION_NUMBER,
   QUOTATION_CHANNELS,
   QUOTATION_EXCLUSIONS,
   generateEstimateAccessToken,
   nextQuotationNumber,
+  quotationLinkExpiry,
 } from './quotation.js';
 import {
   AreaUnit,
@@ -105,7 +107,7 @@ export class QuotationNumberUnavailableError extends Error {
  * help with any other collision, and looping on one would hide a real fault.
  */
 function isQuotationNumberCollision(error: unknown): boolean {
-  const pgError = error as { code?: string; constraint?: string; detail?: string } | null;
+  const pgError = postgresErrorOf(error);
   if (!pgError || pgError.code !== '23505') return false;
   return Boolean(
     pgError.constraint?.includes('estimate_number') || pgError.detail?.includes('estimate_number')
@@ -121,6 +123,11 @@ function isQuotationNumberCollision(error: unknown): boolean {
  * the printed PDF all quote one list. Edit it in quotation.ts, not here.
  */
 export const STANDARD_EXCLUSIONS: readonly string[] = QUOTATION_EXCLUSIONS;
+
+/** Quantity ceilings for add-ons the catalogue gives no maximum. See the add-on step below. */
+const DEFAULT_MAX_FIXED_ADDON_UNITS = 10;
+/** Matches the calculator form's own fallback maximum. */
+const DEFAULT_MAX_MEASURED_ADDON_QUANTITY = 100_000;
 
 export const MILESTONE_DEFINITIONS = [
   { stageNumber: 1, stageName: 'Design & Approvals', percentage: 3, keyDeliverables: 'Soil test, floor plan, structural drawing, DTCP approval assistance' },
@@ -571,10 +578,18 @@ export async function calculateEstimate(
         continue;
       }
 
-      if (maxQty !== null && qty > maxQty) {
+      // An add-on the catalogue gives no maximum still has one. Every fixed-price
+      // add-on is seeded without a maximum and its price is multiplied by the
+      // quantity, so a hand-made request for 1,000 passenger lifts priced — and
+      // stored — as a real lead. Setting a maximum in the admin console overrides
+      // these defaults.
+      const effectiveMaxQty =
+        maxQty ?? (add.pricingUnit === 'fixed' ? DEFAULT_MAX_FIXED_ADDON_UNITS : DEFAULT_MAX_MEASURED_ADDON_QUANTITY);
+
+      if (qty > effectiveMaxQty) {
         issues.push({
           path: `addons.${index}.quantity`,
-          message: `${add.name} has a maximum of ${maxQty} ${add.pricingUnit === 'per_litre' ? 'litres' : 'units'}; ${qty} was requested.`,
+          message: `${add.name} has a maximum of ${effectiveMaxQty} ${add.pricingUnit === 'per_litre' ? 'litres' : 'units'}; ${qty} was requested.`,
         });
         continue;
       }
@@ -776,6 +791,7 @@ export async function calculateEstimate(
     // attempt rolls back, so reusing the token across retries is safe and keeps
     // the value returned to the caller identical to the one that was stored.
     const accessToken = generateEstimateAccessToken();
+    const accessTokenExpiresAt = quotationLinkExpiry();
     result.accessToken = accessToken;
 
     for (let attempt = 0; attempt < MAX_NUMBERING_ATTEMPTS; attempt++) {
@@ -790,6 +806,7 @@ export async function calculateEstimate(
             .values({
               estimateNumber: candidateNumber,
               accessToken,
+              accessTokenExpiresAt,
               customerName: input.customerName,
               customerPhone: input.customerPhone,
               customerEmail: input.customerEmail ?? '',

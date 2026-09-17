@@ -1,4 +1,5 @@
 import { Request } from 'express';
+import { ipKeyGenerator } from 'express-rate-limit';
 import crypto from 'node:crypto';
 import net from 'node:net';
 import { env } from '../config/env.js';
@@ -45,4 +46,17 @@ export function clientIp(req: Request): string {
     }
   }
   return req.ip || req.socket?.remoteAddress || 'unknown';
+}
+
+/**
+ * The rate-limit bucket for a request: the client IP, with IPv6 grouped by /56.
+ *
+ * One IPv6 customer is routinely handed a /64 or larger — billions of addresses.
+ * Keyed per address, every limit here was a formality for anyone who changes
+ * their source address between requests. A /56 is the usual size of a single
+ * household or small-business allocation, and it is express-rate-limit's own
+ * default. IPv4 and IPv4-mapped addresses are keyed as the plain IPv4 address.
+ */
+export function clientIpKey(req: Request): string {
+  return ipKeyGenerator(clientIp(req), 56);
 }

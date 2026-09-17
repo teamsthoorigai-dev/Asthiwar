@@ -19,12 +19,14 @@ import {
   Wrench,
   CheckSquare,
   Building,
+  Link2,
 } from 'lucide-react';
 import {
   getAdminEstimates,
   getAdminEstimateById,
   updateAdminEstimate,
   sendEstimateNotification,
+  reissueQuotationLink,
   AdminEstimate,
   AdminEstimateDetail,
   EstimateStatus,
@@ -67,6 +69,7 @@ export function AdminEstimatesExplorer() {
   const [loadingDetail, setLoadingDetail] = useState<boolean>(false);
   const [alertMsg, setAlertMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [sendingQuotation, setSendingQuotation] = useState<boolean>(false);
+  const [reissuingLink, setReissuingLink] = useState<boolean>(false);
 
   // Pagination State
   const [page, setPage] = useState<number>(1);
@@ -201,6 +204,39 @@ export function AdminEstimatesExplorer() {
       showAlert('error', msg);
     } finally {
       setSendingQuotation(false);
+    }
+  };
+
+  // For a quotation link that reached someone it should not have. The old link
+  // stops working immediately, so the customer needs the new one sent to them.
+  const handleReissueLink = async (id: string) => {
+    if (
+      !window.confirm(
+        'Issue a new customer link? The link the customer has now will stop working immediately.'
+      )
+    ) {
+      return;
+    }
+    setReissuingLink(true);
+    try {
+      const reissued = await reissueQuotationLink(id);
+      const link = `${window.location.origin}${reissued.accessLinkPath}`;
+      const copied = await navigator.clipboard?.writeText(link).then(
+        () => true,
+        () => false
+      );
+      showAlert(
+        'success',
+        `New customer link issued${copied ? ' and copied to the clipboard' : ''}. ` +
+          'Use "Email & WhatsApp Quote" to send it.'
+      );
+      if (estimateDetail && estimateDetail.id === id) {
+        setEstimateDetail({ ...estimateDetail, accessTokenExpiresAt: reissued.expiresAt });
+      }
+    } catch (err: unknown) {
+      showAlert('error', err instanceof Error ? err.message : 'Failed to issue a new link');
+    } finally {
+      setReissuingLink(false);
     }
   };
 
@@ -543,6 +579,17 @@ export function AdminEstimatesExplorer() {
                       <span>{sendingQuotation ? 'Dispatching...' : 'Email & WhatsApp Quote'}</span>
                     </button>
 
+                    <button
+                      type="button"
+                      disabled={reissuingLink}
+                      onClick={() => handleReissueLink(estimateDetail.id)}
+                      className="button button--ghost text-xs py-1.5 px-3 inline-flex items-center gap-1"
+                      title="Revoke the customer's current link and issue a new one"
+                    >
+                      <Link2 size={12} />
+                      <span>{reissuingLink ? 'Issuing...' : 'New customer link'}</span>
+                    </button>
+
                     <a
                       href={getAdminEstimatePdfUrl(estimateDetail.id)}
                       target="_blank"
@@ -553,6 +600,17 @@ export function AdminEstimatesExplorer() {
                       <span>PDF</span>
                     </a>
                   </div>
+
+                  {estimateDetail.accessTokenExpiresAt && (
+                    <p className="w-full text-[10px] text-muted">
+                      Customer link expiry:{' '}
+                      {new Date(estimateDetail.accessTokenExpiresAt).toLocaleDateString('en-IN', {
+                        day: 'numeric',
+                        month: 'short',
+                        year: 'numeric',
+                      })}
+                    </p>
+                  )}
                 </div>
 
                 {/* Client & Dimensions Card */}

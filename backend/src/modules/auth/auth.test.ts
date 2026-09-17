@@ -80,17 +80,19 @@ async function runAuthTests() {
 
     assert(loginRes.status === 200, 'Status code is 200');
     assert(loginRes.data.success === true, 'Response has success: true');
-    assert(Boolean(loginRes.data.data.token), 'Returns session token');
+    assert(!('token' in loginRes.data.data), 'Session token is not in the response body (cookie only)');
     assert(loginRes.data.data.user.email === defaultAdminEmail, 'Returns correct admin email');
     assert(loginRes.data.data.user.role === 'super_admin', 'Role is super_admin');
     assert(Boolean(loginRes.setCookie), 'Sets session cookie in response');
     assert(Boolean(loginRes.setCookie?.includes('asthiwar_session=')), 'Cookie name is asthiwar_session');
     assert(Boolean(loginRes.setCookie?.includes('HttpOnly')), 'Cookie has HttpOnly flag');
 
-    activeToken = loginRes.data.data.token;
-    // Extract cookie value for subsequent requests
+    // Extract cookie value for subsequent requests; the same value works as a bearer token
     const match = loginRes.setCookie?.match(/asthiwar_session=([^;]+)/);
-    if (match) cookieHeader = `asthiwar_session=${match[1]}`;
+    if (match) {
+      activeToken = match[1];
+      cookieHeader = `asthiwar_session=${match[1]}`;
+    }
 
     // -----------------------------------------------------------------------
     // Test 2: Login with non-existent email

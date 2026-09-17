@@ -6,6 +6,7 @@ import cookieParser from 'cookie-parser';
 import { env } from './config/env.js';
 import routes from './routes/index.js';
 import { AppError, errorHandler } from './middleware/errorHandler.js';
+import { createOriginPolicy, rejectCrossSiteWrites } from './middleware/origin.js';
 
 export function createApp(): Express {
   const app = express();
@@ -25,51 +26,49 @@ export function createApp(): Express {
   app.use(helmet());
 
   // CORS Configuration
-  const allowedOrigins = env.CORS_ORIGIN.split(',').map((origin) => origin.trim());
+  const originPolicy = createOriginPolicy({
+    corsOrigin: env.CORS_ORIGIN,
+    publicBaseUrl: env.PUBLIC_BASE_URL,
+    production: env.NODE_ENV === 'production',
+  });
+
+  if (originPolicy.wildcard) {
+    console.warn(
+      '[cors] CORS_ORIGIN contains "*". Other sites may read public responses, but never with ' +
+        'credentials, and cannot send writes. List the site origins explicitly instead.'
+    );
+  }
+
   app.use(
-    cors({
-      origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
-        // Allow requests with no origin (like mobile apps, curl, server-to-server)
-        if (!origin) return callback(null, true);
-        if (allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
-          return callback(null, true);
-        }
+    cors((req, callback) => {
+      const origin = req.header('origin');
 
-        // In development, automatically allow VS Code Dev Tunnels, Localtunnel, Ngrok, and localhost variants
-        if (env.NODE_ENV !== 'production') {
-          try {
-            const parsed = new URL(origin);
-            const host = parsed.hostname.toLowerCase();
-            if (
-              host === 'localhost' ||
-              host === '127.0.0.1' ||
-              host.endsWith('.devtunnels.ms') ||
-              host.endsWith('.loca.lt') ||
-              host.endsWith('.ngrok-free.app') ||
-              host.endsWith('.ngrok.io') ||
-              host.endsWith('.ngrok.app')
-            ) {
-              return callback(null, true);
-            }
-          } catch {
-            // Invalid origin URL format, fall through to rejection
-          }
-        }
+      // No Origin: curl, server-to-server, or a same-origin navigation.
+      if (!origin || originPolicy.isTrusted(origin)) {
+        return callback(null, { origin: true, credentials: true });
+      }
 
-        // A disallowed origin is a client error, not a server fault. Tag it so the
-        // shared error handler answers 403 instead of recording a CRITICAL 500.
-        const rejection: AppError = new Error(`Origin ${origin} is not allowed by CORS`);
-        rejection.statusCode = 403;
-        rejection.code = 'CORS_FORBIDDEN';
-        return callback(rejection);
-      },
-      credentials: true,
+      // `*` means readable by anyone — without credentials, so an admin's session
+      // is never usable from another site.
+      if (originPolicy.wildcard) {
+        return callback(null, { origin: '*', credentials: false });
+      }
+
+      // A disallowed origin is a client error, not a server fault. Tag it so the
+      // shared error handler answers 403 instead of recording a CRITICAL 500.
+      const rejection: AppError = new Error(`Origin ${origin} is not allowed by CORS`);
+      rejection.statusCode = 403;
+      rejection.code = 'CORS_FORBIDDEN';
+      return callback(rejection);
     })
   );
 
   // Request Parsing & Logging
+  //
+  // JSON only. The urlencoded parser served no client — the site sends JSON — and
+  // it is what let a plain HTML form on another site deliver a body this API would
+  // parse, with no preflight to stop it.
   app.use(express.json({ limit: '1mb' }));
-  app.use(express.urlencoded({ extended: true, limit: '1mb' }));
   app.use(cookieParser());
 
   if (env.NODE_ENV !== 'test') {
@@ -84,6 +83,7 @@ export function createApp(): Express {
   }
 
   // API v1 Routing
+  app.use('/api/v1', rejectCrossSiteWrites(originPolicy));
   app.use('/api/v1', routes);
 
   // 404 Handler for unknown routes

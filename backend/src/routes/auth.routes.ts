@@ -8,7 +8,8 @@ import {
 } from '../modules/auth/auth.controller.js';
 import { validateRequest } from '../middleware/validate.js';
 import { requireAdminAuth, requireRole } from '../middleware/auth.js';
-import { clientIp } from '../middleware/client-ip.js';
+import { clientIpKey } from '../middleware/client-ip.js';
+import { submittedEmail, trustedDeviceFor } from '../modules/auth/trusted-device.js';
 import { changePasswordSchema, loginSchema } from '../modules/auth/auth.schema.js';
 import {
   createAdminUserSchema,
@@ -31,25 +32,40 @@ const tooManyRequests = (message: string) => ({
 
 /**
  * Brute-force protection is keyed on the account being attacked, not the source
- * IP.
+ * IP, so many addresses cannot multiply the guesses against one account.
  *
- * Behind a proxy — Render's load balancer, and Vercel's rewrite in front of it —
- * every request arrives from a small pool of infrastructure addresses. An
- * IP-keyed limiter therefore puts all administrators in one bucket, so ten bad
- * attempts by anyone locked out everyone for fifteen minutes. Keying on the
- * submitted email confines a lockout to the account actually under attack.
+ * Keyed that way alone it was also a lockout switch: the seeded admin email is
+ * public, and ten bad passwords from anyone kept the real administrator out for
+ * fifteen minutes, indefinitely. Browsers that have signed in to the account
+ * before carry a trusted-device cookie (trusted-device.ts) and are exempt here;
+ * they are limited per device by the next limiter instead.
  */
 const loginAccountLimiter = rateLimit({
   windowMs: LOGIN_WINDOW_MS,
   max: 10,
   keyGenerator: (req) => {
-    const email = (req.body as { email?: unknown } | undefined)?.email;
-    return typeof email === 'string' && email.trim()
-      ? `account:${email.trim().toLowerCase()}`
-      : `ip:${clientIp(req)}`;
+    const email = submittedEmail(req);
+    return email ? `account:${email}` : `ip:${clientIpKey(req)}`;
   },
+  skip: (req) => trustedDeviceFor(req) !== null,
   message: tooManyRequests(
     'Too many login attempts for this account, please try again after 15 minutes'
+  ),
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+/**
+ * The same ten attempts, per trusted device. A copied device cookie still needs
+ * the password, and gets no more guesses at it than anyone else.
+ */
+const trustedDeviceLimiter = rateLimit({
+  windowMs: LOGIN_WINDOW_MS,
+  max: 10,
+  keyGenerator: (req) => `device:${trustedDeviceFor(req)}`,
+  skip: (req) => trustedDeviceFor(req) === null,
+  message: tooManyRequests(
+    'Too many login attempts from this browser, please try again after 15 minutes'
   ),
   standardHeaders: true,
   legacyHeaders: false,
@@ -63,7 +79,7 @@ const loginAccountLimiter = rateLimit({
 const loginFloodLimiter = rateLimit({
   windowMs: LOGIN_WINDOW_MS,
   max: 100,
-  keyGenerator: (req) => clientIp(req),
+  keyGenerator: (req) => clientIpKey(req),
   message: tooManyRequests('Too many login attempts, please try again after 15 minutes'),
   standardHeaders: true,
   legacyHeaders: false,
@@ -77,7 +93,7 @@ const loginFloodLimiter = rateLimit({
 const passwordChangeLimiter = rateLimit({
   windowMs: LOGIN_WINDOW_MS,
   max: 10,
-  keyGenerator: (req) => `user:${req.user?.id ?? clientIp(req)}`,
+  keyGenerator: (req) => `user:${req.user?.id ?? clientIpKey(req)}`,
   message: tooManyRequests('Too many password change attempts, please try again after 15 minutes'),
   standardHeaders: true,
   legacyHeaders: false,
@@ -88,6 +104,7 @@ router.post(
   '/login',
   loginFloodLimiter,
   loginAccountLimiter,
+  trustedDeviceLimiter,
   validateRequest({ body: loginSchema }),
   loginController
 );

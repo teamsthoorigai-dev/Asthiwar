@@ -11,6 +11,7 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx src/migrate.ts",
     "db:seed": "tsx src/seeds/seed.ts",
+    "db:bootstrap": "tsx src/seeds/seed.ts --bootstrap",
     "db:clean": "tsx src/scripts/clean-db.ts",
     "db:verify": "tsx src/scripts/verify_integrity.ts",
     "db:report-prices": "tsx src/scripts/sanitize_option_prices.ts",
@@ -22,11 +23,10 @@
     "@types/pg": "^8.11.11",
     "bcrypt": "^6.0.0",
     "dotenv": "^16.4.7",
-    "drizzle-kit": "^0.30.2",
-    "drizzle-orm": "^0.38.4",
+    "drizzle-kit": "^0.31.10",
+    "drizzle-orm": "^0.45.2",
     "pg": "^8.13.1",
     "tsx": "^4.19.2",
     "typescript": "^5.7.3"
-  },
-  "devDependencies": {}
+  }
 }

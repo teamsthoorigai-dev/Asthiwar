@@ -14,6 +14,12 @@ import {
 } from './admin.service.js';
 import { logAuditEvent } from '../../services/audit.service.js';
 import { clientIp } from '../../middleware/client-ip.js';
+import { hasAtLeastRole } from '../../middleware/auth.js';
+import {
+  findEstimateByRef,
+  quotationPdfPath,
+  reissueQuotationLink,
+} from '../calculator/quotation.js';
 import {
   EnquiriesQuery,
   UpdateEnquiryDto,
@@ -179,6 +185,62 @@ export async function updateEstimateController(req: Request, res: Response, next
   }
 }
 
+/**
+ * POST /api/v1/admin/estimates/:id/access-link — issue the customer a new link.
+ *
+ * For a quotation link that reached someone it should not have: the old token
+ * stops working immediately. The new link is returned so staff can send it on.
+ */
+export async function reissueQuotationLinkController(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const estimate = await findEstimateByRef(req.params.id as string);
+    if (!estimate) {
+      res.status(404).json({
+        success: false,
+        error: { code: 'ESTIMATE_NOT_FOUND', message: `Estimate ${req.params.id} not found` },
+      });
+      return;
+    }
+
+    const reissued = await reissueQuotationLink(estimate.id);
+    if (!reissued) {
+      res.status(404).json({
+        success: false,
+        error: { code: 'ESTIMATE_NOT_FOUND', message: `Estimate ${req.params.id} not found` },
+      });
+      return;
+    }
+
+    logAuditEvent({
+      eventType: 'ADMIN_MUTATION',
+      action: 'REISSUE_QUOTATION_LINK',
+      severity: 'HIGH',
+      actorType: 'ADMIN',
+      actorId: req.user?.email || req.user?.id,
+      endpoint: req.originalUrl,
+      httpMethod: req.method,
+      statusCode: 200,
+      // The new token is deliberately not recorded.
+      metadata: { estimateId: reissued.id, estimateNumber: reissued.estimateNumber },
+      ipAddress: clientIp(req),
+      userAgent: req.headers['user-agent'],
+    }).catch(() => {});
+
+    res.json({
+      success: true,
+      message: 'A new customer link was issued. The previous link no longer works.',
+      data: {
+        estimateId: reissued.id,
+        estimateNumber: reissued.estimateNumber,
+        accessLinkPath: quotationPdfPath(reissued.estimateNumber, reissued.accessToken),
+        expiresAt: reissued.accessTokenExpiresAt,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
 export async function getDashboardAnalyticsController(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const analytics = await getAdminDashboardAnalytics(req.query as DashboardQuery);
@@ -216,6 +278,16 @@ export async function getAuditLogByIdController(req: Request, res: Response, nex
       return;
     }
     const log = await getAdminAuditLogById(id);
+
+    // A stack trace names source files, paths and internal structure. It is for
+    // whoever maintains the system, not every account that can read the audit
+    // trail. (Production does not record stacks at all; this covers the rest.)
+    if (!hasAtLeastRole(req.user?.role, 'super_admin')) {
+      const { errorStack: _omitted, ...withoutStack } = log;
+      res.json({ success: true, data: withoutStack });
+      return;
+    }
+
     res.json({ success: true, data: log });
   } catch (error) {
     if (error instanceof AdminServiceError) {

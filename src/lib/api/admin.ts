@@ -7,9 +7,10 @@ export interface AdminUser {
   role: string;
 }
 
+/** The session itself is only ever in the HttpOnly cookie; it is not in this body. */
 export interface AdminLoginResponse {
   user: AdminUser;
-  token?: string;
+  expiresAt: string;
 }
 
 export interface DashboardKpis {
@@ -165,6 +166,8 @@ export interface AdminEstimateDetail extends AdminEstimate {
   gstAmount?: string | number;
   milestoneBreakdownJson?: any;
   fullSnapshotJson?: any;
+  /** When the customer's quotation link stops working. */
+  accessTokenExpiresAt?: string;
   items?: AdminEstimateItem[];
   addons?: AdminEstimateAddon[];
 }
@@ -606,6 +609,25 @@ export async function updateAdminEstimate(
   return apiClient<AdminEstimate>(`/api/v1/admin/estimates/${id}`, {
     method: 'PATCH',
     body: payload,
+    ...options,
+  });
+}
+
+export interface ReissuedQuotationLink {
+  estimateId: string;
+  estimateNumber: string;
+  /** Site-relative path of the new customer link, token included. */
+  accessLinkPath: string;
+  expiresAt: string;
+}
+
+/** Revoke the customer's current quotation link and issue a new one. */
+export async function reissueQuotationLink(
+  id: string,
+  options?: RequestOptions
+): Promise<ReissuedQuotationLink> {
+  return apiClient<ReissuedQuotationLink>(`/api/v1/admin/estimates/${id}/access-link`, {
+    method: 'POST',
     ...options,
   });
 }

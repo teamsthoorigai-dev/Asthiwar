@@ -33,7 +33,14 @@ import {
  * Sump has a minimum of 1000 litres" is actionable where "calculation error" is not.
  */
 function describeCalculationError(err: unknown, fallback: string): string {
-  if (err instanceof ApiError && err.code === 'ESTIMATE_NOT_PRICEABLE' && Array.isArray(err.details)) {
+  // VALIDATION_ERROR too: the server's size limits ("Total built-up area cannot
+  // exceed 1,00,000 sq.ft") arrive as validation details, and the bare message is
+  // only "Invalid input parameters".
+  if (
+    err instanceof ApiError &&
+    (err.code === 'ESTIMATE_NOT_PRICEABLE' || err.code === 'VALIDATION_ERROR') &&
+    Array.isArray(err.details)
+  ) {
     const reasons = (err.details as ApiFieldError[])
       .map((d) => d?.message)
       .filter((m): m is string => Boolean(m));

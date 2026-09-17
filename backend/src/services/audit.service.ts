@@ -1,4 +1,5 @@
 import { db, auditLogs } from '@asthiwar/database';
+import { loggableError } from './db-errors.js';
 
 export interface LogAuditParams {
   eventType: 'ERROR' | 'WARN' | 'INFO' | 'ADMIN_MUTATION' | 'CALCULATOR_SUBMISSION' | 'NOTIFICATION_DISPATCH';
@@ -150,6 +151,6 @@ export async function logAuditEvent(params: LogAuditParams): Promise<void> {
     });
   } catch (err) {
     // Fail silently into console so logging errors never disrupt primary business logic
-    console.error('[AUDIT_LOGGER_FALLBACK_ERROR]', err);
+    console.error('[AUDIT_LOGGER_FALLBACK_ERROR]', loggableError(err));
   }
 }

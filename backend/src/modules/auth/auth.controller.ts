@@ -4,6 +4,7 @@ import { LoginDto, ChangePasswordDto } from './auth.schema.js';
 import { SESSION_COOKIE_NAME } from '../../middleware/auth.js';
 import { env } from '../../config/env.js';
 import { clientIp } from '../../middleware/client-ip.js';
+import { issueTrustedDevice } from './trusted-device.js';
 
 /**
  * The browser reaches this API through the site's own origin — src/lib/api/client.ts
@@ -36,11 +37,16 @@ export async function loginController(req: Request, res: Response, next: NextFun
       expires: session.expiresAt,
     });
 
+    // Exempts this browser from the account-wide login lockout from now on.
+    issueTrustedDevice(res, session.user.email);
+
+    // The token travels only in the HttpOnly cookie. It was also returned here,
+    // where any script on the page could read it — undoing HttpOnly — and no part
+    // of the site used it.
     res.json({
       success: true,
       message: 'Login successful',
       data: {
-        token: session.token,
         user: session.user,
         expiresAt: session.expiresAt,
       },

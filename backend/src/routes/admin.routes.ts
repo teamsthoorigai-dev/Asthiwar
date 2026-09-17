@@ -17,6 +17,7 @@ import {
   getEstimatesController,
   getEstimateByIdController,
   updateEstimateController,
+  reissueQuotationLinkController,
   getDashboardAnalyticsController,
   getAuditLogsController,
   getAuditLogByIdController,
@@ -75,6 +76,9 @@ router.get('/estimates/:id', getEstimateByIdController);
 router.get('/estimates/:id/pdf', downloadEstimatePdfController);
 
 router.post('/estimates/:id/notify', canWriteCrm, sendEstimateNotificationController);
+
+// Revokes the customer's current quotation link and issues a new one.
+router.post('/estimates/:id/access-link', canWriteCrm, reissueQuotationLinkController);
 
 router.patch(
   '/estimates/:id',

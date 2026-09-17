@@ -10,7 +10,7 @@ import {
   getComparisonMatrix,
 } from '../modules/calculator/calculator.controller.js';
 import { validateRequest } from '../middleware/validate.js';
-import { clientIp } from '../middleware/client-ip.js';
+import { clientIpKey } from '../middleware/client-ip.js';
 import { calculateEstimateSchema } from '../modules/calculator/calculator.schema.js';
 
 import { downloadEstimatePdfController } from '../modules/pdf/pdf.controller.js';
@@ -40,7 +40,7 @@ const tooManyRequests = (message: string) => ({
 const estimateSubmissionLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
   max: 10,
-  keyGenerator: (req) => clientIp(req),
+  keyGenerator: (req) => clientIpKey(req),
   message: tooManyRequests(
     'Too many estimates submitted from this connection. Please try again in an hour, ' +
       'or call us directly and we will prepare your quotation.'
@@ -57,7 +57,7 @@ const estimateSubmissionLimiter = rateLimit({
 const previewLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 300,
-  keyGenerator: (req) => clientIp(req),
+  keyGenerator: (req) => clientIpKey(req),
   message: tooManyRequests('Too many pricing previews. Please wait a moment and try again.'),
   standardHeaders: true,
   legacyHeaders: false,
@@ -76,7 +76,7 @@ const previewLimiter = rateLimit({
 const quotationReadLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 60,
-  keyGenerator: (req) => clientIp(req),
+  keyGenerator: (req) => clientIpKey(req),
   message: tooManyRequests('Too many quotation downloads. Please wait a few minutes and try again.'),
   standardHeaders: true,
   legacyHeaders: false,

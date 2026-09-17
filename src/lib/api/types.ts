@@ -224,18 +224,9 @@ export interface CalculationResult {
   disclaimers: string[];
 }
 
+/** Deliberately minimal: the endpoint is public. A 503 carries `unavailable`. */
 export interface HealthResponse {
-  status: 'healthy' | 'degraded';
-  timestamp: string;
-  service: string;
-  version: string;
-  database: {
-    provider: string;
-    connected: boolean;
-    message?: string;
-    latencyMs?: number;
-  };
-  uptimeSeconds: number;
+  status: 'ok' | 'unavailable';
 }
 
 export interface ApiFieldError {

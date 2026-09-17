@@ -3,6 +3,12 @@ import { ZodError } from 'zod';
 import { env } from '../config/env.js';
 import { boundedForAudit, logAuditEvent } from '../services/audit.service.js';
 import { clientIp } from './client-ip.js';
+import {
+  describeQueryFailure,
+  loggableError,
+  postgresErrorOf,
+  safeStackOf,
+} from '../services/db-errors.js';
 
 export interface AppError extends Error {
   statusCode?: number;
@@ -74,46 +80,105 @@ function redactSensitive(value: unknown, depth = 0): unknown {
  * That is bad input, not a server fault.
  */
 function isPostgresDataException(err: unknown): boolean {
-  const candidate = err as { code?: unknown; severity?: unknown };
-  return (
-    typeof candidate.code === 'string' &&
-    /^22[0-9A-Z]{3}$/.test(candidate.code) &&
-    typeof candidate.severity === 'string'
-  );
+  const pgError = postgresErrorOf(err);
+  return pgError !== null && /^22[0-9A-Z]{3}$/.test(pgError.code ?? '');
 }
 
 /**
- * How many error records anonymous callers may add to audit_logs per minute.
+ * How many error records anonymous callers may add to audit_logs.
  *
  * Every error used to become a row, and anyone can produce errors at will: a
- * disallowed Origin header was a free INSERT on every request, ahead of any rate
- * limit, and a rejected preview stored its whole request body. The console still
- * gets a sample of what anonymous traffic is hitting; beyond it, the server log
- * notes how many were dropped. Errors from signed-in admins are always recorded.
+ * disallowed Origin header was a free INSERT on every request, and a rejected
+ * preview stored its whole request body. The first cap was one shared budget of
+ * 30 a minute, which let a single address spend it and so keep everyone else's
+ * errors — including its own later probing — out of the trail.
+ *
+ * Now each address gets its own small allowance, under a much larger ceiling
+ * that bounds table growth. Whatever goes over is not silently dropped: once a
+ * minute a single summary row records how many records were withheld and from
+ * which addresses, so a flood is itself visible in the audit trail.
+ * Errors from signed-in admins are always recorded.
  */
 const ANONYMOUS_AUDIT_WINDOW_MS = 60 * 1000;
-const ANONYMOUS_AUDIT_MAX_PER_WINDOW = 30;
-let anonymousAuditWindowStart = 0;
-let anonymousAuditWritten = 0;
-let anonymousAuditSuppressed = 0;
+const ANONYMOUS_AUDIT_PER_ADDRESS = 10;
+const ANONYMOUS_AUDIT_CEILING = 300;
+/** Bounds the per-minute bookkeeping itself. */
+const TRACKED_ADDRESS_LIMIT = 5000;
 
-function admitAnonymousAuditRecord(): boolean {
-  const now = Date.now();
-  if (now - anonymousAuditWindowStart >= ANONYMOUS_AUDIT_WINDOW_MS) {
-    if (anonymousAuditSuppressed > 0) {
-      console.warn(
-        `[audit] Dropped ${anonymousAuditSuppressed} anonymous error record(s) over the per-minute cap.`
-      );
-    }
-    anonymousAuditWindowStart = now;
-    anonymousAuditWritten = 0;
-    anonymousAuditSuppressed = 0;
+let auditWindowStart = 0;
+let auditWindowWritten = 0;
+let auditWindowSuppressed = 0;
+const writtenByAddress = new Map<string, number>();
+const suppressedByAddress = new Map<string, number>();
+let summaryTimer: NodeJS.Timeout | null = null;
+
+function bump(counts: Map<string, number>, address: string): void {
+  if (counts.has(address) || counts.size < TRACKED_ADDRESS_LIMIT) {
+    counts.set(address, (counts.get(address) ?? 0) + 1);
   }
-  if (anonymousAuditWritten < ANONYMOUS_AUDIT_MAX_PER_WINDOW) {
-    anonymousAuditWritten++;
+}
+
+function closeAuditWindow(now: number): Promise<void> {
+  let summary: Promise<void> = Promise.resolve();
+  if (auditWindowSuppressed > 0) {
+    const topAddresses = [...suppressedByAddress.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 20)
+      // Not keyed `address`: the audit sanitizer redacts any field of that name.
+      .map(([ip, count]) => ({ ip, count }));
+    summary = logAuditEvent({
+      eventType: 'WARN',
+      action: 'ANONYMOUS_ERRORS_SUPPRESSED',
+      severity: 'HIGH',
+      actorType: 'SYSTEM',
+      errorMessage: `${auditWindowSuppressed} anonymous error record(s) over the audit cap were not stored individually`,
+      metadata: {
+        windowStart: new Date(auditWindowStart).toISOString(),
+        suppressed: auditWindowSuppressed,
+        distinctAddresses: suppressedByAddress.size,
+        topAddresses,
+      },
+    }).catch(() => {});
+  }
+  auditWindowStart = now;
+  auditWindowWritten = 0;
+  auditWindowSuppressed = 0;
+  writtenByAddress.clear();
+  suppressedByAddress.clear();
+  return summary;
+}
+
+/**
+ * Close the current window now, writing its summary row if anything was
+ * withheld. For graceful shutdown, so the last minute's count is not lost.
+ */
+export function flushAnonymousAuditWindow(): Promise<void> {
+  return closeAuditWindow(Date.now());
+}
+
+function admitAnonymousAuditRecord(address: string): boolean {
+  const now = Date.now();
+  if (now - auditWindowStart >= ANONYMOUS_AUDIT_WINDOW_MS) void closeAuditWindow(now);
+
+  if (
+    (writtenByAddress.get(address) ?? 0) < ANONYMOUS_AUDIT_PER_ADDRESS &&
+    auditWindowWritten < ANONYMOUS_AUDIT_CEILING
+  ) {
+    bump(writtenByAddress, address);
+    auditWindowWritten++;
     return true;
   }
-  anonymousAuditSuppressed++;
+
+  auditWindowSuppressed++;
+  bump(suppressedByAddress, address);
+  // The summary is written when the window closes, even if no further error
+  // arrives to close it. Unref'd so it never keeps the process alive.
+  if (!summaryTimer) {
+    summaryTimer = setInterval(() => {
+      if (Date.now() - auditWindowStart >= ANONYMOUS_AUDIT_WINDOW_MS) void closeAuditWindow(Date.now());
+    }, ANONYMOUS_AUDIT_WINDOW_MS);
+    summaryTimer.unref();
+  }
   return false;
 }
 
@@ -162,12 +227,15 @@ export function errorHandler(
       : appError.details;
 
   const sanitizedUrl = (req.originalUrl || req.url || '').split('?')[0];
+  // Never the raw Drizzle message or stack: both begin with every bound parameter.
+  const safeStack = safeStackOf(err);
+  const address = clientIp(req);
 
   const isAnonymous = !req.user;
   // A rejected Origin is a browser on another site, not a fault anyone can act on.
   const worthRecording = code !== 'CORS_FORBIDDEN';
 
-  if (worthRecording && (!isAnonymous || admitAnonymousAuditRecord())) {
+  if (worthRecording && (!isAnonymous || admitAnonymousAuditRecord(address))) {
     logAuditEvent({
       eventType: statusCode >= 500 ? 'ERROR' : 'WARN',
       action: 'API_ERROR_INTERCEPTED',
@@ -177,22 +245,22 @@ export function errorHandler(
       endpoint: sanitizedUrl,
       httpMethod: req.method,
       statusCode,
-      errorMessage: err.message || message,
-      errorStack: env.NODE_ENV === 'production' ? undefined : err.stack,
+      errorMessage: describeQueryFailure(err) ?? (err.message || message),
+      errorStack: env.NODE_ENV === 'production' ? undefined : safeStack,
       metadata: {
-        errorCode: isUnexpected || isDataException ? (err.code ?? code) : code,
+        errorCode: isUnexpected || isDataException ? (postgresErrorOf(err)?.code ?? appError.code ?? code) : code,
         body: boundedForAudit(redactSensitive(req.body)),
         query: boundedForAudit(redactSensitive(req.query)),
         params: boundedForAudit(redactSensitive(req.params)),
         details: boundedForAudit(details),
       },
-      ipAddress: clientIp(req),
+      ipAddress: address,
       userAgent: req.headers['user-agent'],
     }).catch(() => {});
   }
 
   if (statusCode >= 500) {
-    console.error(`[ERROR 500] ${req.method} ${sanitizedUrl}:`, err);
+    console.error(`[ERROR 500] ${req.method} ${sanitizedUrl}:`, loggableError(err));
   }
 
   res.status(statusCode).json({
@@ -201,7 +269,7 @@ export function errorHandler(
       code,
       message,
       ...(details ? { details } : {}),
-      ...(env.NODE_ENV === 'development' ? { stack: err.stack } : {}),
+      ...(env.NODE_ENV === 'development' ? { stack: safeStack } : {}),
     },
   });
 }

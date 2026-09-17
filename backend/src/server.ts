@@ -1,6 +1,7 @@
 import { createApp } from './app.js';
 import { env } from './config/env.js';
 import { pool } from '@asthiwar/database';
+import { flushAnonymousAuditWindow } from './middleware/errorHandler.js';
 
 const app = createApp();
 
@@ -21,6 +22,8 @@ async function shutdown(signal: string) {
   server.close(async () => {
     console.log('🔒 HTTP server closed.');
     try {
+      // Write the last minute's withheld-error summary before the pool goes away.
+      await flushAnonymousAuditWindow();
       await pool.end();
       console.log('🔌 Database pool closed.');
       process.exit(0);

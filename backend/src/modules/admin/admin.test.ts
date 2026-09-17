@@ -135,13 +135,11 @@ async function runAdminTests() {
     });
     assert(loginRes.status === 200, 'Admin login returns 200 OK');
     assert(loginRes.body.success === true, 'Admin login success is true');
-    bearerToken = loginRes.body.data.token;
+    // The session is only issued as a cookie; its value doubles as a bearer token.
+    const setCookie = loginRes.headers['set-cookie'] ?? [];
+    sessionCookie = setCookie.find((c) => c.startsWith('asthiwar_session='))?.split(';')[0] ?? '';
+    bearerToken = sessionCookie.slice('asthiwar_session='.length);
     assert(!!bearerToken, 'Bearer token successfully obtained');
-
-    const setCookie = loginRes.headers['set-cookie'];
-    if (setCookie && setCookie.length > 0) {
-      sessionCookie = setCookie[0].split(';')[0];
-    }
     assert(!!sessionCookie, 'Session cookie successfully captured');
 
     // -----------------------------------------------------------------

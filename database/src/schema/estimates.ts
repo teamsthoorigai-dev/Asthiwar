@@ -16,6 +16,9 @@ export const estimates = pgTable('estimates', {
   // A customer's link carries the number *and* this token; staff reach the same
   // estimate through an authenticated admin route instead.
   accessToken: text('access_token').notNull(),
+  // When the link stops working. Staff can reissue the token (which also revokes
+  // the old link), and sending the quotation from the console extends it.
+  accessTokenExpiresAt: timestamp('access_token_expires_at', { withTimezone: true }).notNull(),
 
 
   // Customer & Lead Info (Step 0)

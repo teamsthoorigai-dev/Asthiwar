@@ -2,7 +2,8 @@ import { Request, Response, NextFunction } from 'express';
 import { db, enquiries, eq } from '@asthiwar/database';
 import { CreateEnquiryDto } from './enquiries.schema.js';
 import { sendAdminNewLeadAlert } from '../notifications/notifications.service.js';
-import { findEstimateByRef, tokensMatch } from '../calculator/quotation.js';
+import { findEstimateByRef, isAccessLinkExpired, tokensMatch } from '../calculator/quotation.js';
+import { loggableError } from '../../services/db-errors.js';
 
 /**
  * The estimate this enquiry may attach to, or null.
@@ -18,7 +19,9 @@ async function resolveLinkedEstimate(data: CreateEnquiryDto) {
   if (!data.estimateNumber || !token) return null;
 
   const estimate = await findEstimateByRef(data.estimateNumber);
-  if (!estimate || !tokensMatch(token, estimate.accessToken)) return null;
+  if (!estimate || !tokensMatch(token, estimate.accessToken) || isAccessLinkExpired(estimate)) {
+    return null;
+  }
 
   return { id: estimate.id, estimateNumber: estimate.estimateNumber };
 }
@@ -50,7 +53,7 @@ export async function createEnquiry(req: Request, res: Response, next: NextFunct
 
         // Trigger instant email notification via Resend to configured email
         sendAdminNewLeadAlert(updated.id).catch((err) => {
-          console.error('[Enquiries] Failed to send email alert for updated lead:', err);
+          console.error('[Enquiries] Failed to send email alert for updated lead:', loggableError(err));
         });
 
         res.status(200).json({
@@ -87,7 +90,7 @@ export async function createEnquiry(req: Request, res: Response, next: NextFunct
 
     // Trigger instant email notification via Resend to configured email
     sendAdminNewLeadAlert(newEnquiry.id).catch((err) => {
-      console.error('[Enquiries] Failed to send email alert for new lead:', err);
+      console.error('[Enquiries] Failed to send email alert for new lead:', loggableError(err));
     });
 
     res.status(201).json({

@@ -188,7 +188,84 @@ export async function resolveEstimateForPublicAccess(ref: string, suppliedToken:
     );
   }
 
+  // Said plainly only to someone holding the right token — it reveals nothing
+  // to a caller who does not already have the link.
+  if (isAccessLinkExpired(estimate)) {
+    throw new EstimateAccessError(
+      410,
+      'QUOTATION_LINK_EXPIRED',
+      'This quotation link has expired. Please contact us and we will send you a fresh one.'
+    );
+  }
+
   return estimate;
+}
+
+// ---------------------------------------------------------------------------
+// Link lifetime
+// ---------------------------------------------------------------------------
+
+/**
+ * How long a customer's quotation link keeps working.
+ *
+ * Links never expired and could not be withdrawn, so a forwarded message exposed
+ * the customer's details indefinitely. Longer than the quotation's own 30-day
+ * validity, so a customer can still refer back to it while deciding.
+ */
+export const QUOTATION_LINK_VALIDITY_DAYS = 90;
+
+export function quotationLinkExpiry(from: Date = new Date()): Date {
+  return new Date(from.getTime() + QUOTATION_LINK_VALIDITY_DAYS * 24 * 60 * 60 * 1000);
+}
+
+export function isAccessLinkExpired(estimate: { accessTokenExpiresAt: Date | string }): boolean {
+  return new Date(estimate.accessTokenExpiresAt).getTime() <= Date.now();
+}
+
+/**
+ * Issue a new link for a quotation. The previous token stops working at once.
+ * For a link that was forwarded where it should not have been.
+ */
+export async function reissueQuotationLink(estimateId: string) {
+  const [updated] = await db
+    .update(estimates)
+    .set({
+      accessToken: generateEstimateAccessToken(),
+      accessTokenExpiresAt: quotationLinkExpiry(),
+      updatedAt: new Date(),
+    })
+    .where(eq(estimates.id, estimateId))
+    .returning({
+      id: estimates.id,
+      estimateNumber: estimates.estimateNumber,
+      accessToken: estimates.accessToken,
+      accessTokenExpiresAt: estimates.accessTokenExpiresAt,
+    });
+  return updated ?? null;
+}
+
+/**
+ * Keep the current link working for another full period. Used when staff send
+ * the quotation, so the link in that message is never already expired.
+ */
+export async function extendQuotationLink(estimateId: string): Promise<Date> {
+  const expiresAt = quotationLinkExpiry();
+  await db
+    .update(estimates)
+    .set({ accessTokenExpiresAt: expiresAt })
+    .where(eq(estimates.id, estimateId));
+  return expiresAt;
+}
+
+/**
+ * The stored snapshot, as served to the customer. The snapshot was written with
+ * the token it was issued under; after a reissue that value is stale, and the
+ * caller already holds the live one, so it is not repeated back.
+ */
+export function publicSnapshotOf(snapshot: unknown): unknown {
+  if (!snapshot || typeof snapshot !== 'object') return snapshot;
+  const { accessToken: _omitted, ...rest } = snapshot as Record<string, unknown>;
+  return rest;
 }
 
 /** How long a quotation stands, in days. Printed on the document and in term 1. */

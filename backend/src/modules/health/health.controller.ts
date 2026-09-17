@@ -18,23 +18,18 @@ function probeDatabase(): ReturnType<typeof testDatabaseConnection> {
   return lastProbe.result;
 }
 
+/**
+ * Up or not, and nothing else.
+ *
+ * This is public and unauthenticated. It used to name the service, its version,
+ * the database provider and driver, the query latency and the process uptime —
+ * none of which Render's health check reads (it only looks at the status code),
+ * and all of which help someone fingerprint the stack or time a restart. The
+ * detail of a failed database probe is written to the server log instead.
+ */
 export async function getHealth(req: Request, res: Response): Promise<void> {
-  const dbStatus = await probeDatabase();
+  const { connected } = await probeDatabase();
 
-  const isHealthy = dbStatus.connected;
-  const statusCode = isHealthy ? 200 : 503;
-
-  res.status(statusCode).json({
-    status: isHealthy ? 'healthy' : 'degraded',
-    timestamp: new Date().toISOString(),
-    service: 'asthiwar-backend',
-    version: '1.0.0',
-    database: {
-      provider: 'Neon PostgreSQL (node-postgres)',
-      connected: dbStatus.connected,
-      message: dbStatus.message,
-      ...(dbStatus.latencyMs !== undefined ? { latencyMs: dbStatus.latencyMs } : {}),
-    },
-    uptimeSeconds: Math.floor(process.uptime()),
-  });
+  res.setHeader('Cache-Control', 'no-store');
+  res.status(connected ? 200 : 503).json({ status: connected ? 'ok' : 'unavailable' });
 }

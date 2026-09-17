@@ -8,7 +8,11 @@ dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 
 const envSchema = z.object({
   PORT: z.coerce.number().default(4000),
-  NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+  // Defaults to production: a deploy that forgets to set it must fail closed. A
+  // development default returned stack traces, trusted any *.ngrok-free.app or
+  // *.loca.lt origin (anyone can register one), accepted the published admin
+  // password, and dropped the cookie's Secure flag. Local .env files set it.
+  NODE_ENV: z.enum(['development', 'production', 'test']).default('production'),
   DATABASE_URL: z.string().min(1, 'DATABASE_URL is required'),
   CORS_ORIGIN: z.string().default('http://localhost:3000,http://localhost:5173'),
   // Where a customer reaches this deployment. Notification templates build
@@ -33,6 +37,10 @@ const parsedEnv = envSchema.safeParse(process.env);
 if (!parsedEnv.success) {
   console.error('❌ Invalid environment variables:', parsedEnv.error.format());
   throw new Error('Invalid environment configuration: SESSION_SECRET (min 32 chars) and DATABASE_URL are strictly required');
+}
+
+if (!process.env.NODE_ENV) {
+  console.warn('[env] NODE_ENV is not set; running with production behaviour.');
 }
 
 export const env = parsedEnv.data;

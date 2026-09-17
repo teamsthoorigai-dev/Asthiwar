@@ -21,7 +21,7 @@ import {
 } from '@asthiwar/database';
 import { packageTierApplies, packageTierSpecificity } from '../../services/addon-tiers.js';
 import { isCurrentPrice } from '../../services/pricing-window.js';
-import { EstimateAccessError, resolveEstimateForPublicAccess } from './quotation.js';
+import { EstimateAccessError, publicSnapshotOf, resolveEstimateForPublicAccess } from './quotation.js';
 import { calculateEstimate } from './calculator.service.js';
 import { CalculatorInput } from './calculator.types.js';
 
@@ -492,7 +492,7 @@ export async function getEstimateByNumber(req: Request, res: Response, next: Nex
 
     res.json({
       success: true,
-      data: est.fullSnapshotJson,
+      data: publicSnapshotOf(est.fullSnapshotJson),
     });
   } catch (error) {
     if (error instanceof EstimateAccessError) {

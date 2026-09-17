@@ -7,9 +7,10 @@ import {
   NotificationChannel,
 } from './notifications.types.js';
 import { env } from '../../config/env.js';
-import { estimateRefCandidates, quotationPdfPath } from '../calculator/quotation.js';
+import { estimateRefCandidates, extendQuotationLink, quotationPdfPath } from '../calculator/quotation.js';
 import { sendEmail, isResendConfigured } from '../../services/resend.service.js';
 import { sendWhatsAppMessage } from '../../services/whatsapp.service.js';
+import { loggableError } from '../../services/db-errors.js';
 import {
   renderQuotationEmail,
   renderAdminLeadAlertEmail,
@@ -82,6 +83,8 @@ export async function sendEstimateQuotationNotification(estimateIdOrNumber: stri
     throw new NotificationError(404, 'ESTIMATE_NOT_FOUND', `Estimate ${estimateIdOrNumber} not found`);
   }
 
+  // Staff are sending this link now, so it must not be one that has already lapsed.
+  await extendQuotationLink(estimate.id);
   const pdfUrl = publicQuotationPdfUrl(estimate.estimateNumber, estimate.accessToken);
 
   const results = [];
@@ -278,7 +281,7 @@ export async function sendAdminNewLeadAlert(enquiryId: string) {
     to: adminWhatsAppPhone,
     message: waLeadMessage,
   }).catch((err) => {
-    console.error('[Notifications] WhatsApp background dispatch error:', err);
+    console.error('[Notifications] WhatsApp background dispatch error:', loggableError(err));
     return { sent: false, reason: 'FAILED' as const, error: String(err), provider: undefined };
   });
 
@@ -306,7 +309,7 @@ export async function sendAdminNewLeadAlert(enquiryId: string) {
       sentAt: waSentAt,
     })
     .catch((err) => {
-      console.error('[Notifications] Failed to record WhatsApp notification row:', err);
+      console.error('[Notifications] Failed to record WhatsApp notification row:', loggableError(err));
     });
 
   return record;
