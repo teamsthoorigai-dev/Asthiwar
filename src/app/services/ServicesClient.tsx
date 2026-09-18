@@ -44,7 +44,7 @@ export function ServicesClient() {
         trigger: stage,
         pin: true,
         scrub: 0.6,
-        start: 'top top',
+        start: 'top 72px',
         end: () => `+=${getScrollDistance()}`,
         invalidateOnRefresh: true,
         anticipatePin: 1,

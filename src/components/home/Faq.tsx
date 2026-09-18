@@ -32,7 +32,12 @@ export function Faq({ content }: Props) {
       <Section className={styles.faqSection} aria-labelledby="faq-title">
         <div className={styles.layout}>
           <div className={styles.intro}>
-            <SectionHeader id="faq-title" title={content.title} body={content.intro} />
+            <SectionHeader
+              id="faq-title"
+              title={content.title}
+              body={content.intro}
+              className={styles.faqHeader}
+            />
           </div>
 
           <div className={styles.accordion}>

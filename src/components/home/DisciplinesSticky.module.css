@@ -85,6 +85,12 @@
   border-radius: 4px;
 }
 
+@media (max-width: 1023px) {
+  .disciplinesSection {
+    padding-bottom: var(--s-6) !important;
+  }
+}
+
 /* ---- desktop: sticky list + cross-fading image stack ---- */
 
 .track {
