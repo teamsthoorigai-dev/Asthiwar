@@ -2,14 +2,30 @@
 
 import { useEffect, type ReactNode } from 'react';
 import Lenis from 'lenis';
+import { usePathname } from 'next/navigation';
 import { gsap, ScrollTrigger, REDUCED } from '@/lib/gsap';
-import { registerLenis } from '@/lib/lenis';
+import { registerLenis, getLenis } from '@/lib/lenis';
 
 /**
  * Lenis smooth scroll, driven by the GSAP ticker so ScrollTrigger stays in sync.
  * Skipped entirely under prefers-reduced-motion — the page then uses native scroll.
  */
 export function SmoothScroll({ children }: { children: ReactNode }) {
+  const pathname = usePathname();
+
+  useEffect(() => {
+    if (REDUCED()) {
+      window.scrollTo(0, 0);
+      return;
+    }
+    const lenis = getLenis();
+    if (lenis) {
+      lenis.scrollTo(0, { immediate: true });
+    } else {
+      window.scrollTo(0, 0);
+    }
+  }, [pathname]);
+
   useEffect(() => {
     if (REDUCED()) return;
 

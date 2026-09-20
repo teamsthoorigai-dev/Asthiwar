@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      # Next.js will route API requests here via next.config.ts rewrites
+      - API_BASE_URL_INTERNAL=http://backend:4000
+    depends_on:
+      - backend
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    ports:
+      - "4000:4000"
+    environment:
+      - NODE_ENV=production
+      - PORT=4000
+      - DATABASE_URL=postgres://asthiwar:asthiwar_password@postgres:5432/asthiwar
+      # - SESSION_SECRET=your_secret_here
+      # - CORS_ORIGIN=http://localhost:3000
+      # - PUBLIC_BASE_URL=http://localhost:3000
+    depends_on:
+      postgres:
+        condition: service_healthy
+    # Optional: uncomment if you want migrations to run automatically
+    # command: sh -c "npm run db:setup && npm --workspace=backend run start"
+
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_USER=asthiwar
+      - POSTGRES_PASSWORD=asthiwar_password
+      - POSTGRES_DB=asthiwar
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U asthiwar"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:

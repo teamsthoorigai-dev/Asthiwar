@@ -1,0 +1,42 @@
+FROM node:22-alpine AS base
+
+FROM base AS deps
+RUN apk add --no-cache libc6-compat
+WORKDIR /app
+
+COPY package.json package-lock.json ./
+COPY backend/package.json ./backend/
+COPY database/package.json ./database/
+RUN npm ci
+
+FROM base AS builder
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+
+# Build the backend and database
+RUN npm run build:backend
+
+FROM base AS runner
+WORKDIR /app
+
+ENV NODE_ENV production
+
+# We only need the built files and node_modules in production
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/package.json ./
+COPY --from=builder /app/backend ./backend
+COPY --from=builder /app/database ./database
+
+# Create a non-root user
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 backenduser
+RUN chown -R backenduser:nodejs /app
+
+USER backenduser
+
+EXPOSE 4000
+ENV PORT 4000
+
+# Optionally, you can run db migrations before starting
+CMD ["npm", "--workspace=backend", "run", "start"]

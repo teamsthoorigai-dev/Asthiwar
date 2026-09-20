@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import { SplitHeading } from './SplitHeading';
 import { gsap, REDUCED } from '@/lib/gsap';
 import { PAGE_HERO_SIZES } from '@/lib/imageSizes';
@@ -50,26 +50,10 @@ export function PageHero({
   const scaleLayerRef = useRef<HTMLDivElement>(null);
   const parallaxLayerRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
-  const [videoPlaying, setVideoPlaying] = useState(false);
 
   const imageSrc = typeof image === 'string' ? image : image?.src;
   const resolvedAlt =
     imageAlt ?? (typeof image === 'object' ? image?.alt : undefined) ?? '';
-
-  useEffect(() => {
-    const v = videoRef.current;
-    if (!v) return;
-    const onPlaying = () => setVideoPlaying(true);
-    v.addEventListener('playing', onPlaying);
-    if (!v.paused && v.readyState >= 3) {
-      setVideoPlaying(true);
-    } else {
-      v.play().catch(() => {});
-    }
-    return () => {
-      v.removeEventListener('playing', onPlaying);
-    };
-  }, [video]);
 
   useEffect(() => {
     const hero = heroRef.current;
@@ -151,16 +135,6 @@ export function PageHero({
         <div className={styles.mediaWrapper}>
           {video ? (
             <div className={styles.videoContainer}>
-              <Image
-                src={imageSrc}
-                alt={resolvedAlt}
-                fill
-                priority
-                sizes={PAGE_HERO_SIZES}
-                className={[styles.videoPoster, videoPlaying && styles.videoPosterHidden]
-                  .filter(Boolean)
-                  .join(' ')}
-              />
               <video
                 ref={videoRef}
                 className={styles.videoElement}
@@ -171,7 +145,6 @@ export function PageHero({
                 loop
                 playsInline
                 preload="auto"
-                onPlaying={() => setVideoPlaying(true)}
               />
             </div>
           ) : (
