@@ -24,9 +24,10 @@
   padding: var(--s-2) var(--gutter);
 }
 
+/* Same box as the width/height props on the <Image>; see SiteFooter.module.css. */
 .logo {
   height: 28px;
-  width: auto;
+  width: 190px;
 }
 
 .close {

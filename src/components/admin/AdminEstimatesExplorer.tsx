@@ -32,6 +32,7 @@ import {
   EstimateStatus,
 } from '@/lib/api/admin';
 import { getAdminEstimatePdfUrl } from '@/lib/api/calculator';
+import { formatSignedINR } from '@/lib/calculator/format';
 import { CsvColumn, downloadCsv, timestampedFilename, toCsv } from '@/lib/csv';
 
 function formatINR(amount: number | string | undefined | null): string {
@@ -666,7 +667,7 @@ export function AdminEstimatesExplorer() {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted">Brand Customization Upgrades:</span>
-                      <span className="font-bold text-foreground">+{formatINR(estimateDetail.upgradesCost)}</span>
+                      <span className="font-bold text-foreground">{formatSignedINR(Number(estimateDetail.upgradesCost))}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted">Selected Add-ons & Utility Systems:</span>
@@ -715,10 +716,12 @@ export function AdminEstimatesExplorer() {
                             <span className="text-[11px] text-muted font-mono">{item.selectedOptionName}</span>
                           </div>
                           <div className="text-right font-mono">
-                            <span className="font-bold text-foreground">+{formatINR(item.calculatedPrice)}</span>
-                            {Number(item.unitPriceDelta) > 0 && (
+                            {/* A downgrade credit is a negative price and delta; a hard-coded
+                                "+" made it read "+₹-51,000" and the rate note hid it. */}
+                            <span className="font-bold text-foreground">{formatSignedINR(Number(item.calculatedPrice))}</span>
+                            {Number(item.unitPriceDelta) !== 0 && (
                               <span className="text-[10px] text-muted block">
-                                (+₹{item.unitPriceDelta}/sqft)
+                                ({formatSignedINR(Number(item.unitPriceDelta))}/sqft)
                               </span>
                             )}
                           </div>

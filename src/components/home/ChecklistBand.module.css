@@ -1,40 +1,241 @@
+/* Full-bleed surface ground, contained content — the same shell as the cost band
+   above it, so the two read as neighbours: headline on the left, a ruled list on
+   the right. */
 .section {
   border-block-end: 1px solid var(--hairline);
   background: var(--surface);
   color: var(--ink);
+  padding-block: var(--section-y);
 }
 
-.inner {
-  display: flex;
-  align-items: center;
-  justify-content: center;
+/* Four pieces in reading order — headline, standfirst, list, tally — so a phone
+   simply stacks them. From 64rem the list takes the right column and the left
+   column is split top and bottom: the headline hangs from the list's first rule,
+   the standfirst and tally sit on its last, and the space between is left empty
+   on purpose rather than filled. */
+.grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas:
+    'head'
+    'body'
+    'list'
+    'tally';
   width: 100%;
   max-width: var(--container-large);
-  min-height: clamp(8rem, 17vw, 15rem);
   margin-inline: auto;
   padding-inline: var(--gutter);
-  text-align: center;
 }
 
-.label {
+@media (min-width: 64rem) {
+  .grid {
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+    grid-template-rows: auto 1fr auto auto;
+    grid-template-areas:
+      'head list'
+      '.    list'
+      'body list'
+      'tally list';
+    column-gap: clamp(2rem, 4.5vw, 5rem);
+  }
+}
+
+/* ---- left: eyebrow and headline ---- */
+
+.head {
+  grid-area: head;
+}
+
+.eyebrow {
   margin: 0;
   color: var(--accent);
-  font-size: 30px;
+  font-size: var(--fs-sm);
   font-weight: var(--fw-medium);
-  letter-spacing: -0.04em;
-  line-height: 0.9;
-  text-wrap: balance;
+  letter-spacing: 0.1em;
+  line-height: var(--lh-head);
+  text-transform: uppercase;
 }
 
-@media (max-width: 520px) {
-  .inner {
-    justify-content: flex-start;
-    min-height: 9rem;
-    text-align: left;
+.title {
+  /* "Checklist" is ~3.8em wide and "750+ Checklist" ~6.3em, so 9ch (~4.9em) is
+     the width where the headline stacks as "750+" over "Checklist" at every
+     size — ch scales with the clamp, so the break holds as the type grows. */
+  max-width: 9ch;
+  margin: 1rem 0 0;
+  font-size: clamp(4.25rem, 8vw, 8rem);
+  font-weight: var(--fw-medium);
+  letter-spacing: -0.04em;
+  line-height: 1.02;
+}
+
+/* ---- left: standfirst and tally ---- */
+
+.body {
+  grid-area: body;
+  align-self: end;
+  max-width: 32rem;
+  margin: clamp(1.5rem, 2.5vw, 2.5rem) 0 0;
+  color: var(--body);
+  font-size: clamp(1.15rem, 1.05rem + 0.6vw, 1.6rem);
+  line-height: 1.4;
+  text-wrap: pretty;
+}
+
+.tally {
+  grid-area: tally;
+  align-self: end;
+  margin: var(--s-3) 0 0;
+  color: var(--muted);
+  font-size: var(--fs-xs);
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--fw-bold);
+  letter-spacing: 0.12em;
+  line-height: var(--lh-head);
+  text-transform: uppercase;
+}
+
+/* ---- right: the ruled list ---- */
+
+.list {
+  grid-area: list;
+  margin: clamp(2.5rem, 5vw, 4rem) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+@media (min-width: 64rem) {
+  .list {
+    margin-top: 0;
+  }
+}
+
+.item {
+  /* One place decides how tall a line of text is, so the box and the index can
+     centre themselves on the *first* line — the brick check has a second line
+     under its title and must not pull the box down with it. */
+  --row-size: clamp(1.2rem, 0.95rem + 0.9vw, 1.55rem);
+  --row-lh: 1.3;
+  --box: clamp(1.5rem, 2vw, 1.85rem);
+
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
+  column-gap: clamp(1rem, 2vw, 1.75rem);
+  padding-block: clamp(1rem, 1.5vw, 1.4rem);
+}
+
+/* The rule is an element, not a border, so it can draw itself across. The
+   list's own top edge is the first row's rule, drawn above it. */
+.rule {
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  height: 1px;
+  background: var(--hairline);
+  transform-origin: left center;
+}
+
+.item:first-child::before {
+  content: '';
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  height: 1px;
+  background: var(--hairline);
+}
+
+/* ---- checkbox ---- */
+
+.box {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: var(--box);
+  height: var(--box);
+  margin-top: calc((var(--row-size) * var(--row-lh) - var(--box)) / 2);
+  overflow: hidden;
+  border: 1.5px solid var(--accent-bright);
+  border-radius: var(--radius);
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+
+/* The tick and its ground are the resting state; the timeline in
+   ChecklistBand.tsx winds them back to empty and plays them forward once. */
+.fill {
+  position: absolute;
+  inset: 0;
+  background: var(--accent-bright);
+}
+
+.tick {
+  position: relative;
+  width: 68%;
+  height: 68%;
+  fill: none;
+  stroke: var(--on-accent);
+  stroke-width: 2.75;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* ---- the words ---- */
+
+.copy {
+  display: grid;
+  gap: 0.2rem;
+  min-width: 0;
+  transition: transform var(--dur-base) var(--ease-out);
+}
+
+.text {
+  color: var(--ink);
+  font-size: var(--row-size);
+  font-weight: var(--fw-medium);
+  letter-spacing: -0.015em;
+  line-height: var(--row-lh);
+  text-wrap: pretty;
+}
+
+.detail {
+  color: var(--body);
+  font-size: clamp(0.85rem, 1vw, 1rem);
+  line-height: var(--lh-body);
+}
+
+.index {
+  color: var(--muted);
+  font-size: var(--fs-xs);
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--fw-medium);
+  letter-spacing: 0.18em;
+  /* Same line box as the first line of text, so the numeral sits on its
+     centre line. */
+  line-height: calc(var(--row-size) * var(--row-lh));
+  transition: color var(--dur-fast) var(--ease-out);
+}
+
+@media (hover: hover) {
+  .item:hover .copy {
+    transform: translate3d(0.4rem, 0, 0);
   }
 
-  .label {
-    max-width: 6ch;
-    font-size: 30px;
+  .item:hover .box {
+    transform: scale(1.08);
+  }
+
+  .item:hover .index {
+    color: var(--ink);
+  }
+}
+
+/* Phones: the index is the first thing to go when the row is tight. */
+@media (max-width: 30rem) {
+  .item {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .index {
+    display: none;
   }
 }

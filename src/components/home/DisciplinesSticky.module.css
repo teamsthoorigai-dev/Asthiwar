@@ -91,6 +91,13 @@
   }
 }
 
+/* On phones the FAQ follows directly, with no gap between the list and its heading. */
+@media (max-width: 767px) {
+  .disciplinesSection {
+    padding-bottom: 0 !important;
+  }
+}
+
 /* ---- desktop: sticky list + cross-fading image stack ---- */
 
 .track {

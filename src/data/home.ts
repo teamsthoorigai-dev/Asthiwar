@@ -109,6 +109,35 @@ export const estimateBand = {
   cta: { label: string; href: string };
 };
 
+/* ---- Checklist band · the 750+ quality checklist ---- */
+
+/**
+ * A sample of the checks, not the whole set — the band's tally says so. `detail`
+ * is a second line for a check that is really a group of tests.
+ */
+export const checklistBand = {
+  eyebrow: 'Quality',
+  count: '750+',
+  title: 'Checklist',
+  body: 'Detailed checklist for every process, from site assessment to final interior and handover.',
+  items: [
+    { title: 'Soil testing' },
+    { title: 'Bore water neerotam location mark check' },
+    { title: 'Brickwork mortar ratio and water ratio check' },
+    { title: 'Spirit level check for brickwork' },
+    { title: 'Masonry bond type check' },
+    { title: 'Brick quality check', detail: 'Compression, water absorption and more' },
+    { title: 'M-sand testing' },
+    { title: 'Water used for brickwork test' },
+  ],
+} as const satisfies {
+  eyebrow: string;
+  count: string;
+  title: string;
+  body: string;
+  items: ReadonlyArray<{ title: string; detail?: string }>;
+};
+
 /* ---- Section 05 · LastingCards ---- */
 
 export type LastingCardIcon =

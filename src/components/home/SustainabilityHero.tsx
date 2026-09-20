@@ -55,7 +55,7 @@ export function SustainabilityHero() {
               before mechanical energy is added.
             </p>
             <div className={styles.actions}>
-              <Button href="/sustainable-construction" variant="white">
+              <Button href="/sustainable-construction" variant="white" className={styles.cta}>
                 Walk with Nature
               </Button>
             </div>

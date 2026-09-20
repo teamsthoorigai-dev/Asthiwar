@@ -6,6 +6,20 @@
   border-bottom: 1px solid var(--hairline);
 }
 
+/* A parent can trim the far end of the list (the last row's closing rule and its bottom
+   padding) with --accordion-end-*, for a list that runs straight into the next block. */
+.item:last-child {
+  border-bottom: var(--accordion-end-border, 1px solid var(--hairline));
+}
+
+.item:last-child:not(.open) .trigger {
+  padding-bottom: var(--accordion-end-pad, var(--s-3));
+}
+
+.item:last-child .panelInner {
+  padding-bottom: var(--accordion-end-pad, var(--s-3));
+}
+
 .trigger {
   display: flex;
   align-items: flex-start;

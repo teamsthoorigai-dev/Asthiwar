@@ -15,7 +15,13 @@
 
 @media (max-width: 767px) {
   .faqSection {
-    padding-top: 0 !important;
+    padding-block: 0 !important;
+  }
+
+  /* The list runs straight into the footer: no closing rule or padding under the last row. */
+  .accordion {
+    --accordion-end-pad: 0px;
+    --accordion-end-border: 0;
   }
 }
 

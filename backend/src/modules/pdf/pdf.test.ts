@@ -2,6 +2,7 @@ import http from 'http';
 import { createApp } from '../../app.js';
 import { pool } from '@asthiwar/database';
 import { urlSafeQuotationNumber } from '../calculator/quotation.js';
+import { MINUS, customizationCells, formatINR, upgradesSummaryRow } from './pdf.service.js';
 
 function makeRequest(
   server: http.Server,
@@ -108,6 +109,9 @@ async function runPdfTests() {
         packageSlug: 'premium',
         customizations: [
           { itemSlug: 'masonry_work', optionSlug: 'red_bricks' },
+          // A downgrade credit (−Rs 15/sq.ft on Premium), so the document is
+          // rendered with a negative row and not only with upgrades.
+          { itemSlug: 'cement', optionSlug: 'any_isi_cement' },
         ],
         addons: [
           { addonSlug: 'underground_sump', variantSlug: 'flyash', quantity: 6000 },
@@ -123,6 +127,13 @@ async function runPdfTests() {
     testEstimateNumber = parsedJson.data.estimateNumber;
     testAccessToken = parsedJson.data.accessToken;
     assert(!!testEstimateNumber, `Created estimate: ${testEstimateNumber}`);
+    const creditLine = (parsedJson.data.customizations ?? []).find(
+      (c: { itemSlug: string }) => c.itemSlug === 'cement'
+    );
+    assert(
+      !!creditLine && creditLine.unitPriceDelta < 0 && creditLine.calculatedPrice < 0,
+      'Estimate carries a downgrade credit (negative delta and price) for the PDF to print'
+    );
     assert(
       typeof testAccessToken === 'string' && testAccessToken.length === 64,
       'Estimate is issued with a 64-character access token'
@@ -204,6 +215,46 @@ async function runPdfTests() {
     assert(notFoundRes.status === 404, 'Non-existent estimate returns 404');
     const notFoundJson = JSON.parse(notFoundRes.body.toString('utf-8'));
     assert(notFoundJson.error.code === 'ESTIMATE_NOT_FOUND', 'Returns ESTIMATE_NOT_FOUND code');
+
+    // -----------------------------------------------------------------
+    // [Test 5] Downgrade credits are printed, not hidden
+    //
+    // A plainer brand than the package includes is stored as a negative delta and
+    // a negative price. The customisation table and the summary card both tested
+    // `> 0`, so a credit came out as "Included / Rs. 0" and the summary left the
+    // line out — the printed rows no longer added up to the printed total.
+    // -----------------------------------------------------------------
+    console.log('\n[Test 5] Downgrade Credits Keep Their Sign on the Quotation');
+    assert(formatINR(-51000) === `${MINUS}Rs. 51,000`, 'A credit leads with its sign, not "Rs. -51,000"');
+    assert(formatINR(61200) === 'Rs. 61,200' && formatINR(0) === 'Rs. 0', 'Upgrades and zero print unsigned, as before');
+    assert(formatINR(-0.4) === 'Rs. 0', 'A credit that rounds to nothing does not print as a signed zero');
+
+    // The values arrive from Postgres numeric columns, i.e. as strings.
+    const credit = customizationCells('-30.00', '-51000.00');
+    assert(credit.rate === `${MINUS}Rs. 30 / sq.ft`, 'A credit shows its rate, not "Included"');
+    assert(credit.amount === `${MINUS}Rs. 51,000`, 'A credit shows its amount, not "Rs. 0"');
+    assert(credit.changed, 'A credit is flagged as a change so it is set in the accent colour');
+
+    const upgrade = customizationCells('36.00', '61200.00');
+    assert(upgrade.rate === '+Rs. 36 / sq.ft' && upgrade.amount === 'Rs. 61,200', 'An upgrade prints as before');
+
+    const unchanged = customizationCells('0.00', '0.00');
+    assert(
+      unchanged.rate === 'Included' && unchanged.amount === 'Rs. 0' && !unchanged.changed,
+      'A component at the package default still prints "Included / Rs. 0"'
+    );
+
+    const creditsRow = upgradesSummaryRow('-40800.00');
+    assert(
+      creditsRow?.label === 'Specification Credits:' && creditsRow.value === `${MINUS}Rs. 40,800`,
+      'A net credit gets its own summary line, so Base + Add-Ons + lines = Total'
+    );
+    const upgradesRow = upgradesSummaryRow('61200.00');
+    assert(
+      upgradesRow?.label === 'Specification Upgrades:' && upgradesRow.value === 'Rs. 61,200',
+      'A net upgrade keeps the "Specification Upgrades" line'
+    );
+    assert(upgradesSummaryRow('0.00') === null, 'No summary line when the selections change nothing');
 
     console.log('\n-----------------------------------------------------------------');
     console.log('Results: All Phase 9 PDF Generation Tests Passed!');

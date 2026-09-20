@@ -51,6 +51,13 @@ export const FONT_REG = HAS_SATOSHI ? 'Satoshi' : 'Helvetica';
 export const FONT_MED = HAS_SATOSHI && FONT_MEDIUM_PATH ? 'Satoshi-Medium' : (HAS_SATOSHI ? 'Satoshi' : 'Helvetica');
 export const FONT_BLD = HAS_SATOSHI ? 'Satoshi-Bold' : 'Helvetica-Bold';
 
+/**
+ * The minus of a credit. U+2212 sets as a sign where a hyphen reads as a dash (the
+ * web report makes the same choice), but the built-in Helvetica fallback is
+ * WinAnsi and has no such glyph.
+ */
+export const MINUS = HAS_SATOSHI ? String.fromCharCode(0x2212) : '-';
+
 export class PdfGenerationError extends Error {
   constructor(
     public statusCode: number,
@@ -69,8 +76,7 @@ const OXIDE = '#B8854F';           // Warm architectural oxide
 const OXIDE_DEEP = '#76522F';      // Deep oxide accent
 const OXIDE_WASH = '#F9F5EE';      // Subtle warm oxide highlight — letterhead cream ground
 const PAPER = '#EFEAE3';           // On-accent architectural paper
-const CARD_BG = '#F7F5F0';         // Warm card & section fill
-const ROW_ALT_BG = '#FAF8F5';      // Subtle warm zebra row fill
+const CARD_BG = '#F7F5F0';         // Warm fill for the masthead badge
 const BORDER_HAIRLINE = '#D6D0C5'; // Fine architectural hairline
 const BODY_INK = '#526057';        // Body text ink
 const MUTED_INK = '#7C887F';       // Muted captions & secondary notes
@@ -80,11 +86,52 @@ function cleanText(text: string | null | undefined): string {
   return String(text).replace(/₹\s?/g, 'Rs. ');
 }
 
-function formatINR(amount: number | string | undefined | null): string {
+export function formatINR(amount: number | string | undefined | null): string {
   if (amount === undefined || amount === null) return 'Rs. 0';
   const num = typeof amount === 'string' ? parseFloat(amount) : Number(amount);
   if (isNaN(num)) return 'Rs. 0';
-  return 'Rs. ' + Math.round(num).toLocaleString('en-IN');
+  const rounded = Math.round(num);
+  // The sign leads the currency: a credit is negative, and "Rs. -51,000" reads as a
+  // typo where "−Rs. 51,000" reads as money off.
+  return (rounded < 0 ? MINUS : '') + 'Rs. ' + Math.abs(rounded).toLocaleString('en-IN');
+}
+
+/**
+ * The two figure cells of a brand-customisation row.
+ *
+ * A downgrade credit is stored as a negative delta and a negative price. Both
+ * cells used to test `> 0` and fall through to "Included" / "Rs. 0", so a customer
+ * who chose a plainer brand saw no trace of the money coming off.
+ */
+export function customizationCells(
+  unitPriceDelta: number | string | null | undefined,
+  calculatedPrice: number | string | null | undefined
+): { rate: string; amount: string; changed: boolean } {
+  const delta = Number(unitPriceDelta) || 0;
+  return {
+    rate: delta === 0 ? 'Included' : `${delta > 0 ? '+' : ''}${formatINR(delta)} / sq.ft`,
+    amount: formatINR(calculatedPrice),
+    changed: delta !== 0,
+  };
+}
+
+/**
+ * The customisations line of the commercial summary, or null when the selections
+ * leave the package price where it was.
+ *
+ * `upgradesCost` is net of downgrade credits, so it can be negative. The row was
+ * gated on `> 0`, which dropped it exactly when the credits outweighed the
+ * upgrades and left Base + Add-Ons short of the printed total.
+ */
+export function upgradesSummaryRow(
+  upgradesCost: number | string | null | undefined
+): { label: string; value: string } | null {
+  const cost = Number(upgradesCost) || 0;
+  if (cost === 0) return null;
+  return {
+    label: cost < 0 ? 'Specification Credits:' : 'Specification Upgrades:',
+    value: formatINR(cost),
+  };
 }
 
 function formatNumber(value: number | string | undefined | null, decimals = 0): string {
@@ -236,12 +283,21 @@ const MASTHEAD_WATERMARK_TOWERS: Array<Array<[number, number]>> = [
 ];
 
 /**
+ * Opacity of OXIDE laid over the paper for the watermark. On white paper 0.12
+ * reads as a soft warm beige (about #F6F0EA), a touch lighter than the solid
+ * #F2EBE5 the letterhead uses — raise it for a stronger mark, lower it for a fainter one.
+ */
+const WATERMARK_OPACITY = 0.12;
+
+/**
  * Draws the letterhead's building-silhouette watermark in the background of the page.
  */
 function drawMastheadWatermark(doc: PDFKit.PDFDocument): void {
   const scale = doc.page.width / MASTHEAD_WATERMARK_SOURCE_SIZE;
   doc.save();
-  doc.fillColor('#F2EBE5');
+  // Set before any path is built; the save/restore keeps the opacity from
+  // carrying into the page content drawn afterwards.
+  doc.fillColor(OXIDE).fillOpacity(WATERMARK_OPACITY);
   for (const tower of MASTHEAD_WATERMARK_TOWERS) {
     const [[startX, startY], ...rest] = tower;
     doc.moveTo(startX * scale, startY * scale);
@@ -251,6 +307,36 @@ function drawMastheadWatermark(doc: PDFKit.PDFDocument): void {
     doc.lineTo(startX * scale, startY * scale);
     doc.fill();
   }
+  doc.restore();
+}
+
+/**
+ * Table rows and cards are washes of OXIDE_DEEP at low opacity rather than solid
+ * fills. The watermark is painted first on every page, so an opaque row hid the
+ * part of it behind the table and left the mark cut into pieces; a translucent
+ * wash lets it show through. On plain white paper each lands within three levels
+ * (of 255) of the solid colour it replaced, so tables look the same wherever the
+ * watermark isn't. Plain white rows are simply not painted.
+ */
+const WASH_ROW_ALT = 0.04; // was solid #FAF8F5
+const WASH_CARD = 0.06;    // was solid #F7F5F0
+const WASH_TOTAL = 0.15;   // was solid #EAE6DE
+
+/** A flat translucent band — a zebra table row or a total row. */
+function washRect(doc: PDFKit.PDFDocument, x: number, y: number, w: number, h: number, opacity: number): void {
+  // save/restore scopes the opacity: PDFKit's fillColor() never resets it, so
+  // it would otherwise carry into every fill and piece of text drawn after this.
+  doc.save();
+  doc.fillColor(OXIDE_DEEP).fillOpacity(opacity);
+  doc.rect(x, y, w, h).fill();
+  doc.restore();
+}
+
+/** A rounded card: translucent wash inside, fully opaque hairline border. */
+function washCard(doc: PDFKit.PDFDocument, x: number, y: number, w: number, h: number): void {
+  doc.save();
+  doc.fillColor(OXIDE_DEEP).fillOpacity(WASH_CARD).strokeColor(BORDER_HAIRLINE);
+  doc.roundedRect(x, y, w, h, 6).fillAndStroke();
   doc.restore();
 }
 
@@ -405,9 +491,7 @@ export async function generateEstimatePdf(estimateNumberOrId: string): Promise<B
       doc.y = 108;
       const infoCardY = doc.y;
       const cardHeight = 88;
-      doc.roundedRect(36, infoCardY, tblW, cardHeight, 6)
-        .strokeColor(BORDER_HAIRLINE)
-        .fillAndStroke(CARD_BG, BORDER_HAIRLINE);
+      washCard(doc, 36, infoCardY, tblW, cardHeight);
 
       // Left Column: Client Information
       doc.fillColor(OXIDE_DEEP).font(FONT_BLD).fontSize(8.5).text('CLIENT INFORMATION', 50, infoCardY + 11);
@@ -452,7 +536,6 @@ export async function generateEstimatePdf(estimateNumberOrId: string): Promise<B
       doc.text('Base Amount (INR)', tblX + tblW - 110, pkgTableY + 8.5, { align: 'right', width: 100 });
 
       const pkgRowY = pkgTableY + 26;
-      doc.rect(tblX, pkgRowY, tblW, 28).fill('#FFFFFF').strokeColor(BORDER_HAIRLINE).stroke();
       doc.fillColor(CARBON).font(FONT_BLD).fontSize(8.5);
       const packageLabel = estimate.packageSlug ? `${String(estimate.packageSlug).toUpperCase()} PACKAGE` : 'STANDARD PACKAGE';
       doc.text(packageLabel, tblX + 8, pkgRowY + 9);
@@ -475,7 +558,7 @@ export async function generateEstimatePdf(estimateNumberOrId: string): Promise<B
       doc.text('Item Category', tblX + 8, custTableY + 7.5);
       doc.text('Selected Brand / Option', tblX + 155, custTableY + 7.5);
       doc.text('Rate Delta', tblX + 355, custTableY + 7.5, { width: 75, align: 'right' });
-      doc.text('Amount Addition', tblX + tblW - 90, custTableY + 7.5, { align: 'right', width: 80 });
+      doc.text('Amount Change', tblX + tblW - 90, custTableY + 7.5, { align: 'right', width: 80 });
 
       let curY = custTableY + 24;
       if (items.length > 0) {
@@ -489,22 +572,19 @@ export async function generateEstimatePdf(estimateNumberOrId: string): Promise<B
             doc.text('Item Category', tblX + 8, curY + 7.5);
             doc.text('Selected Brand / Option', tblX + 155, curY + 7.5);
             doc.text('Rate Delta', tblX + 355, curY + 7.5, { width: 75, align: 'right' });
-            doc.text('Amount Addition', tblX + tblW - 90, curY + 7.5, { align: 'right', width: 80 });
+            doc.text('Amount Change', tblX + tblW - 90, curY + 7.5, { align: 'right', width: 80 });
             curY += 24;
           }
-          const rowBg = idx % 2 === 0 ? '#FFFFFF' : ROW_ALT_BG;
-          doc.rect(tblX, curY, tblW, 24).fill(rowBg).strokeColor(BORDER_HAIRLINE).stroke();
+          if (idx % 2 === 1) washRect(doc, tblX, curY, tblW, 24, WASH_ROW_ALT);
           doc.fillColor(BODY_INK).font(FONT_REG).fontSize(8);
           doc.text(cleanText(item.itemName), tblX + 8, curY + 7.5, { width: 142, lineBreak: false, ellipsis: true });
           doc.font(FONT_MED).fontSize(8.5).fillColor(CARBON).text(cleanText(item.selectedOptionName), tblX + 155, curY + 7.5, { width: 195, lineBreak: false, ellipsis: true });
-          const delta = Number(item.unitPriceDelta) || 0;
-          doc.font(FONT_REG).fontSize(8).fillColor(delta > 0 ? OXIDE_DEEP : BODY_INK).text(delta > 0 ? `+${formatINR(delta)} / sq.ft` : 'Included', tblX + 355, curY + 7.5, { width: 75, align: 'right', lineBreak: false });
-          const price = Number(item.calculatedPrice) || 0;
-          doc.font(FONT_BLD).fontSize(8.5).fillColor(CARBON).text(price > 0 ? formatINR(price) : 'Rs. 0', tblX + tblW - 90, curY + 7.5, { align: 'right', width: 80, lineBreak: false });
+          const cells = customizationCells(item.unitPriceDelta, item.calculatedPrice);
+          doc.font(FONT_REG).fontSize(8).fillColor(cells.changed ? OXIDE_DEEP : BODY_INK).text(cells.rate, tblX + 355, curY + 7.5, { width: 75, align: 'right', lineBreak: false });
+          doc.font(FONT_BLD).fontSize(8.5).fillColor(CARBON).text(cells.amount, tblX + tblW - 90, curY + 7.5, { align: 'right', width: 80, lineBreak: false });
           curY += 24;
         });
       } else {
-        doc.rect(tblX, curY, tblW, 24).fill('#FFFFFF').strokeColor(BORDER_HAIRLINE).stroke();
         doc.fillColor(MUTED_INK).font(FONT_REG).fontSize(8);
         doc.text('Standard Package Specifications Included', tblX + 8, curY + 7.5);
         doc.text('Included', tblX + 355, curY + 7.5, { width: 75, align: 'right' });
@@ -544,8 +624,7 @@ export async function generateEstimatePdf(estimateNumberOrId: string): Promise<B
             doc.text('Total Cost', tblX + tblW - 90, addY + 7.5, { align: 'right', width: 80 });
             addY += 24;
           }
-          const rowBg = idx % 2 === 0 ? '#FFFFFF' : ROW_ALT_BG;
-          doc.rect(tblX, addY, tblW, 24).fill(rowBg).strokeColor(BORDER_HAIRLINE).stroke();
+          if (idx % 2 === 1) washRect(doc, tblX, addY, tblW, 24, WASH_ROW_ALT);
           doc.fillColor(BODY_INK).font(FONT_REG).fontSize(8);
           doc.text(cleanText(addon.addonName), tblX + 8, addY + 7.5, { width: 142, lineBreak: false, ellipsis: true });
           doc.font(FONT_MED).fontSize(8.5).fillColor(CARBON).text(cleanText(addon.selectedVariant).toUpperCase(), tblX + 155, addY + 7.5, { width: 195, lineBreak: false, ellipsis: true });
@@ -563,27 +642,25 @@ export async function generateEstimatePdf(estimateNumberOrId: string): Promise<B
       // =========================================================================
       const sumBoxW = 280;
       const sumBoxX = doc.page.width - 36 - sumBoxW;
-      const hasUpgrades = Number(estimate.upgradesCost) > 0;
+      const upgradesRow = upgradesSummaryRow(estimate.upgradesCost);
       const hasAddons = Number(estimate.addonsCost) > 0;
-      const sumRowCount = 1 + (hasUpgrades ? 1 : 0) + (hasAddons ? 1 : 0);
+      const sumRowCount = 1 + (upgradesRow ? 1 : 0) + (hasAddons ? 1 : 0);
       const sumRowH = 20;
       const sumBoxH = sumRowCount * sumRowH + 46;
 
       checkPageBreak(sumBoxH + 20);
       const sumBoxY = doc.y + 4;
 
-      doc.roundedRect(sumBoxX, sumBoxY, sumBoxW, sumBoxH, 6)
-        .strokeColor(BORDER_HAIRLINE)
-        .fillAndStroke(CARD_BG, BORDER_HAIRLINE);
+      washCard(doc, sumBoxX, sumBoxY, sumBoxW, sumBoxH);
 
       let currentSumY = sumBoxY + 11;
       doc.fillColor(BODY_INK).font(FONT_REG).fontSize(8.5).text('Base Construction Cost:', sumBoxX + 14, currentSumY);
       doc.font(FONT_BLD).fontSize(9).fillColor(CARBON).text(formatINR(estimate.baseConstructionCost), sumBoxX + sumBoxW - 110, currentSumY, { align: 'right', width: 96 });
       currentSumY += sumRowH;
 
-      if (hasUpgrades) {
-        doc.fillColor(BODY_INK).font(FONT_REG).fontSize(8.5).text('Specification Upgrades:', sumBoxX + 14, currentSumY);
-        doc.font(FONT_BLD).fontSize(9).fillColor(CARBON).text(formatINR(estimate.upgradesCost), sumBoxX + sumBoxW - 110, currentSumY, { align: 'right', width: 96 });
+      if (upgradesRow) {
+        doc.fillColor(BODY_INK).font(FONT_REG).fontSize(8.5).text(upgradesRow.label, sumBoxX + 14, currentSumY);
+        doc.font(FONT_BLD).fontSize(9).fillColor(CARBON).text(upgradesRow.value, sumBoxX + sumBoxW - 110, currentSumY, { align: 'right', width: 96 });
         currentSumY += sumRowH;
       }
 
@@ -633,8 +710,7 @@ export async function generateEstimatePdf(estimateNumberOrId: string): Promise<B
       let msY = msTableY + 24;
       const msRowH = 26;
       milestoneList.forEach((m, idx) => {
-        const rowBg = idx % 2 === 0 ? '#FFFFFF' : ROW_ALT_BG;
-        doc.rect(tblX, msY, tblW, msRowH).fill(rowBg).strokeColor(BORDER_HAIRLINE).stroke();
+        if (idx % 2 === 1) washRect(doc, tblX, msY, tblW, msRowH, WASH_ROW_ALT);
         doc.fillColor(CARBON).font(FONT_BLD).fontSize(8);
         doc.text(`Stage ${m.stageNumber}`, tblX + 8, msY + 8.5);
         doc.fillColor(CARBON).font(FONT_BLD).fontSize(8);
@@ -650,7 +726,7 @@ export async function generateEstimatePdf(estimateNumberOrId: string): Promise<B
 
       // Total Row
       const totalRowH = 26;
-      doc.rect(tblX, msY, tblW, totalRowH).fill('#EAE6DE').strokeColor(BORDER_HAIRLINE).stroke();
+      washRect(doc, tblX, msY, tblW, totalRowH, WASH_TOTAL);
       doc.fillColor(CARBON).font(FONT_BLD).fontSize(8.5);
       doc.text('TOTAL CONTRACT VALUE', tblX + 42, msY + 8.5);
       doc.text('100.00%', tblX + tblW - 128, msY + 8.5, { width: 44, align: 'center', lineBreak: false });
@@ -668,6 +744,7 @@ export async function generateEstimatePdf(estimateNumberOrId: string): Promise<B
         '3. Standard Inclusions: 100% material, labor, structural drawings, 3D elevation, site engineer supervision.',
         '4. Standard Exclusions: Government building approval fees, EB permanent connection deposits, borewell depth beyond allowances.',
         '5. Payment Guarantee: Zero advance beyond Stage 1 booking fee; milestone payments only upon site stage verification.',
+        '6. Taxes: GST 18% extra applicable.',
       ];
       terms.forEach((t) => {
         doc.fillColor(BODY_INK).font(FONT_REG).fontSize(7.5).text(t, 42, doc.y);
@@ -704,7 +781,7 @@ export async function generateEstimatePdf(estimateNumberOrId: string): Promise<B
 
       // Sign-off Block
       const sigY = 740;
-      doc.fillColor(CARBON).font(FONT_BLD).fontSize(7.5).text('For Asthiwar Design & Build', 36, sigY + 6);
+      doc.fillColor(CARBON).font(FONT_BLD).fontSize(7.5).text('For Asthiwar', 36, sigY + 6);
       doc.font(FONT_REG).fontSize(6.5).fillColor(MUTED_INK).text('Authorized Engineering Signatory', 36, sigY + 18);
       doc.font(FONT_BLD).fontSize(7.5).fillColor(CARBON).text('Customer Acknowledgment', doc.page.width - 220, sigY + 6);
       doc.font(FONT_REG).fontSize(6.5).fillColor(MUTED_INK).text('Signature / Acceptance Date: ___________________', doc.page.width - 220, sigY + 18);

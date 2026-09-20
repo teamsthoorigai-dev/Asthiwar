@@ -100,7 +100,7 @@ export function MenuOverlay({ open, onClose, returnFocusTo }: Props) {
           <Image
             src="/brand/asthiwar-logo-black.png"
             alt="ASTHIWAR"
-            width={160}
+            width={190}
             height={28}
             className={styles.logo}
           />

@@ -134,12 +134,7 @@ export function StepEstimateReport({ result, onReset }: StepEstimateReportProps)
             <h1 className="text-3xl sm:text-4xl font-extrabold tabular-nums tracking-tight">
               {formatINR(totalCost)}
             </h1>
-            <p className="text-xs sm:text-sm text-muted mt-1">
-              Estimated Total Investment • Effective Rate:{' '}
-              <strong className="text-foreground tabular-nums">
-                {formatINR(effectiveRate)} / Sq.Ft
-              </strong>
-            </p>
+            
           </div>
 
           <div className="flex flex-wrap gap-2.5">
@@ -273,20 +268,7 @@ export function StepEstimateReport({ result, onReset }: StepEstimateReportProps)
             <span>Subtotal (Excl. Taxes)</span>
             <span className="tabular-nums">{formatINR(breakdown?.subtotalCost)}</span>
           </div>
-          {/* Never invent a rate here. `gstPercentage` is 0 on a civil construction
-              quote, and `|| 18` turned that falsy 0 into a printed "GST (18%)"
-              sitting next to ₹0 — a tax line the customer was never charged. */}
-          {(breakdown?.gstPercentage ?? 0) > 0 ? (
-            <div className="flex justify-between py-2 border-b border-border text-muted">
-              <span>GST ({breakdown?.gstPercentage}%)</span>
-              <span className="tabular-nums">{formatINR(breakdown?.gstAmount)}</span>
-            </div>
-          ) : (
-            <div className="flex justify-between py-2 border-b border-border text-muted">
-              <span>GST</span>
-              <span className="tabular-nums">Not applicable</span>
-            </div>
-          )}
+          
           <div className="flex justify-between py-3 text-base sm:text-lg font-bold border-t-2 border-foreground">
             <span>Total Authoritative Project Cost</span>
             <span className="tabular-nums">{formatINR(breakdown?.totalProjectCost)}</span>

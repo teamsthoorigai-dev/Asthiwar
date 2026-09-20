@@ -50,7 +50,7 @@ export function SiteFooter() {
               <Image
                 src="/brand/asthiwar-logo-white.png"
                 alt="ASTHIWAR"
-                width={160}
+                width={190}
                 height={28}
                 className={styles.logo}
               />

@@ -115,37 +115,50 @@
     min-height: auto;
   }
 
+  /* Copy sits at the top and the card is only as tall as its content, so there is no
+     empty band of photo above the text (or below it). */
   .hero {
-    min-height: clamp(26rem, 65svh, 34rem);
-    align-items: flex-end;
+    min-height: 0;
+    align-items: flex-start;
   }
 
   .inner {
-    padding-block: clamp(2.5rem, 5svh, 3.5rem);
+    padding-block: var(--gutter);
   }
 
   .image {
     object-position: 60% center;
   }
 
+  /* Text now covers the whole card, so the scrim is an even veil rather than a
+     gradient that only darkens the bottom. */
   .scrim {
     background:
-      linear-gradient(180deg, rgb(16 25 19 / 0.72) 0%, rgb(16 25 19 / 0.35) 30%, rgb(16 25 19 / 0.92) 80%, rgb(16 25 19 / 0.98) 100%),
-      linear-gradient(90deg, rgb(16 25 19 / 0.65), transparent 82%);
+      linear-gradient(180deg, rgb(16 25 19 / 0.8) 0%, rgb(16 25 19 / 0.7) 100%),
+      linear-gradient(90deg, rgb(16 25 19 / 0.5), transparent 85%);
+  }
+
+  .eyebrow {
+    margin-bottom: 0.85rem;
+    font-size: 0.85rem;
   }
 
   .title {
-    font-size: clamp(1.65rem, 6.5vw, 2.25rem);
+    font-size: clamp(1.85rem, 7.3vw, 2.5rem);
     line-height: 1.12;
   }
 
   .intro {
-    font-size: 0.9rem;
-    margin-top: 0.75rem;
+    font-size: 1rem;
+    margin-top: 0.85rem;
   }
 
   .actions {
-    margin-top: 1rem;
+    margin-top: 1.15rem;
+  }
+
+  .actions .cta {
+    font-size: 0.9rem;
   }
 }
 

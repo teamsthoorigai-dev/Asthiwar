@@ -357,7 +357,7 @@ doc.y = exclY + (exclusionsCol1.length * 8) + 4;
 // Signature Block
 const sigY = 745;
 doc.strokeColor(BORDER_COLOR).lineWidth(0.8).moveTo(36, sigY).lineTo(doc.page.width - 36, sigY).stroke();
-doc.fillColor(PRIMARY).font('Helvetica-Bold').fontSize(7.5).text('For Asthiwar Design & Build', 36, sigY + 6);
+doc.fillColor(PRIMARY).font('Helvetica-Bold').fontSize(7.5).text('For Asthiwar', 36, sigY + 6);
 doc.font('Helvetica').fontSize(6.5).fillColor(TEXT_MUTED).text('Authorized Engineering Signatory', 36, sigY + 16);
 doc.font('Helvetica-Bold').fontSize(7.5).fillColor(PRIMARY).text('Customer Acknowledgment', doc.page.width - 190, sigY + 6);
 doc.font('Helvetica').fontSize(6.5).fillColor(TEXT_MUTED).text('Signature / Acceptance Date: ___________________', doc.page.width - 190, sigY + 16);
