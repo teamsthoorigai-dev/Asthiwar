@@ -1,22 +1,30 @@
+/* Justified rows. Every tile has its picture's own proportions (--ar, set on the
+   button) and, on wider screens, a width that follows them, so the pictures in a
+   row share one height: no bars, no backing, nothing cropped. */
 .grid {
-  display: grid;
-  grid-template-columns: 1fr;
+  /* Target row height; rows grow from it to fill the width. lib/imageSizes.ts
+     sizes the tiles from this, so change them together. */
+  --row-h: min(24vw, 21rem);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
   gap: var(--s-2);
 }
 
 .tile {
   position: relative;
-  aspect-ratio: 4 / 3;
+  flex: 1 1 100%;
+  aspect-ratio: var(--ar);
   overflow: hidden;
   border-radius: 4px;
-  background: var(--surface);
   border: 0;
   padding: 0;
   cursor: zoom-in;
 }
 
 .image {
-  object-fit: contain;
+  /* The tile already has the picture's proportions, so this crops nothing. */
+  object-fit: cover;
   border-radius: 4px;
   transition: transform 0.6s var(--ease-out);
 }
@@ -107,14 +115,15 @@
 }
 
 @media (min-width: 768px) {
-  .grid {
-    grid-template-columns: repeat(2, 1fr);
+  .tile {
+    flex: calc(var(--ar) * 100) 1 calc(var(--ar) * var(--row-h));
   }
 
-  /* First tile spans both columns for an asymmetric rhythm. */
-  .tile:first-child {
-    grid-column: span 2;
-    aspect-ratio: 16 / 9;
+  /* Soaks up the last row's spare width, so a short last row keeps its natural
+     size instead of stretching across the page. */
+  .grid::after {
+    content: '';
+    flex: 1000000 1 0;
   }
 }
 

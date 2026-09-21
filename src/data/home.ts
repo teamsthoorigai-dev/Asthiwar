@@ -126,7 +126,7 @@ export const checklistBand = {
     { title: 'Brickwork mortar ratio and water ratio check' },
     { title: 'Spirit level check for brickwork' },
     { title: 'Masonry bond type check' },
-    { title: 'Brick quality check', detail: 'Compression, water absorption and more' },
+    { title: 'Brick quality check' },
     { title: 'M-sand testing' },
     { title: 'Water used for brickwork test' },
   ],
@@ -541,7 +541,7 @@ export const workGallery = {
       location: 'Cheran ma nagar, Coimbatore',
       year: '2025',
       image: {
-        src: '/Ather/ather-09.jpeg',
+        src: '/Ather/finished/aether-finished-02.jpg',
         alt: 'Aether  exterior envelope nearing completion under scaffolding.',
       },
     },
@@ -552,7 +552,7 @@ export const workGallery = {
       location: 'Cheran ma nagar, Coimbatore',
       year: '2025',
       image: {
-        src: '/Ather/ather-08.png',
+        src: '/Ather/construction/aether-construction-01.png',
         alt: 'Aether  — contemporary duplex facade in Cheran ma nagar, Coimbatore.',
         fit: 'contain',
         width: 1086,
@@ -566,7 +566,7 @@ export const workGallery = {
       location: 'Vilankurichi, Coimbatore',
       year: '2026',
       image: {
-        src: '/Trevea/trivara-1.jpeg',
+        src: '/Trevea/construction/trivara-construction-04.jpg',
         alt: 'Trivara Townhouses — exterior superstructure under scaffolding.',
         fit: 'contain',
         width: 1600,
@@ -580,7 +580,7 @@ export const workGallery = {
       location: 'Vilankurichi, Coimbatore',
       year: '2026',
       image: {
-        src: '/Trevea/trivara-2.jpeg',
+        src: '/Trevea/design/trivara-design-01.jpg',
         alt: 'Trivara Townhouses — contemporary brick accent facade in Vilankurichi, Coimbatore.',
       },
     },

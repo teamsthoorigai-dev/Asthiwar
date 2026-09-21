@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/Button';
 import { PageHero } from '@/components/ui/PageHero';
 import { Section } from '@/components/ui/Section';
 import { ProjectGallery } from '@/components/projects/ProjectGallery';
-import { getProject, isUnconfirmed, projects } from '@/data/site';
+import { galleryStages, getProject, isUnconfirmed, projects } from '@/data/site';
 import { JsonLd } from '@/components/JsonLd';
 import { getProjectBreadcrumbJsonLd } from '@/lib/jsonld';
 import styles from './page.module.css';
@@ -181,7 +181,22 @@ export default async function ProjectPage({
 
       <Section>
         <h2 className={styles.sectionTitle}>Gallery</h2>
-        <ProjectGallery shots={project.gallery} title={project.title} />
+        {galleryStages(project).map(({ stage, label, shots }, i) => (
+          <section key={stage} id={stage} className={styles.stage} aria-labelledby={`${stage}-title`}>
+            <header className={styles.stageHeader}>
+              <span className={styles.stageNumber} aria-hidden="true">
+                {String(i + 1).padStart(2, '0')}
+              </span>
+              <h3 id={`${stage}-title`} className={styles.stageTitle}>
+                {label}
+              </h3>
+              <span className={styles.stageCount}>
+                {shots.length} {shots.length === 1 ? 'image' : 'images'}
+              </span>
+            </header>
+            <ProjectGallery shots={shots} title={`${project.title.trim()} — ${label}`} />
+          </section>
+        ))}
 
         <div className={styles.nextRow}>
           <Link href={`/projects/${next.slug}`} className={styles.nextTextLink}>

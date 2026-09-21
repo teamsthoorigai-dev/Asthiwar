@@ -13,6 +13,8 @@ const publicPaths = [
   '/projects',
   '/services',
   '/sustainable-construction',
+  '/terms',
+  '/privacy',
 ] as const;
 
 export default function sitemap(): MetadataRoute.Sitemap {

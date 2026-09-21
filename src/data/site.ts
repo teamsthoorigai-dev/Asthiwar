@@ -213,6 +213,12 @@ export type ProjectDatum = {
   coordinates: string;
 };
 
+/** What a gallery picture shows: the completed building, the design work, or the build on site. */
+export type ProjectStage = 'finished' | 'design' | 'construction';
+
+/** `width` and `height` are the picture's own pixel size; the gallery lays its tiles out from them before the image has loaded. */
+export type ProjectShot = { src: string; alt: string; stage: ProjectStage; width: number; height: number };
+
 export type Project = {
   slug: string;
   title: string;
@@ -225,8 +231,8 @@ export type Project = {
   image: { src: string; alt: string };
   /** Looping video shown in the project header in place of `image`, which stays as its poster. */
   video?: string;
-  /** Cycled on hover in the archive grid. */
-  gallery: ReadonlyArray<{ src: string; alt: string }>;
+  /** Every picture of the project. The project page splits them into sections by `stage`. */
+  gallery: ReadonlyArray<ProjectShot>;
   summary: string;
   overview: string;
   challenge: string;
@@ -246,16 +252,26 @@ export const projects: readonly Project[] = [
     area: '2,450 sq.ft (3.3 Cents Plot)',
     year: '2025',
     status: 'Completed',
-    image: { src: '/Ather/ather-06.jpeg', alt: 'Aether  contemporary duplex facade in Cheran ma nagar, Coimbatore' },
+    image: { src: '/Ather/construction/aether-construction-03.jpg', alt: 'Aether  contemporary duplex facade in Cheran ma nagar, Coimbatore' },
     video: '/Ather/AetherLandscape.mp4',
     gallery: [
-      { src: '/Ather/1.jpg', alt: 'Exterior facade with glass balcony railing' },
-      { src: '/Ather/2.jpg', alt: 'Exterior envelope nearing completion under scaffolding' },
-      { src: '/Ather/3.jpeg', alt: 'Concrete frame and masonry shell mid-construction' },
-      { src: '/Ather/4.jpeg', alt: 'Rooftop terrace under construction at sunset' },
-      { src: '/Ather/5.jpeg', alt: 'Interior textured plaster finish being applied' },
-      { src: '/Ather/6.jpeg', alt: 'Interior joinery and cabinetry installation' },
-      { src: '/Ather/7.jpeg', alt: 'Site progress during superstructure phase' },
+      { stage: 'finished', src: '/Ather/finished/aether-finished-01.jpg', width: 5393, height: 4045, alt: 'Front elevation of the two completed villas in soft overcast light' },
+      { stage: 'finished', src: '/Ather/finished/aether-finished-02.jpg', width: 1350, height: 1080, alt: 'The completed villas at golden hour, seen from the street' },
+      { stage: 'finished', src: '/Ather/finished/aether-finished-03.jpg', width: 5506, height: 2803, alt: 'Street-level view along the front of both completed villas' },
+      { stage: 'finished', src: '/Ather/finished/aether-finished-04.jpg', width: 4608, height: 3072, alt: 'Living hall with a fluted timber TV wall, ceiling fan and chandelier' },
+      { stage: 'finished', src: '/Ather/finished/aether-finished-05.jpg', width: 4608, height: 3072, alt: 'Kitchen with timber cabinetry, black granite counters and lit open shelving' },
+      { stage: 'finished', src: '/Ather/finished/aether-finished-06.jpg', width: 4608, height: 3072, alt: 'Kitchen looking towards the window, lit shelving on the left' },
+      { stage: 'finished', src: '/Ather/finished/aether-finished-07.jpg', width: 4608, height: 3072, alt: 'Vanity with a vessel basin and mirror beside a lit timber niche' },
+      { stage: 'design', src: '/Ather/design/aether-design-01.jpg', width: 4961, height: 3508, alt: 'Rendered corner view of the two villas with jaali screens, landscaping and parked cars' },
+      { stage: 'design', src: '/Ather/design/aether-design-02.jpg', width: 3840, height: 2160, alt: 'Rendered front elevation of the two villas' },
+      { stage: 'design', src: '/Ather/design/aether-design-07.jpg', width: 3222, height: 4027, alt: 'Villa-01 ground floor plan' },
+      { stage: 'design', src: '/Ather/design/aether-design-08.jpg', width: 3266, height: 4083, alt: 'Villa-01 first floor plan' },
+      { stage: 'design', src: '/Ather/design/aether-design-09.jpg', width: 3183, height: 4178, alt: 'Villa-02 ground floor plan' },
+      { stage: 'design', src: '/Ather/design/aether-design-10.jpg', width: 3236, height: 4045, alt: 'Villa-02 first floor plan' },
+      { stage: 'construction', src: '/Ather/construction/aether-construction-01.png', width: 1086, height: 1448, alt: 'Reinforced concrete and masonry frame rising on site, with workers and a cement mixer' },
+      { stage: 'construction', src: '/Ather/construction/aether-construction-02.jpg', width: 1600, height: 900, alt: 'Plastered three-storey structure under scaffolding, workers on the facade' },
+      { stage: 'construction', src: '/Ather/construction/aether-construction-03.jpg', width: 900, height: 1600, alt: 'Front facade wrapped in scaffolding during exterior finishing' },
+      { stage: 'construction', src: '/Ather/construction/aether-construction-04.jpg', width: 1600, height: 900, alt: 'Workers laying large-format floor tiles in a room with barred windows' },
     ],
     summary:
       'A bespoke 2,450 sq.ft 3BHK semi-furnished duplex situated on a prominent 60-ft and 30-ft corner road in Cheran ma nagar. Built with uncompromised material quality, skilled labour, perfect Vaasthu and Manai Adi Sastra adherence, and two-car luxury parking.',
@@ -296,19 +312,32 @@ export const projects: readonly Project[] = [
     area: '2,200 sq.ft (2.75 Cents Plot)',
     year: '2026',
     status: 'In Progress',
-    image: { src: '/Trevea/trivara-2.jpeg', alt: 'Trivara Townhouses contemporary brick-accent facade in Vilankurichi, Coimbatore' },
+    image: { src: '/Trevea/design/trivara-design-01.jpg', alt: 'Trivara Townhouses contemporary brick-accent facade in Vilankurichi, Coimbatore' },
+    // Nothing is finished yet, so the project page shows the design and construction sections only.
     gallery: [
-      { src: '/Trevea/trivara-2.jpeg', alt: 'Rendered elevation of brick accent townhouse facade' },
-      { src: '/Trevea/trevea-09.jpeg', alt: 'Isometric floor plan showing first-floor layout' },
-      { src: '/Trevea/trevea-01.jpeg', alt: 'Exterior superstructure under scaffolding' },
-      { src: '/Trevea/trevea-04.jpeg', alt: 'Reinforced concrete slab and beam construction with rebar' },
-      { src: '/Trevea/trevea-02.jpeg', alt: 'Site progress — masonry and concrete frame' },
-      { src: '/Trevea/trevea-05.jpeg', alt: 'Construction detail on site' },
-      { src: '/Trevea/trevea-06.jpeg', alt: 'Structural work in progress' },
-      { src: '/Trevea/trevea-07.jpeg', alt: 'Site overview during mid-construction phase' },
-      { src: '/Trevea/trevea-08.jpeg', alt: 'Construction progress — walls and openings' },
-      { src: '/Trevea/trevea-10.jpeg', alt: 'Site detail during construction' },
-      { src: '/Trevea/trevea-11.jpeg', alt: 'Site overview' },
+      { stage: 'design', src: '/Trevea/design/trivara-design-01.jpg', width: 1920, height: 1080, alt: 'Rendered elevation of the townhouses with exposed brick accents' },
+      { stage: 'design', src: '/Trevea/design/trivara-design-02.jpg', width: 1241, height: 859, alt: 'Isometric view of the first floor, plots 8 & 9' },
+      { stage: 'design', src: '/Trevea/design/trivara-design-03.jpg', width: 1241, height: 877, alt: 'Isometric view of the ground floor, plots 8 & 9' },
+      { stage: 'design', src: '/Trevea/design/trivara-design-04.jpg', width: 1131, height: 1600, alt: 'Coloured ground floor plan, plots 8 & 9' },
+      { stage: 'design', src: '/Trevea/design/trivara-design-05.jpg', width: 1131, height: 1600, alt: 'Coloured first floor plan, plot 10' },
+      { stage: 'construction', src: '/Trevea/construction/trivara-construction-01.jpg', width: 1600, height: 720, alt: 'Plinth beam reinforcement laid out on the excavated foundation, with workers and column starter bars' },
+      { stage: 'construction', src: '/Trevea/construction/trivara-construction-02.jpg', width: 1600, height: 720, alt: 'Cast plinth beams and column starter bars at foundation level' },
+      { stage: 'construction', src: '/Trevea/construction/trivara-construction-03.jpg', width: 1280, height: 720, alt: 'Ground-floor brick walls rising between concrete columns, with a wheelbarrow and stacked bricks' },
+      { stage: 'construction', src: '/Trevea/construction/trivara-construction-04.jpg', width: 1600, height: 900, alt: 'Columns rising from the slab at dusk, a worker curing the concrete with a hose' },
+      { stage: 'construction', src: '/Trevea/construction/trivara-construction-05.jpg', width: 1600, height: 900, alt: 'Columns in timber formwork on the slab at sunset, neighbouring houses beyond' },
+      { stage: 'construction', src: '/Trevea/construction/trivara-construction-06.jpg', width: 900, height: 1600, alt: 'Masons laying brickwork beside reinforcement bars, the sun low behind' },
+      { stage: 'construction', src: '/Trevea/construction/trivara-construction-07.jpg', width: 1600, height: 900, alt: 'Workers tying reinforcement over a sunken pit between brick walls' },
+      { stage: 'construction', src: '/Trevea/construction/trivara-construction-08.jpg', width: 1280, height: 720, alt: 'Workers coating the inside walls of a brick tank between reinforced columns' },
+      { stage: 'construction', src: '/Trevea/construction/trivara-construction-09.jpg', width: 1600, height: 900, alt: 'Reinforcement and shuttering for a slab beam, a worker fixing the formwork' },
+      { stage: 'construction', src: '/Trevea/construction/trivara-construction-10.jpg', width: 1600, height: 900, alt: 'Roof slab reinforcement laid out at sunset, workers at the edge' },
+      { stage: 'construction', src: '/Trevea/construction/trivara-construction-11.jpg', width: 1600, height: 900, alt: 'Slab reinforcement mesh across the full floor, neighbouring houses and palms behind' },
+      { stage: 'construction', src: '/Trevea/construction/trivara-construction-12.jpg', width: 1600, height: 1200, alt: 'Slab reinforcement with white conduit pipes laid across the mesh before the pour' },
+      { stage: 'construction', src: '/Trevea/construction/trivara-construction-13.jpg', width: 1600, height: 900, alt: 'Shuttering over an opening between brick walls, seen from roof level' },
+      { stage: 'construction', src: '/Trevea/construction/trivara-construction-14.jpg', width: 4080, height: 3060, alt: 'Masonry frame wrapped in scaffolding, seen from below' },
+      { stage: 'construction', src: '/Trevea/construction/trivara-construction-15.jpg', width: 1280, height: 572, alt: 'Two-storey concrete frame with brick infill, seen from the street' },
+      { stage: 'construction', src: '/Trevea/construction/trivara-construction-16.jpg', width: 1600, height: 900, alt: 'Plastered terrace parapet and stair-head room, a worker at the roof edge' },
+      { stage: 'construction', src: '/Trevea/construction/trivara-construction-17.jpg', width: 4080, height: 3060, alt: 'The scaffolded masonry frame from the same viewpoint in a lighter exposure' },
+      { stage: 'construction', src: '/Trevea/construction/trivara-construction-18.jpg', width: 2268, height: 4032, alt: 'Timber door frame fixed in the concrete structure, hung with flower garlands' },
     ],
     summary:
       'A contemporary 2,200 sq.ft 3BHK townhouse development in Vilankurichi. Built on a 2.75-cent north-facing plot, combining efficient vertical volume planning with warm exposed brick accents and low-thermal-gain design.',
@@ -349,6 +378,35 @@ export function isUnconfirmed(value: string): boolean {
 export function getProject(slug: string): Project | undefined {
   const normalized = slug === 'ather' ? 'aether' : slug === 'trevea' ? 'trivara' : slug;
   return projects.find((p) => p.slug === normalized);
+}
+
+/** The gallery sections, in the order a project page shows them. */
+export const projectStages: ReadonlyArray<{ stage: ProjectStage; label: string }> = [
+  { stage: 'finished', label: 'Finished' },
+  { stage: 'design', label: 'Design' },
+  { stage: 'construction', label: 'Construction' },
+];
+
+/** A project's pictures split into sections. A stage with nothing in it yet is left out. */
+export function galleryStages(project: Project) {
+  return projectStages
+    .map(({ stage, label }) => ({
+      stage,
+      label,
+      shots: project.gallery.filter((shot) => shot.stage === stage),
+    }))
+    .filter(({ shots }) => shots.length > 0);
+}
+
+/**
+ * Pictures per section an archive card cycles through. A card stacks every frame
+ * it shows, so it takes a taste of each stage rather than the whole gallery.
+ */
+const CARD_FRAMES_PER_STAGE = 2;
+
+/** The frames an archive card cycles on hover; the first is the card's still. */
+export function cardShots(project: Project): ReadonlyArray<ProjectShot> {
+  return galleryStages(project).flatMap(({ shots }) => shots.slice(0, CARD_FRAMES_PER_STAGE));
 }
 
 /** Categories that are actually set. Empty while every project is unconfirmed. */

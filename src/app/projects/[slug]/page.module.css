@@ -173,6 +173,48 @@
   padding-block-start: var(--s-3) !important;
 }
 
+/* ---- gallery sections ---- */
+
+.stage {
+  scroll-margin-block-start: calc(var(--header-height, 4.5rem) + var(--s-3));
+}
+
+.stage + .stage {
+  margin-block-start: var(--s-6);
+}
+
+.stageHeader {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-2) var(--s-3);
+  padding-block: var(--s-2);
+  margin-block-end: var(--s-3);
+  border-top: 1px solid var(--hairline);
+}
+
+.stageNumber {
+  color: var(--accent);
+  font-size: var(--fs-h4);
+  font-weight: var(--fw-bold);
+  font-variant-numeric: tabular-nums;
+  line-height: var(--lh-head);
+}
+
+.stageTitle {
+  color: var(--ink);
+  font-size: var(--fs-h4);
+  font-weight: var(--fw-medium);
+  line-height: var(--lh-head);
+  margin: 0;
+}
+
+.stageCount {
+  margin-inline-start: auto;
+  color: var(--muted);
+  font-size: var(--fs-sm);
+  font-variant-numeric: tabular-nums;
+}
+
 /* ---- next project ---- */
 
 .nextRow {

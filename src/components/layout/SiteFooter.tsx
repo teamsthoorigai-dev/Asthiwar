@@ -120,7 +120,9 @@ export function SiteFooter() {
         </div>
 
         <div className={styles.legal}>
-          <p style={{ margin: 0 }}>© 2026 ASTHIWAR Design &amp; Build</p>
+          <p className={styles.copyright}>
+            © 2026 <span className={styles.holder}>DreamLand Pictures.</span> All Rights Reserved.
+          </p>
           <ul className={styles.legalLinks}>
             {legalNav.map((item) => (
               <li key={item.href}>
@@ -130,6 +132,9 @@ export function SiteFooter() {
               </li>
             ))}
           </ul>
+          <p className={styles.credit}>
+            Crafted by <span className={styles.creditName}>DreamLand Pictures</span>
+          </p>
         </div>
       </div>
     </footer>

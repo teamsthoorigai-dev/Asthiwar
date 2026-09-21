@@ -1,12 +1,12 @@
 'use client';
 
 import Image from 'next/image';
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { PROJECT_SHOT_SIZES } from '@/lib/imageSizes';
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
+import { projectTileSizes } from '@/lib/imageSizes';
 import { lockScroll, unlockScroll } from '@/lib/lenis';
 import styles from './ProjectGallery.module.css';
 
-type Shot = { src: string; alt: string };
+type Shot = { src: string; alt: string; width: number; height: number };
 
 const FOCUSABLE = 'button:not([disabled]), a[href]';
 
@@ -90,6 +90,7 @@ export function ProjectGallery({ shots, title }: { shots: readonly Shot[]; title
             key={`${shot.src}-${i}`}
             type="button"
             className={styles.tile}
+            style={{ '--ar': shot.width / shot.height } as CSSProperties}
             aria-label={`View image ${i + 1} of ${shots.length}`}
             onClick={(e) => {
               openerRef.current = e.currentTarget;
@@ -100,7 +101,7 @@ export function ProjectGallery({ shots, title }: { shots: readonly Shot[]; title
               src={shot.src}
               alt={shot.alt || ''}
               fill
-              sizes={PROJECT_SHOT_SIZES}
+              sizes={projectTileSizes(shot.width, shot.height)}
               className={styles.image}
             />
           </button>

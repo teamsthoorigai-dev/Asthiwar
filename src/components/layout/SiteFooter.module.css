@@ -206,22 +206,64 @@
 
 /* ---- row 3: legal ---- */
 
+/* Phones: the copyright on its own row, the links and the credit sharing the one below. */
 .legal {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-areas:
+    'copyright copyright'
+    'links credit';
   align-items: center;
-  justify-content: space-between;
   gap: var(--s-2) var(--s-4);
   padding-block: var(--s-3);
   font-size: var(--fs-xs);
 }
 
+.copyright {
+  grid-area: copyright;
+  margin: 0;
+}
+
+/* The rights holder reads a step brighter than the boilerplate around it. */
+.holder {
+  color: var(--on-accent);
+}
+
 .legalLinks {
+  grid-area: links;
   display: flex;
   gap: var(--s-3);
   margin: 0;
   padding: 0;
   list-style: none;
+}
+
+/* Keep the links at the row's 12px; as .link they would take the 14px used in the columns above. */
+.legalLinks .link {
+  font-size: inherit;
+}
+
+.credit {
+  grid-area: credit;
+  margin: 0;
+}
+
+.creditName {
+  color: var(--oxide-light);
+  font-weight: var(--fw-bold);
+  white-space: nowrap;
+}
+
+/* Room for all three on one line (about 590px of content): copyright left, credit right. */
+@media (min-width: 720px) {
+  .legal {
+    grid-template-columns: auto 1fr auto;
+    grid-template-areas: 'copyright links credit';
+  }
+
+  .legalLinks {
+    justify-self: center;
+  }
 }
 
 @media (min-width: 640px) {

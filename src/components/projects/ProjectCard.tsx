@@ -3,7 +3,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
-import { isUnconfirmed, type Project } from '@/data/site';
+import { cardShots, isUnconfirmed, type Project } from '@/data/site';
 import { PROJECT_SHOT_SIZES } from '@/lib/imageSizes';
 import styles from './ProjectCard.module.css';
 
@@ -26,9 +26,10 @@ export function ProjectCard({
   const [frame, setFrame] = useState(0);
   const [hovering, setHovering] = useState(false);
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
+  const frames = cardShots(project);
 
   useEffect(() => {
-    if (!hovering || project.gallery.length < 2) return;
+    if (!hovering || frames.length < 2) return;
 
     const canHover =
       typeof window !== 'undefined' && window.matchMedia('(hover: hover)').matches;
@@ -38,14 +39,14 @@ export function ProjectCard({
     if (!canHover || reduced) return;
 
     timer.current = setInterval(() => {
-      setFrame((f) => (f + 1) % project.gallery.length);
+      setFrame((f) => (f + 1) % frames.length);
     }, CYCLE_MS);
 
     return () => {
       if (timer.current) clearInterval(timer.current);
       timer.current = null;
     };
-  }, [hovering, project.gallery.length]);
+  }, [hovering, frames.length]);
 
   const startHover = () => {
     setHovering(true);
@@ -96,7 +97,7 @@ export function ProjectCard({
         onBlur={stop}
       >
         <div className={styles.media}>
-          {project.gallery.map((shot, i) => (
+          {frames.map((shot, i) => (
             <div
               key={`${shot.src}-${i}`}
               className={[styles.frame, i === frame && styles.frameActive]

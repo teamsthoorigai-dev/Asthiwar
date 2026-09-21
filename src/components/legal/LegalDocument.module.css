@@ -1,0 +1,253 @@
+.page {
+  width: 100%;
+  background: var(--bg);
+}
+
+/* Clears the fixed header the same way the contact page does. */
+.section {
+  padding-block: calc(var(--section-y) + 5rem) var(--section-y);
+}
+
+.inner {
+  width: 100%;
+  max-width: var(--container);
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+}
+
+/* ---- header ---- */
+
+.header {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.eyebrow {
+  margin: 0 0 var(--s-2);
+  color: var(--accent);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/* Two lines at every width ("Terms &" / "Conditions"), as the contact title is. */
+.title {
+  max-width: 12ch;
+  margin: 0;
+}
+
+.introRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--s-2);
+  width: 100%;
+  margin-top: var(--s-5);
+}
+
+.effective {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  letter-spacing: 0.04em;
+}
+
+.lead {
+  max-width: 46ch;
+  margin: 0;
+  color: var(--body);
+  font-size: var(--fs-lg);
+  line-height: var(--lh-body);
+  text-wrap: pretty;
+}
+
+/* ---- clauses ---- */
+
+.clauses {
+  margin-top: var(--s-6);
+  border-block-start: 1px solid var(--hairline);
+}
+
+.clause {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--s-2);
+  padding-block: var(--s-4);
+  border-block-end: 1px solid var(--hairline);
+  /* A deep link such as /terms#cost-estimates lands below the fixed header. */
+  scroll-margin-top: calc(var(--header-height) + var(--s-3));
+}
+
+.clauseHead {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-2);
+}
+
+.num {
+  min-width: 2ch;
+  color: var(--oxide-deep);
+  font-size: var(--fs-sm);
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--fw-medium);
+  letter-spacing: 0.08em;
+}
+
+.clauseTitle {
+  margin: 0;
+  font-size: clamp(1.375rem, 1.1rem + 0.7vw, 1.75rem);
+  letter-spacing: -0.01em;
+}
+
+.clauseBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  min-width: 0;
+}
+
+.text,
+.list {
+  max-width: 38rem;
+  margin: 0;
+  color: var(--body);
+  font-size: var(--fs-md);
+  line-height: var(--lh-body);
+  text-wrap: pretty;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0;
+  list-style: none;
+}
+
+.list li {
+  position: relative;
+  padding-inline-start: 1.5rem;
+}
+
+/* A short oxide rule instead of a disc, in keeping with the hairline drawing. */
+.list li::before {
+  content: '';
+  position: absolute;
+  inset-inline-start: 0;
+  top: 0.85em;
+  width: 0.75rem;
+  height: 1px;
+  background: var(--oxide);
+}
+
+.facts {
+  margin: 0;
+  border-block-start: 1px solid var(--hairline);
+}
+
+.fact {
+  display: grid;
+  grid-template-columns: minmax(6.5rem, 0.45fr) minmax(0, 1.55fr);
+  gap: var(--s-3);
+  padding-block: var(--s-2);
+  border-block-end: 1px solid var(--hairline);
+}
+
+/* A clause that ends on its rows is closed by the clause's own rule, not two. */
+.clauseBody > .facts:last-child .fact:last-child {
+  border-block-end: 0;
+}
+
+.factLabel {
+  color: var(--muted);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-medium);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  /* Sits on the first line of the text, whose line box is taller than the label's. */
+  padding-top: 0.2rem;
+}
+
+.factText {
+  max-width: 38rem;
+  margin: 0;
+  color: var(--body);
+  line-height: var(--lh-body);
+  text-wrap: pretty;
+}
+
+.link {
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-color: var(--oxide);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.2em;
+  transition: text-decoration-color var(--dur-fast) var(--ease-out);
+}
+
+.link:hover {
+  text-decoration-color: var(--ink);
+}
+
+/* A phone number wrapped after its country code reads as two numbers. */
+.nowrap {
+  white-space: nowrap;
+}
+
+/* ---- closing line ---- */
+
+.closing {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  padding-top: var(--s-5);
+}
+
+/* Same two columns as the header row and the clauses, so the text below lines up
+   with the body copy above it. */
+@media (min-width: 900px) {
+  .introRow,
+  .clause,
+  .closing {
+    grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+    column-gap: var(--s-6);
+  }
+
+  .clause {
+    padding-block: var(--s-5);
+  }
+
+  .closing .text {
+    grid-column: 2;
+  }
+}
+
+@media (max-width: 767px) {
+  .section {
+    padding-block: calc(var(--section-y-sm) + 4rem) var(--section-y-sm);
+  }
+
+  .introRow {
+    margin-top: var(--s-4);
+  }
+
+  .clauses {
+    margin-top: var(--s-5);
+  }
+
+  .lead {
+    font-size: var(--fs-md);
+  }
+}
+
+@media (max-width: 480px) {
+  .fact {
+    grid-template-columns: 1fr;
+    gap: 0.25rem;
+  }
+
+  .factLabel {
+    padding-top: 0;
+  }
+}
