@@ -10,7 +10,10 @@ const API_ORIGIN = process.env.API_BASE_URL_INTERNAL ?? 'http://localhost:4000';
 const THIRTY_DAYS = 60 * 60 * 24 * 30;
 
 const nextConfig: NextConfig = {
-  output: 'standalone',
+  // The Docker image runs from .next/standalone. Vercel packages the build
+  // itself, and with standalone on Next 16.3.x its build fails after compiling
+  // (ENOENT .next/next-server.js.nft.json, vercel/next.js#96646), so skip it there.
+  output: process.env.VERCEL ? undefined : 'standalone',
   devIndicators: false,
   images: {
     formats: ['image/avif', 'image/webp'],
