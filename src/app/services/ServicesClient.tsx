@@ -44,7 +44,10 @@ export function ServicesClient() {
         trigger: stage,
         pin: true,
         scrub: 0.6,
-        start: 'top 72px',
+        // Only mobile's stacked header needs the pin held off by the HUD's
+        // height — on desktop that offset misaligns the horizontal track
+        // against the site's fixed header, clipping the first panel's copy.
+        start: () => (window.innerWidth < 1024 ? 'top 72px' : 'top top'),
         end: () => `+=${getScrollDistance()}`,
         invalidateOnRefresh: true,
         anticipatePin: 1,

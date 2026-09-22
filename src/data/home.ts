@@ -552,11 +552,11 @@ export const workGallery = {
       location: 'Cheran ma nagar, Coimbatore',
       year: '2025',
       image: {
-        src: '/Ather/construction/aether-construction-01.png',
+        src: '/Ather/construction/aether-construction-9.jpg',
         alt: 'Aether  — contemporary duplex facade in Cheran ma nagar, Coimbatore.',
         fit: 'contain',
-        width: 1086,
-        height: 1448,
+        width: 1600,
+        height: 900,
       },
     },
     {

@@ -272,9 +272,9 @@
     gap: var(--s-5);
   }
 
-  .brandCol {
-    grid-column: auto;
-  }
+  /* brandCol stays full-width until 1024px: sharing a row with the taller
+     Navigate list here would size the row to Navigate's height and leave the
+     short logo sitting in a lot of dead space above Services. */
 
   .contactCol {
     grid-column: auto;
@@ -285,5 +285,9 @@
   .grid {
     grid-template-columns: 1.4fr 1fr 1fr 1fr;
     gap: var(--s-4);
+  }
+
+  .brandCol {
+    grid-column: auto;
   }
 }

@@ -112,7 +112,11 @@
 
 @media (max-width: 48rem) {
   .container {
+    /* At exactly 48rem both this query and the min-width: 48rem one above
+       are active, so the desktop rule's explicit `height` (near-viewport
+       tall) has to be cleared here too, not just its min-height. */
     min-height: auto;
+    height: auto;
   }
 
   /* Copy sits at the top and the card is only as tall as its content, so there is no
@@ -124,6 +128,20 @@
 
   .inner {
     padding-block: var(--gutter);
+  }
+
+  .copy {
+    margin-inline: auto;
+    text-align: center;
+  }
+
+  .title,
+  .intro {
+    margin-inline: auto;
+  }
+
+  .actions {
+    justify-content: center;
   }
 
   .image {

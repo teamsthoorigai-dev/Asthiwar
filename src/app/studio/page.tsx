@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { StudioClient } from './StudioClient';
 
 export const metadata: Metadata = {
-  title: 'Studio — ASTHIWAR',
+  title: 'Studio',
   description:
     'Designing with Purpose. Rooted in Context. Evolving with Time. Inside ASTHIWAR architecture, structural engineering, and construction practice in Coimbatore and Virudhunagar, Tamil Nadu.',
   openGraph: {

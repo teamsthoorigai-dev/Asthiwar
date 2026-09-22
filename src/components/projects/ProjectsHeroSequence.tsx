@@ -56,8 +56,8 @@ const stages: readonly Stage[] = [
     at: 0.60,
     index: '03',
     label: 'MATERIAL / COMFORT',
-    title: 'Sustainable choices shape every layer.',
-    note: 'Natural cooling, breathable lime, lower-carbon methods and honest tactile finishes support healthier living.',
+    title: 'Material Honesty.',
+    note: 'Materials are selected for structural integrity, longevity, and how they weather over time. We build with verified, high-grade fundamentals that endure rather than cosmetic finishes that degrade.',
   },
   {
     at: 0.82,
