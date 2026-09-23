@@ -5,7 +5,7 @@
   border-block-end: 1px solid var(--hairline);
   background: var(--surface);
   color: var(--ink);
-  padding-block: var(--section-y);
+  padding-block: var(--section-y) var(--s-4);
 }
 
 /* Four pieces in reading order — headline, standfirst, list, tally — so a phone
