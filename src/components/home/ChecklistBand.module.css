@@ -65,7 +65,9 @@
   font-size: clamp(4.25rem, 8vw, 8rem);
   font-weight: var(--fw-medium);
   letter-spacing: -0.04em;
-  line-height: 1.02;
+  /* Neither "750+" nor "Checklist" has a descender, so the lines can sit
+     tighter than the cost band's 1.02 without anything colliding. */
+  line-height: 0.92;
 }
 
 /* ---- left: standfirst and tally ---- */
@@ -113,16 +115,17 @@
   /* One place decides how tall a line of text is, so the box and the index can
      centre themselves on the *first* line — the brick check has a second line
      under its title and must not pull the box down with it. */
-  --row-size: clamp(1.2rem, 0.95rem + 0.9vw, 1.55rem);
-  --row-lh: 1.3;
-  --box: clamp(1.5rem, 2vw, 1.85rem);
+  --row-size: clamp(0.95rem, 0.85rem + 0.35vw, 1.15rem);
+  --row-lh: 1.35;
+  --box: clamp(1.1rem, 1.3vw, 1.3rem);
 
   position: relative;
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: start;
-  column-gap: clamp(1rem, 2vw, 1.75rem);
-  padding-block: clamp(1rem, 1.5vw, 1.4rem);
+  column-gap: clamp(0.85rem, 1.4vw, 1.25rem);
+  /* Same row rhythm as the cost band's fields directly above. */
+  padding-block: clamp(1rem, 1.2vw, 1.4rem);
 }
 
 /* The rule is an element, not a border, so it can draw itself across. The
