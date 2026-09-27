@@ -27,7 +27,7 @@ import { SESSION_COOKIE_NAME } from '../middleware/auth.js';
 import { clientIp, clientIpKey } from '../middleware/client-ip.js';
 import { errorHandler, flushAnonymousAuditWindow } from '../middleware/errorHandler.js';
 import { TRUSTED_DEVICE_COOKIE } from './auth/trusted-device.js';
-import { escapeHtml } from './email/email-templates.js';
+import { escapeHtml, renderAdminLeadAlertEmail } from './email/email-templates.js';
 import { boundedForAudit, sanitizePayload } from '../services/audit.service.js';
 import { sendWhatsAppMessage } from '../services/whatsapp.service.js';
 
@@ -105,6 +105,22 @@ async function runSecurityTests() {
     assert(escaped.includes('&#39;'), 'Single quotes are escaped');
     assert(escaped.includes('&amp;'), 'Ampersand is escaped');
     console.log('  ✅ PASS: escapeHtml cleanly converts all HTML injection vectors');
+
+    // The lead alert's subject carries the customer's name into <title>, the one
+    // place in the document it was not escaped. A name that closed the title put
+    // a live link into mail the team receives from its own domain.
+    const leadAlert = renderAdminLeadAlertEmail({
+      fullName: '</title></head><body><a href="https://evil.example/login">Verify your account</a>\nBcc: x@evil.example',
+      phone: '9876543210',
+      plotLocation: 'Chennai',
+    });
+    assert(!leadAlert.html.includes('<a href="https://evil.example'), 'A customer name cannot add markup to the lead alert');
+    assert(
+      /<title>[^<]*&lt;\/title&gt;[^<]*<\/title>/.test(leadAlert.html),
+      'The customer name stays inside <title>, escaped'
+    );
+    assert(!/[\r\n]/.test(leadAlert.subject), 'A line break in the name does not reach the Subject header');
+    console.log('  ✅ PASS: The staff lead alert escapes customer text in its title and subject');
 
     // -----------------------------------------------------------------
     // [Test 2] PII Redaction in Audit & Log Pipelines
@@ -913,6 +929,59 @@ async function runSecurityTests() {
       `Unset NODE_ENV resolves to production (stdout: ${probe.stdout.trim()} stderr: ${probe.stderr.trim().slice(0, 200)})`
     );
     console.log('  ✅ PASS: A deploy that forgets NODE_ENV fails closed');
+
+    const loadEnvWith = (overrides: NodeJS.ProcessEnv) =>
+      spawnSync(
+        process.execPath,
+        ['--import', import.meta.resolve('tsx'), '--input-type=module', '-e', `const m = await import(${JSON.stringify(envModuleUrl)}); console.log('TRUST_PROXY_HOPS=' + m.env.TRUST_PROXY_HOPS);`],
+        {
+          cwd: fs.mkdtempSync(path.join(os.tmpdir(), 'asthiwar-env-')),
+          env: { ...childEnv, ...overrides },
+          encoding: 'utf8',
+        }
+      );
+
+    // -----------------------------------------------------------------
+    // [Test 19] The SESSION_SECRET printed in .env.example does not run production
+    // -----------------------------------------------------------------
+    console.log('\n[Test 19] Published SESSION_SECRET');
+    // It signs the trusted-device cookie: whoever knows it can mint cookies that
+    // skip the per-account login lockout.
+    const exampleSecret = fs
+      .readFileSync(fileURLToPath(new URL('../../../.env.example', import.meta.url)), 'utf8')
+      .match(/^SESSION_SECRET=(.+)$/m)?.[1]
+      ?.trim();
+    assert(Boolean(exampleSecret), '.env.example still carries an example SESSION_SECRET to test against');
+    const prodWithExample = loadEnvWith({ NODE_ENV: 'production', SESSION_SECRET: exampleSecret });
+    assert(
+      prodWithExample.status !== 0 && /published example value/.test(prodWithExample.stderr),
+      `Production refuses to start on it (exit ${prodWithExample.status})`
+    );
+    const devWithExample = loadEnvWith({ NODE_ENV: 'development', SESSION_SECRET: exampleSecret });
+    assert(
+      devWithExample.status === 0,
+      `Local development still starts with it (exit ${devWithExample.status}: ${devWithExample.stderr.trim().slice(0, 200)})`
+    );
+    console.log('  ✅ PASS: The published example secret is refused in production');
+
+    // -----------------------------------------------------------------
+    // [Test 20] Trusted proxy hops match the deployment
+    // -----------------------------------------------------------------
+    console.log('\n[Test 20] Trusted proxy hops');
+    // Trusting a proxy that is not there lets any caller forge X-Forwarded-For
+    // and choose their own rate-limit bucket, so an API reached directly runs
+    // with 0.
+    assert(/TRUST_PROXY_HOPS=1\b/.test(loadEnvWith({}).stdout), 'Default is one hop — the load balancer on Render');
+    assert(/TRUST_PROXY_HOPS=0\b/.test(loadEnvWith({ TRUST_PROXY_HOPS: '0' }).stdout), 'An API reached directly can trust none');
+    assert(loadEnvWith({ TRUST_PROXY_HOPS: '-1' }).status !== 0, 'A negative hop count is refused');
+    const configuredHops = env.TRUST_PROXY_HOPS;
+    try {
+      env.TRUST_PROXY_HOPS = 0;
+      assert(createApp().get('trust proxy') === 0, 'createApp applies TRUST_PROXY_HOPS');
+    } finally {
+      env.TRUST_PROXY_HOPS = configuredHops;
+    }
+    console.log('  ✅ PASS: The trusted hop count is configurable');
 
     console.log('\n-----------------------------------------------------------------');
     console.log('Results: All Security Hardening & Penetration Tests Passed!');

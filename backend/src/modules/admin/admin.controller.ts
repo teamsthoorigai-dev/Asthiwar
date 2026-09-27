@@ -13,6 +13,7 @@ import {
   getAdminAuditLogById,
 } from './admin.service.js';
 import { logAuditEvent } from '../../services/audit.service.js';
+import { recordAdminAction } from '../../services/admin-audit.js';
 import { clientIp } from '../../middleware/client-ip.js';
 import { hasAtLeastRole } from '../../middleware/auth.js';
 import {
@@ -72,6 +73,20 @@ export async function updateEnquiryController(req: Request, res: Response, next:
     const id = req.params.id as string;
     const dto = req.body as UpdateEnquiryDto;
     const updated = await updateAdminEnquiry(id, dto);
+
+    recordAdminAction(req, {
+      action: 'UPDATE_ENQUIRY',
+      severity: 'MEDIUM',
+      // Whether the notes changed, not what they say: they are free text about
+      // a customer, and the audit trail is readable by every admin role.
+      metadata: {
+        enquiryId: id,
+        status: dto.status,
+        priority: dto.priority,
+        adminNotesChanged: dto.adminNotes !== undefined,
+      },
+    });
+
     res.json({
       success: true,
       message: 'Enquiry updated successfully',
@@ -168,6 +183,13 @@ export async function updateEstimateController(req: Request, res: Response, next
     const id = req.params.id as string;
     const dto = req.body as UpdateEstimateDto;
     const updated = await updateAdminEstimate(id, dto);
+
+    recordAdminAction(req, {
+      action: 'UPDATE_ESTIMATE',
+      severity: 'MEDIUM',
+      metadata: { estimateId: id, changes: dto },
+    });
+
     res.json({
       success: true,
       message: 'Estimate updated successfully',

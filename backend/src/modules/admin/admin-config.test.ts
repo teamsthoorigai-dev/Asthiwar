@@ -661,6 +661,52 @@ async function runAdminConfigTests() {
     assert(quoted(restoredPremium, 'ramco_dalmia_cement').isPackageDefault === true, 'Premium includes Ramco/Dalmia again');
     assert(quoted(restoredPremium, 'any_isi_cement').priceDelta === -15, 'ISI is back to its seeded −15 credit in Premium');
 
+    // -----------------------------------------------------------------
+    // [Test 10] Price changes and sign-ins leave a record
+    // -----------------------------------------------------------------
+    console.log('\n[Test 10] Audit coverage for pricing and sign-in');
+    // A city's multiplier, an add-on's price and a variant's deletion change what
+    // customers are quoted; each ran earlier in this suite, and none used to be
+    // recorded. Nor was any sign-in, successful or not.
+    const failedSignIn = await makeRequest(server, {
+      method: 'POST',
+      path: '/api/v1/admin/auth/login',
+      body: { email: 'audit-probe@asthiwar.test', password: 'not-the-password' },
+    });
+    assert(failedSignIn.status === 401, 'A wrong password is refused');
+
+    // Audit writes are fire-and-forget, so give each a moment to land.
+    const auditRows = async (action: string): Promise<Array<{ actorId: string | null }>> => {
+      for (let attempt = 0; attempt < 20; attempt++) {
+        const res = await makeRequest(server, {
+          method: 'GET',
+          path: `/api/v1/admin/audit-logs?action=${action}&limit=20`,
+          headers: { Cookie: sessionCookie },
+        });
+        if (res.body.pagination.total > 0) return res.body.data;
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
+      return [];
+    };
+
+    for (const action of [
+      'ADMIN_LOGIN',
+      'CREATE_LOCATION',
+      'UPDATE_LOCATION',
+      'UPDATE_ADDON_PRICE',
+      'CREATE_ADDON_VARIANT',
+      'UPDATE_ADDON_VARIANT',
+      'DELETE_ADDON_VARIANT',
+    ]) {
+      assert((await auditRows(action)).length > 0, `${action} is in the audit trail`);
+    }
+
+    const failedSignIns = await auditRows('ADMIN_LOGIN_FAILED');
+    assert(
+      failedSignIns.some((row) => row.actorId === 'au****@asthiwar.test'),
+      'A failed sign-in is recorded against the (masked) account it targeted'
+    );
+
     console.log('\n-----------------------------------------------------------------');
     console.log('Results: All Phase 8 Admin Configuration & Pricing Tests Passed!');
   } finally {

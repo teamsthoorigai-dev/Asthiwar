@@ -20,7 +20,7 @@ import {
   AuditLogsQuery,
   DashboardQuery,
 } from './admin.schema.js';
-import { estimateRefCandidates } from '../calculator/quotation.js';
+import { estimateRefCandidates, publicSnapshotOf } from '../calculator/quotation.js';
 
 export class AdminServiceError extends Error {
   constructor(
@@ -31,6 +31,20 @@ export class AdminServiceError extends Error {
     super(message);
     this.name = 'AdminServiceError';
   }
+}
+
+/**
+ * An estimate as the console receives it: without the customer's access token.
+ *
+ * The token is the customer's link — whoever holds it opens their quotation and
+ * PDF for 90 days — and nothing in the console reads it. Every admin role reads
+ * estimates, viewer included, and a token copied out of a response kept working
+ * after that account was disabled. Staff who need a link reissue one through
+ * POST /estimates/:id/access-link, which revokes the old one and is audited.
+ */
+function withoutAccessToken<T extends { accessToken: string; fullSnapshotJson: unknown }>(estimate: T) {
+  const { accessToken: _omitted, ...rest } = estimate;
+  return { ...rest, fullSnapshotJson: publicSnapshotOf(estimate.fullSnapshotJson) };
 }
 
 // ----------------------------------------------------
@@ -151,7 +165,7 @@ export async function getAdminEnquiryById(id: string) {
 
   return {
     ...enquiry,
-    estimate: linkedEstimate,
+    estimate: linkedEstimate ? withoutAccessToken(linkedEstimate) : null,
   };
 }
 
@@ -336,7 +350,7 @@ export async function getAdminEstimateById(idOrEstimateNumber: string) {
   });
 
   return {
-    ...estimate,
+    ...withoutAccessToken(estimate),
     items,
     addons,
   };
@@ -361,7 +375,7 @@ export async function updateAdminEstimate(id: string, dto: UpdateEstimateDto) {
     .where(eq(schema.estimates.id, id))
     .returning();
 
-  return updated;
+  return withoutAccessToken(updated);
 }
 
 // ----------------------------------------------------

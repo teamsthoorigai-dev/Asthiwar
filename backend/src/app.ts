@@ -17,10 +17,13 @@ export function createApp(): Express {
    * `req.ip` is the load balancer for every visitor, `req.protocol` is always
    * 'http', and express-rate-limit warns that it cannot identify clients.
    *
-   * One hop only — trusting more would let a caller forge X-Forwarded-For and
-   * choose their own rate-limit bucket.
+   * TRUST_PROXY_HOPS proxies are trusted: 1 by default, which is Render's load
+   * balancer. Trusting more hops than there are lets a caller forge
+   * X-Forwarded-For and choose their own rate-limit bucket — and that includes
+   * trusting one that is not there. An API that clients reach directly must run
+   * with 0.
    */
-  app.set('trust proxy', 1);
+  app.set('trust proxy', env.TRUST_PROXY_HOPS);
 
   // Security Middleware
   app.use(helmet());

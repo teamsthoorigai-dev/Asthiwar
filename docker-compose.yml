@@ -1,11 +1,19 @@
 version: '3.8'
 
+# Secrets come from the environment or a .env file beside this one (see
+# .env.example): POSTGRES_PASSWORD and SESSION_SECRET are required.
+
 services:
   web:
     build:
       context: .
       dockerfile: Dockerfile.web
     ports:
+      # In production, put a TLS-terminating reverse proxy in front of this and
+      # have it overwrite X-Forwarded-For with the client's address (nginx:
+      # proxy_set_header X-Forwarded-For $remote_addr). Next.js passes a
+      # caller-supplied X-Forwarded-For through to the API as sent, so without
+      # that a visitor chooses their own rate-limit bucket.
       - "3000:3000"
     environment:
       - NODE_ENV=production
@@ -19,12 +27,15 @@ services:
       context: .
       dockerfile: Dockerfile.backend
     ports:
-      - "4000:4000"
+      # Loopback only: the web service reaches the API over the compose network.
+      # Published on every interface, anyone could call the API without the web
+      # tier in front and forge X-Forwarded-For, which it trusts one hop of.
+      - "127.0.0.1:4000:4000"
     environment:
       - NODE_ENV=production
       - PORT=4000
-      - DATABASE_URL=postgres://asthiwar:asthiwar_password@postgres:5432/asthiwar
-      # - SESSION_SECRET=your_secret_here
+      - DATABASE_URL=postgres://asthiwar:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@postgres:5432/asthiwar
+      - SESSION_SECRET=${SESSION_SECRET:?Set SESSION_SECRET (32+ characters) in .env}
       # - CORS_ORIGIN=http://localhost:3000
       # - PUBLIC_BASE_URL=http://localhost:3000
     depends_on:
@@ -37,10 +48,14 @@ services:
     image: postgres:15-alpine
     environment:
       - POSTGRES_USER=asthiwar
-      - POSTGRES_PASSWORD=asthiwar_password
+      # This file is public; a password written here is everyone's password.
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
       - POSTGRES_DB=asthiwar
     ports:
-      - "5432:5432"
+      # Loopback only, for tools on this machine. Docker's published ports go
+      # around host firewalls such as UFW, so "5432:5432" put the database on
+      # the internet.
+      - "127.0.0.1:5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
