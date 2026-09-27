@@ -242,6 +242,81 @@ export const updateOptionPriceSchema = z.object({
   })).optional(),
 });
 
+/** The widest value `option_prices.price_delta` (numeric(10,2)) can hold. */
+const MAX_RATE_DELTA = 99_999_999.99;
+
+/**
+ * A component's rate matrix — every brand's delta in every package — written as
+ * one change.
+ *
+ * The console edits the matrix a row or a column at a time and derives the rest
+ * of it (src/lib/rateMatrix.ts), so one edit can move a dozen rates across
+ * several brands. Saved brand by brand through PUT /options/:id/price, a failure
+ * part-way left some brands repriced and others not: a matrix that agreed with
+ * neither the old ladder nor the new one, live on the calculator.
+ *
+ * `defaults` switches which brand a package includes in the same transaction.
+ * The included brand has to be free in its package, so moving it and repricing
+ * the column around it cannot be two requests: whichever went first would be
+ * refused for leaving a priced brand marked as included.
+ */
+export const updateItemRateMatrixSchema = z
+  .object({
+    rates: z
+      .array(
+        z.object({
+          optionId: z.coerce.number().int().positive('Option ID is required'),
+          packageId: z.coerce.number().int().positive('Package ID is required'),
+          priceDelta: z.coerce
+            .number()
+            .finite('Rate delta must be a number')
+            .min(-MAX_RATE_DELTA, 'Rate delta is out of range')
+            .max(MAX_RATE_DELTA, 'Rate delta is out of range'),
+        })
+      )
+      .max(5000, 'Too many rates in one request')
+      .superRefine((rates, ctx) => {
+        const seen = new Set<string>();
+        rates.forEach((rate, index) => {
+          const key = `${rate.optionId}:${rate.packageId}`;
+          if (seen.has(key)) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              path: [index],
+              message: `Option ${rate.optionId} has more than one rate for package ${rate.packageId}.`,
+            });
+          }
+          seen.add(key);
+        });
+      }),
+    defaults: z
+      .array(
+        z.object({
+          packageId: z.coerce.number().int().positive('Package ID is required'),
+          // null clears the package's included brand.
+          defaultOptionId: z.coerce.number().int().positive().nullable(),
+        })
+      )
+      .max(100, 'Too many packages in one request')
+      .superRefine((defaults, ctx) => {
+        const seen = new Set<number>();
+        defaults.forEach((entry, index) => {
+          if (seen.has(entry.packageId)) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              path: [index, 'packageId'],
+              message: `Package ${entry.packageId} is given more than one included brand.`,
+            });
+          }
+          seen.add(entry.packageId);
+        });
+      })
+      .optional(),
+  })
+  .refine((data) => data.rates.length > 0 || (data.defaults?.length ?? 0) > 0, {
+    message: 'Nothing to update',
+  });
+
 export const updatePackageItemSchema = z.object({
   isIncluded: z.boolean().optional(),
   additionalCostPrice: z.coerce.number().min(0).optional(),
@@ -310,6 +385,7 @@ export type UpdateItemDto = z.infer<typeof updateItemSchema>;
 export type CreateOptionDto = z.infer<typeof createOptionSchema>;
 export type UpdateOptionPriceDto = z.infer<typeof updateOptionPriceSchema>;
 export type UpdatePackageItemDto = z.infer<typeof updatePackageItemSchema>;
+export type UpdateItemRateMatrixDto = z.infer<typeof updateItemRateMatrixSchema>;
 export type MilestoneStageItemDto = z.infer<typeof milestoneStageItemSchema>;
 export type UpdateMilestonesDto = z.infer<typeof updateMilestonesSchema>;
 

@@ -18,6 +18,7 @@ import {
   createOptionSchema,
   updateOptionPriceSchema,
   updatePackageItemSchema,
+  updateItemRateMatrixSchema,
   updateMilestonesSchema,
 } from '../modules/admin/admin-config.schema.js';
 import {
@@ -47,6 +48,7 @@ import {
   updateOptionPriceController,
   deleteOptionController,
   updatePackageItemController,
+  updateItemRateMatrixController,
   getMilestonesController,
   updateMilestonesController,
 } from '../modules/admin/admin-config.controller.js';
@@ -171,6 +173,12 @@ router.patch(
   updateItemController
 );
 router.delete('/items/:id', canDeleteCatalogue, deleteItemController);
+router.put(
+  '/items/:id/rate-matrix',
+  canWritePricing,
+  validateRequest({ body: updateItemRateMatrixSchema }),
+  updateItemRateMatrixController
+);
 router.post(
   '/options',
   canWritePricing,

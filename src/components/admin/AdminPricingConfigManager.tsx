@@ -55,6 +55,7 @@ import {
   updateItem,
   deleteItem,
   updateMilestones,
+  updateItemRateMatrix,
   ADDON_PRICING_UNITS,
   expandPackageTier,
   ITEM_UNITS,
@@ -68,6 +69,26 @@ import {
   ItemUnit,
 } from '@/lib/api/admin';
 import { useAdminRoute, writeAdminHash } from '@/lib/useAdminRoute';
+import {
+  anchorOf,
+  canLink,
+  cellKey,
+  currentLadder,
+  deriveGrid,
+  diffGrids,
+  formatRupees,
+  ladderFromColumn,
+  moveBrand,
+  parseRupees,
+  rateAt,
+  rowsToSave,
+  toPaise,
+  withIncludedBrand,
+  type Ladder,
+  type MatrixShape,
+  type RateGrid,
+} from '@/lib/rateMatrix';
+import { RateChangeList, RateMatrixPreview } from './RateMatrixPreview';
 
 type MainSectionTab = 'packages' | 'addons' | 'locations' | 'specifications' | 'milestones';
 
@@ -157,8 +178,13 @@ type ItemDialog =
   | { mode: 'edit'; item: AdminSpecificationItem };
 type OptionDialog =
   | { mode: 'create'; itemId: number; itemName: string }
-  | { mode: 'edit'; option: BrandOption; itemName: string };
+  | { mode: 'edit'; option: BrandOption; itemId: number; itemName: string };
 type AddonDialog = { mode: 'create' } | { mode: 'edit'; addon: AdminAddon };
+/** One package's column of a component's rate matrix. */
+type RateColumnDialog = { itemId: number; packageId: number };
+
+/** Stands in for a brand that is still being created, so it can sit in the matrix. */
+const NEW_OPTION_ID = -1;
 
 interface CategoryForm {
   name: string;
@@ -190,6 +216,24 @@ interface OptionForm {
    * is why no option's price could be edited from this console at all.
    */
   packageDeltas: Record<number, string>;
+  /**
+   * Whether the brand's rates move together. A brand's rate in each package is
+   * its gap to the brand that package includes (src/lib/rateMatrix.ts), so one
+   * rate fixes the rest; typing it in any package fills in the others, and a
+   * package that includes this brand is re-measured from it on save.
+   */
+  linked: boolean;
+  /** The component's price ladder, with this brand where its typed rates put it. */
+  ladder: Ladder | null;
+  /** Rates are derived only once one is typed, so renaming a brand reprices nothing. */
+  ratesTouched: boolean;
+}
+
+interface RateColumnForm {
+  /** Each brand's rate in the package, as typed, keyed by option id. */
+  rates: Record<number, string>;
+  /** Whether the other packages are re-measured from this column on save. */
+  linked: boolean;
 }
 
 interface AddonForm {
@@ -221,7 +265,16 @@ const EMPTY_ITEM_FORM: ItemForm = {
   isCustomizable: true,
   sortOrder: 0,
 };
-const EMPTY_OPTION_FORM: OptionForm = { name: '', slug: '', description: '', packageDeltas: {} };
+const EMPTY_OPTION_FORM: OptionForm = {
+  name: '',
+  slug: '',
+  description: '',
+  packageDeltas: {},
+  linked: true,
+  ladder: null,
+  ratesTouched: false,
+};
+const EMPTY_RATE_COLUMN_FORM: RateColumnForm = { rates: {}, linked: true };
 const EMPTY_ADDON_FORM: AddonForm = {
   name: '',
   slug: '',
@@ -278,6 +331,27 @@ function resolveLiveDelta(
   const universal = live.find((pr) => pr.packageId === null);
   if (universal) return { amount: Number(universal.priceDelta) || 0, inherited: true };
   return { amount: 0, inherited: false };
+}
+
+/**
+ * A brand's rate in every package that includes a brand, as the ladder places
+ * it, written back into the brand dialog's inputs. `except` is the input being
+ * typed in, left exactly as typed.
+ */
+function linkedRow(
+  shape: MatrixShape,
+  ladder: Ladder,
+  optionId: number,
+  packageDeltas: Record<number, string>,
+  except: number
+): Record<number, string> {
+  const next = { ...packageDeltas };
+  for (const column of shape.columns) {
+    const anchor = anchorOf(shape, column.packageId);
+    if (anchor === null || column.packageId === except) continue;
+    next[column.packageId] = formatRupees((ladder[optionId] ?? 0) - (ladder[anchor] ?? 0));
+  }
+  return next;
 }
 
 function toOptionalNumber(value: string): number | undefined {
@@ -426,6 +500,19 @@ function AdminModal({
   );
 }
 
+/** Stands where a rate input would, for the brand a package includes: its rate there is always 0. */
+function IncludedRateBadge() {
+  return (
+    <span
+      className="w-28 shrink-0 inline-flex items-center justify-center gap-1 rounded border border-emerald-500/25 bg-emerald-500/10 py-1 text-[11px] font-bold text-emerald-700 dark:text-emerald-400"
+      title="The brand this package includes is free in it"
+    >
+      <Check size={11} className="stroke-[3]" />
+      <span>Included · ₹0</span>
+    </span>
+  );
+}
+
 interface MilestoneFormItem {
   id?: number;
   stageNumber: number;
@@ -474,6 +561,8 @@ export function AdminPricingConfigManager() {
   const [confirmState, setConfirm] = useState<{
     title: string;
     body: string;
+    /** Shown under the body — what exactly the action will change. */
+    details?: React.ReactNode;
     confirmLabel: string;
     onConfirm: () => Promise<unknown>;
   } | null>(null);
@@ -500,6 +589,10 @@ export function AdminPricingConfigManager() {
   const [optionForm, setOptionForm] = useState<OptionForm>(EMPTY_OPTION_FORM);
   const [creatingOption, setCreatingOption] = useState<boolean>(false);
 
+  const [rateColumnDialog, setRateColumnDialog] = useState<RateColumnDialog | null>(null);
+  const [rateColumnForm, setRateColumnForm] = useState<RateColumnForm>(EMPTY_RATE_COLUMN_FORM);
+  const [savingRateColumn, setSavingRateColumn] = useState<boolean>(false);
+
   // Add-on catalog dialogs.
   const [addonDialog, setAddonDialog] = useState<AddonDialog | null>(null);
   const [addonForm, setAddonForm] = useState<AddonForm>(EMPTY_ADDON_FORM);
@@ -519,7 +612,7 @@ export function AdminPricingConfigManager() {
   const [savingVariant, setSavingVariant] = useState<boolean>(false);
 
   const anyDialogBusy =
-    savingCategory || savingItem || creatingOption || savingAddon || savingVariant;
+    savingCategory || savingItem || creatingOption || savingAddon || savingVariant || savingRateColumn;
 
   const dismissToast = useCallback((id: number) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
@@ -644,6 +737,7 @@ export function AdminPricingConfigManager() {
       setCategoryDialog(null);
       setItemDialog(null);
       setOptionDialog(null);
+      setRateColumnDialog(null);
       setAddonDialog(null);
       setVariantDialog(null);
     };
@@ -1055,46 +1149,150 @@ export function AdminPricingConfigManager() {
   };
 
   // Specifications Handlers
-  /** Every active package starts at 0.00 so the dialog always shows a full grid. */
-  const blankPackageDeltas = useCallback((): Record<number, string> => {
-    const deltas: Record<number, string> = {};
-    for (const pkg of config?.packages ?? []) deltas[pkg.id] = '0.00';
-    return deltas;
-  }, [config?.packages]);
 
-  const openCreateOption = (itemId: number, itemName: string) => {
-    setOptionForm({ ...EMPTY_OPTION_FORM, packageDeltas: blankPackageDeltas() });
-    setOptionDialog({ mode: 'create', itemId, itemName });
-  };
+  /**
+   * The package tiers as matrix columns, in catalogue order.
+   *
+   * `mapping` is the package_items row. null means the component is not part of
+   * that tier at all, which is a different thing from being in the tier with no
+   * brand chosen, and has to read differently on screen.
+   */
+  const tierColumnsFor = (specItem: AdminSpecificationItem) =>
+    (config?.packages ?? [])
+      .slice()
+      .sort((a, b) => a.id - b.id)
+      .map((pkg) => ({
+        pkg,
+        mapping: specItem.packageMappings.find((m) => m.packageId === pkg.id) ?? null,
+      }));
 
-  const openEditOption = (option: BrandOption, itemName: string) => {
-    // Seed from the rows in force only. Retired rows are the record of what past
-    // quotations were issued under; loading one would resurrect an old rate.
-    const deltas = blankPackageDeltas();
-    for (const price of option.prices ?? []) {
-      if (price.effectiveTo != null || price.packageId == null) continue;
-      deltas[price.packageId] = Number(price.priceDelta).toFixed(2);
-    }
+  /**
+   * A component's rate matrix as the rate dialogs edit it: one column per
+   * package, measured from the brand that package includes.
+   *
+   * Rates are read the way the engine charges them, so a figure a dialog starts
+   * from is the figure on the quotation. An included brand reads as 0 in its own
+   * package, as the matrix already shows it: that is the only rate it may carry,
+   * and any row a dialog saves writes it that way.
+   */
+  const matrixFor = (specItem: AdminSpecificationItem) => {
+    const tiers = tierColumnsFor(specItem);
+    const shape: MatrixShape = {
+      optionIds: specItem.options.map((opt) => opt.id),
+      columns: tiers.map(({ pkg, mapping }) => ({
+        packageId: pkg.id,
+        includedOptionId: mapping?.defaultOptionId ?? null,
+      })),
+    };
 
-    // An option priced universally (package_id IS NULL) has one rate covering
-    // every tier. Show that rate in each column rather than a grid of zeroes,
-    // so saving preserves what the option currently costs instead of zeroing it.
-    const universal = (option.prices ?? []).find(
-      (pr) => pr.effectiveTo == null && pr.packageId == null
-    );
-    if (universal) {
-      for (const key of Object.keys(deltas)) {
-        deltas[Number(key)] = Number(universal.priceDelta).toFixed(2);
+    const grid: RateGrid = {};
+    for (const opt of specItem.options) {
+      for (const { pkg } of tiers) {
+        grid[cellKey(opt.id, pkg.id)] =
+          anchorOf(shape, pkg.id) === opt.id ? 0 : toPaise(resolveLiveDelta(opt, pkg.id).amount);
       }
     }
+
+    return {
+      shape,
+      grid,
+      packages: tiers.map(({ pkg }) => pkg),
+      brands: specItem.options.map((opt) => ({ id: opt.id, name: opt.brandName })),
+    };
+  };
+
+  const findSpecItem = (itemId: number) =>
+    config?.categories
+      .flatMap((category) => category.items)
+      .find((specItem) => specItem.id === itemId) ?? null;
+
+  /**
+   * The brand dialog's view of its component: the matrix with the brand's row as
+   * typed (a new row, while creating) and, once a rate is typed with linking on,
+   * everything that row moves.
+   */
+  const optionMatrixFor = (dialog: OptionDialog, form: OptionForm) => {
+    const specItem = findSpecItem(dialog.itemId);
+    if (!specItem) return null;
+
+    const base = matrixFor(specItem);
+    const optionId = dialog.mode === 'edit' ? dialog.option.id : NEW_OPTION_ID;
+    const shape: MatrixShape =
+      dialog.mode === 'create'
+        ? { ...base.shape, optionIds: [...base.shape.optionIds, NEW_OPTION_ID] }
+        : base.shape;
+
+    // A cell that does not parse yet keeps its current rate.
+    const typed: RateGrid = { ...base.grid };
+    for (const pkg of base.packages) {
+      const rate =
+        anchorOf(shape, pkg.id) === optionId ? 0 : parseRupees(form.packageDeltas[pkg.id] ?? '');
+      if (rate !== null) typed[cellKey(optionId, pkg.id)] = rate;
+    }
+
+    const after =
+      form.linked && form.ratesTouched && form.ladder ? deriveGrid(shape, form.ladder, typed) : typed;
+
+    return { ...base, specItem, optionId, shape, after };
+  };
+
+  const openCreateOption = (specItem: AdminSpecificationItem) => {
+    const { shape, grid, packages } = matrixFor(specItem);
+    const ladder = currentLadder(shape, grid);
+    setOptionForm({
+      ...EMPTY_OPTION_FORM,
+      packageDeltas: Object.fromEntries(packages.map((pkg) => [pkg.id, '0.00'])),
+      linked: ladder !== null,
+      ladder: ladder ? { ...ladder, [NEW_OPTION_ID]: 0 } : null,
+    });
+    setOptionDialog({ mode: 'create', itemId: specItem.id, itemName: specItem.name });
+  };
+
+  const openEditOption = (option: BrandOption, specItem: AdminSpecificationItem) => {
+    const { shape, grid, packages } = matrixFor(specItem);
+    const ladder = currentLadder(shape, grid);
 
     setOptionForm({
       name: option.brandName,
       slug: option.slug,
       description: option.specification ?? '',
-      packageDeltas: deltas,
+      packageDeltas: Object.fromEntries(
+        packages.map((pkg) => [pkg.id, formatRupees(rateAt(grid, option.id, pkg.id))])
+      ),
+      linked: ladder !== null,
+      ladder,
+      ratesTouched: false,
     });
-    setOptionDialog({ mode: 'edit', option, itemName });
+    setOptionDialog({ mode: 'edit', option, itemId: specItem.id, itemName: specItem.name });
+  };
+
+  const handleOptionRateChange = (packageId: number, raw: string) => {
+    if (!optionDialog) return;
+    const context = optionMatrixFor(optionDialog, optionForm);
+
+    setOptionForm((prev) => {
+      // Stored as typed. Coercing to a number here would erase a half-entered
+      // '-' or '1.' on every keystroke.
+      const next: OptionForm = {
+        ...prev,
+        packageDeltas: { ...prev.packageDeltas, [packageId]: raw },
+        ratesTouched: true,
+      };
+      if (!prev.linked || !prev.ladder || !context) return next;
+
+      const rate = parseRupees(raw);
+      const ladder =
+        rate === null ? null : moveBrand(context.shape, prev.ladder, context.optionId, packageId, rate);
+      // Not a number yet, or a package that includes no brand to measure from:
+      // the rate stands on its own.
+      if (!ladder) return next;
+
+      return {
+        ...next,
+        ladder,
+        packageDeltas: linkedRow(context.shape, ladder, context.optionId, next.packageDeltas, packageId),
+      };
+    });
   };
 
   const handleSubmitOption = async (e: React.FormEvent) => {
@@ -1105,61 +1303,156 @@ export function AdminPricingConfigManager() {
     if (!name || !slug) return;
 
     const description = optionForm.description.trim();
-
-    // One row per active package. A blank box means 0.00, not "leave this tier
-    // out" — an option missing a row for a tier is charged at nothing there.
-    const prices: OptionPackagePrice[] = [];
-    for (const pkg of config?.packages ?? []) {
-      const raw = (optionForm.packageDeltas[pkg.id] ?? '').trim();
-      const value = raw === '' ? 0 : Number(raw);
-      if (!Number.isFinite(value)) {
-        pushToast('error', `${pkg.name}: rate delta must be a valid number.`);
-        return;
-      }
-      prices.push({ packageId: pkg.id, priceDelta: value });
+    const context = optionMatrixFor(optionDialog, optionForm);
+    if (!context) {
+      pushToast('error', 'This component is no longer in the catalogue. Reload the page.');
+      return;
     }
 
-    if (prices.length === 0) {
+    if (context.packages.length === 0) {
       pushToast('error', 'No active packages to price this option against.');
       return;
     }
 
+    // A blank box means 0.00, not "leave this tier out" — an option missing a row
+    // for a tier is charged at nothing there.
+    for (const pkg of context.packages) {
+      if (anchorOf(context.shape, pkg.id) === context.optionId) continue;
+      if (parseRupees(optionForm.packageDeltas[pkg.id] ?? '') === null) {
+        pushToast('error', `${pkg.name}: rate delta must be a valid number.`);
+        return;
+      }
+    }
+
+    if (optionDialog.mode === 'create') {
+      const prices: OptionPackagePrice[] = context.packages.map((pkg) => ({
+        packageId: pkg.id,
+        priceDelta: rateAt(context.after, NEW_OPTION_ID, pkg.id) / 100,
+      }));
+
+      setCreatingOption(true);
+      const created = await runAction(
+        'opt:create',
+        () =>
+          createOption({
+            itemId: optionDialog.itemId,
+            name,
+            slug,
+            description,
+            prices,
+          }),
+        {
+          success: `Brand option '${name}' created.`,
+          failure: 'Failed to create the brand option.',
+        }
+      );
+      setCreatingOption(false);
+      if (created) setOptionDialog(null);
+      return;
+    }
+
+    const { option } = optionDialog;
+    const rows = rowsToSave(context.shape, context.grid, context.after);
+    const rateCount = diffGrids(context.shape, context.grid, context.after).length;
+    const detailsChanged =
+      name !== option.brandName ||
+      slug !== option.slug ||
+      description !== (option.specification ?? '');
+
+    if (rows.length === 0 && !detailsChanged) {
+      setOptionDialog(null);
+      return;
+    }
+
     setCreatingOption(true);
-
-    const ok =
-      optionDialog.mode === 'create'
-        ? await runAction(
-            'opt:create',
-            () =>
-              createOption({
-                itemId: optionDialog.itemId,
-                name,
-                slug,
-                description,
-                prices,
-              }),
-            {
-              success: `Brand option '${name}' created.`,
-              failure: 'Failed to create the brand option.',
-            }
-          )
-        : await runAction(
-            `opt:${optionDialog.option.id}`,
-            () =>
-              updateOptionPricing(optionDialog.option.id, {
-                name,
-                slug,
-                description,
-                prices,
-              }),
-            {
-              success: `Brand option '${name}' updated.`,
-              failure: `Failed to update '${name}'.`,
-            }
-          );
-
+    const saved = await runAction(
+      `opt:${option.id}`,
+      async () => {
+        // Details first: a slug that clashes is refused before any rate moves.
+        if (detailsChanged) await updateOptionPricing(option.id, { name, slug, description });
+        if (rows.length > 0) await updateItemRateMatrix(optionDialog.itemId, { rates: rows });
+      },
+      {
+        success:
+          rateCount > 0
+            ? `Brand option '${name}' saved — ${rateCount} rate${rateCount === 1 ? '' : 's'} updated.`
+            : `Brand option '${name}' updated.`,
+        failure: `Failed to update '${name}'.`,
+      }
+    );
     setCreatingOption(false);
-    if (ok) setOptionDialog(null);
+    if (saved) setOptionDialog(null);
+  };
+
+  /**
+   * One package's column of a component's rates: what a customer on that package
+   * pays to switch to each brand. With linking on, the column sets every brand's
+   * place on the ladder and the other packages are re-measured from it.
+   */
+  const rateColumnMatrixFor = (dialog: RateColumnDialog, form: RateColumnForm) => {
+    const specItem = findSpecItem(dialog.itemId);
+    const pkg = config?.packages.find((p) => p.id === dialog.packageId);
+    if (!specItem || !pkg) return null;
+
+    const base = matrixFor(specItem);
+    const anchor = anchorOf(base.shape, pkg.id);
+
+    const typed: RateGrid = { ...base.grid };
+    const invalid: string[] = [];
+    for (const opt of specItem.options) {
+      const rate = opt.id === anchor ? 0 : parseRupees(form.rates[opt.id] ?? '');
+      if (rate === null) invalid.push(opt.brandName);
+      else typed[cellKey(opt.id, pkg.id)] = rate;
+    }
+
+    const ladder = form.linked ? ladderFromColumn(base.shape, typed, pkg.id) : null;
+    const after = ladder ? deriveGrid(base.shape, ladder, base.grid) : typed;
+
+    return { ...base, specItem, pkg, anchor, invalid, after };
+  };
+
+  const openRateColumn = (specItem: AdminSpecificationItem, packageId: number) => {
+    const { shape, grid } = matrixFor(specItem);
+    setRateColumnForm({
+      rates: Object.fromEntries(
+        specItem.options.map((opt) => [opt.id, formatRupees(rateAt(grid, opt.id, packageId))])
+      ),
+      linked: anchorOf(shape, packageId) !== null,
+    });
+    setRateColumnDialog({ itemId: specItem.id, packageId });
+  };
+
+  const handleSubmitRateColumn = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!rateColumnDialog) return;
+    const context = rateColumnMatrixFor(rateColumnDialog, rateColumnForm);
+    if (!context) {
+      pushToast('error', 'This component is no longer in the catalogue. Reload the page.');
+      return;
+    }
+    if (context.invalid.length > 0) {
+      pushToast('error', `${context.invalid.join(', ')}: rate delta must be a valid number.`);
+      return;
+    }
+
+    const rows = rowsToSave(context.shape, context.grid, context.after);
+    if (rows.length === 0) {
+      setRateColumnDialog(null);
+      return;
+    }
+
+    const count = diffGrids(context.shape, context.grid, context.after).length;
+    setSavingRateColumn(true);
+    const saved = await runAction(
+      `ratecol:${context.specItem.id}:${context.pkg.id}`,
+      () => updateItemRateMatrix(context.specItem.id, { rates: rows }),
+      {
+        success: `${context.specItem.name}: ${count} rate${count === 1 ? '' : 's'} updated.`,
+        failure: `Failed to update the ${context.pkg.name} rates for ${context.specItem.name}.`,
+      }
+    );
+    setSavingRateColumn(false);
+    if (saved) setRateColumnDialog(null);
   };
 
   /**
@@ -1190,9 +1483,15 @@ export function AdminPricingConfigManager() {
   };
 
   /**
-   * Set a brand as the default included brand for a package tier.
-   * If the chosen brand currently has an upgrade delta, prompt the operator to
-   * zero the delta so the write succeeds and pricing remains consistent.
+   * Choose the brand a package includes.
+   *
+   * Every rate in a package is measured from the brand it includes, so moving
+   * that brand moves the zero of the whole column. The column is re-measured
+   * from the new brand in the same save, and each brand keeps its gap to the
+   * others: switching Premium from Ramco to Ultratech makes ISI a −₹35 credit
+   * there, rather than leaving −₹15 measured from a brand Premium no longer
+   * includes. The server refuses an included brand that carries a charge, which
+   * is why the switch and the rates travel in one request.
    */
   const handleSelectDefaultBrand = async (
     mapping: { id: number; packageId: number; defaultOptionId: number | null },
@@ -1208,68 +1507,39 @@ export function AdminPricingConfigManager() {
     const selectedOpt = item.options.find((o) => o.id === newOptionId);
     if (!selectedOpt) return;
 
-    const { amount } = resolveLiveDelta(selectedOpt, pkg.id);
-    if (amount !== 0) {
-      setConfirm({
-        title: `Set ${selectedOpt.brandName} as default for ${pkg.name}?`,
-        body: `'${selectedOpt.brandName}' currently charges ${formatDelta(amount)} in ${pkg.name}. A default included brand cannot charge an extra fee, so its upgrade rate in ${pkg.name} will automatically be set to ₹0.00.`,
-        confirmLabel: 'Set as Default (₹0)',
-        onConfirm: async () => {
-          const currentDeltas = (config?.packages ?? []).map((p) => {
-            const live = resolveLiveDelta(selectedOpt, p.id);
-            return {
-              packageId: p.id,
-              priceDelta: p.id === pkg.id ? 0 : live.amount,
-            };
-          });
+    const { shape, grid, brands } = matrixFor(item);
+    const switched = withIncludedBrand(shape, grid, pkg.id, newOptionId);
+    const changes = switched ? diffGrids(shape, grid, switched.grid) : [];
 
-          const ok = await runAction(
-            `opt:${selectedOpt.id}`,
-            () =>
-              updateOptionPricing(selectedOpt.id, {
-                name: selectedOpt.brandName,
-                slug: selectedOpt.slug,
-                description: selectedOpt.specification,
-                prices: currentDeltas,
-              }),
-            {
-              success: `Set ${selectedOpt.brandName} upgrade delta to ₹0 for ${pkg.name}.`,
-              failure: `Failed to update rate for ${selectedOpt.brandName}.`,
-            }
-          );
-          if (!ok) return false;
-
-          return runAction(
-            `pkgitem:${mapping.id}`,
-            () => updatePackageItem(mapping.id, { defaultOptionId: newOptionId }),
-            {
-              success: `${selectedOpt.brandName} is now the default brand for ${pkg.name}.`,
-              failure: `Failed to set default brand for ${pkg.name}.`,
-            }
-          );
-        },
-      });
+    // Already free here, and every gap already measured from it: nothing to reprice.
+    if (!switched || changes.length === 0) {
+      await handleUpdatePackageItem(mapping.id, item.name, pkg.name, { defaultOptionId: newOptionId });
       return;
     }
 
-    await handleUpdatePackageItem(mapping.id, item.name, pkg.name, { defaultOptionId: newOptionId });
+    setConfirm({
+      title: `Make ${selectedOpt.brandName} the brand ${pkg.name} includes?`,
+      body:
+        `${pkg.name}'s rates are measured from the brand it includes, so its column is re-measured ` +
+        `from ${selectedOpt.brandName}. Each brand keeps the same gap to the others; ` +
+        `${changes.length} rate${changes.length === 1 ? '' : 's'} in ${pkg.name} change:`,
+      details: <RateChangeList changes={changes} brands={brands} />,
+      confirmLabel: 'Switch & re-measure',
+      onConfirm: () =>
+        runAction(
+          `pkgitem:${mapping.id}`,
+          () =>
+            updateItemRateMatrix(item.id, {
+              rates: rowsToSave(shape, grid, switched.grid),
+              defaults: [{ packageId: pkg.id, defaultOptionId: newOptionId }],
+            }),
+          {
+            success: `${selectedOpt.brandName} is now the brand ${pkg.name} includes.`,
+            failure: `Failed to change the brand ${pkg.name} includes.`,
+          }
+        ),
+    });
   };
-
-  /**
-   * The package tiers as matrix columns, in catalogue order.
-   *
-   * `mapping` is the package_items row. null means the component is not part of
-   * that tier at all, which is a different thing from being in the tier with no
-   * brand chosen, and has to read differently on screen.
-   */
-  const tierColumnsFor = (specItem: AdminSpecificationItem) =>
-    (config?.packages ?? [])
-      .slice()
-      .sort((a, b) => a.id - b.id)
-      .map((pkg) => ({
-        pkg,
-        mapping: specItem.packageMappings.find((m) => m.packageId === pkg.id) ?? null,
-      }));
 
   const handleDeleteBrandOption = async (optionId: number, brandName: string, itemName: string) => {
     setConfirm({
@@ -1639,6 +1909,16 @@ export function AdminPricingConfigManager() {
       </div>
     );
   }
+
+  const optionMatrix = optionDialog ? optionMatrixFor(optionDialog, optionForm) : null;
+  const optionRateChanges =
+    optionDialog?.mode === 'edit' && optionMatrix
+      ? diffGrids(optionMatrix.shape, optionMatrix.grid, optionMatrix.after)
+      : [];
+  const rateColumnMatrix = rateColumnDialog ? rateColumnMatrixFor(rateColumnDialog, rateColumnForm) : null;
+  const rateColumnChanges = rateColumnMatrix
+    ? diffGrids(rateColumnMatrix.shape, rateColumnMatrix.grid, rateColumnMatrix.after)
+    : [];
 
   return (
     <div className="space-y-6 animate-fade-in relative">
@@ -2233,7 +2513,7 @@ export function AdminPricingConfigManager() {
                         <div className="flex items-center gap-1 self-start sm:self-auto shrink-0">
                           <button
                             type="button"
-                            onClick={() => openCreateOption(item.id, item.name)}
+                            onClick={() => openCreateOption(item)}
                             className="button button--ghost text-xs py-1.5 px-3 flex items-center gap-1.5"
                           >
                             <Plus size={13} />
@@ -2283,7 +2563,7 @@ export function AdminPricingConfigManager() {
                             Brands &amp; Package Rates
                           </span>
                           <span className="text-[11px] text-muted">
-                            Choose each package&apos;s default brand in the column header. Click any rate delta or &lsquo;Edit Rates&rsquo; to customize pricing.
+                            Rates are linked: edit one brand&apos;s row (&lsquo;Edit Rates&rsquo;) or one package&apos;s column (&lsquo;Edit column&rsquo;) and the rest of the matrix follows.
                           </span>
                         </div>
 
@@ -2295,7 +2575,7 @@ export function AdminPricingConfigManager() {
                             </p>
                             <button
                               type="button"
-                              onClick={() => openCreateOption(item.id, item.name)}
+                              onClick={() => openCreateOption(item)}
                               className="button button--ghost text-xs py-1.5 px-3 mt-3 inline-flex items-center gap-1.5"
                             >
                               <Plus size={13} />
@@ -2372,6 +2652,16 @@ export function AdminPricingConfigManager() {
                                                 </option>
                                               ))}
                                             </select>
+                                            <button
+                                              type="button"
+                                              onClick={() => openRateColumn(item, pkg.id)}
+                                              disabled={busyMapping}
+                                              className="mt-1.5 w-full inline-flex items-center justify-center gap-1 rounded border border-border/70 hover:border-primary/50 py-0.5 text-[10px] font-semibold text-muted hover:text-foreground transition-colors disabled:opacity-50"
+                                              title={`Edit every brand's rate in ${pkg.name}`}
+                                            >
+                                              <Pencil size={10} />
+                                              <span>Edit column</span>
+                                            </button>
                                           </div>
                                         ) : (
                                           <span className="mt-1.5 block text-[11px] font-normal text-muted italic">
@@ -2446,7 +2736,7 @@ export function AdminPricingConfigManager() {
                                               <div className="inline-flex flex-col items-center">
                                                 <button
                                                   type="button"
-                                                  onClick={() => openEditOption(opt, item.name)}
+                                                  onClick={() => openEditOption(opt, item)}
                                                   className="group inline-flex items-center gap-1 px-2 py-1 rounded bg-surface-2 hover:bg-surface-3 text-foreground border border-border/70 hover:border-primary/50 transition-all text-left"
                                                   title={`Click to edit rate for ${opt.brandName} (${pkg.name})`}
                                                 >
@@ -2480,7 +2770,7 @@ export function AdminPricingConfigManager() {
                                         <div className="flex items-center justify-end gap-1.5">
                                           <button
                                             type="button"
-                                            onClick={() => openEditOption(opt, item.name)}
+                                            onClick={() => openEditOption(opt, item)}
                                             className="button button--ghost text-xs py-1 px-2.5 inline-flex items-center gap-1.5 text-foreground hover:bg-surface-3"
                                             aria-label={`Edit ${opt.brandName} and its per-package rates`}
                                             title={`Edit ${opt.brandName} and its per-package rates`}
@@ -3181,6 +3471,7 @@ export function AdminPricingConfigManager() {
               : `Edit Brand Option — ${optionDialog.itemName}`
           }
           onClose={() => setOptionDialog(null)}
+          width={optionDialog.mode === 'edit' ? 'max-w-xl' : 'max-w-md'}
         >
           <form onSubmit={handleSubmitOption} className="space-y-3 text-xs">
             <div>
@@ -3220,8 +3511,34 @@ export function AdminPricingConfigManager() {
               <legend className="font-bold text-muted block mb-1">
                 Rate Delta per Package (₹ / sq.ft)
               </legend>
+              {optionMatrix && canLink(optionMatrix.shape) && (
+                <label className="flex items-start gap-2 mb-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={optionForm.linked}
+                    onChange={(e) => {
+                      const linked = e.target.checked;
+                      // Relinking waits for the next rate typed, so rates entered
+                      // one by one are never rewritten by the toggle alone.
+                      setOptionForm((prev) => ({
+                        ...prev,
+                        linked,
+                        ratesTouched: linked ? false : prev.ratesTouched,
+                      }));
+                    }}
+                    className="calculator-checkbox mt-0.5"
+                  />
+                  <span>
+                    <span className="font-semibold block">Link rates across packages</span>
+                    <span className="text-[10px] text-muted">
+                      Type this brand&apos;s rate for any one package and the others fill in,
+                      measured from the brand each package includes.
+                    </span>
+                  </span>
+                </label>
+              )}
               <div className="space-y-1.5">
-                {(config?.packages ?? []).map((pkg) => (
+                {(optionMatrix?.packages ?? config?.packages ?? []).map((pkg) => (
                   <div key={pkg.id} className="flex items-center gap-2">
                     <label
                       htmlFor={`opt-pkg-delta-${pkg.id}`}
@@ -3229,42 +3546,51 @@ export function AdminPricingConfigManager() {
                     >
                       {pkg.name}
                     </label>
-                    <div className="relative w-28 shrink-0">
-                      <span className="absolute left-2 top-1/2 -translate-y-1/2 text-muted text-[11px] pointer-events-none">
-                        ₹
-                      </span>
-                      <input
-                        id={`opt-pkg-delta-${pkg.id}`}
-                        type="number"
-                        step="0.01"
-                        inputMode="decimal"
-                        value={optionForm.packageDeltas[pkg.id] ?? ''}
-                        onChange={(e) => {
-                          const raw = e.target.value;
-                          setOptionForm((prev) => ({
-                            ...prev,
-                            // Stored as typed. Coercing to a number here would
-                            // erase a half-entered '-' or '1.' on every keystroke.
-                            packageDeltas: { ...prev.packageDeltas, [pkg.id]: raw },
-                          }));
-                        }}
-                        onKeyDown={(e) => {
-                          // '-' stays allowed: a plainer brand than the tier
-                          // includes is a downgrade credit. 'e' is not a rate.
-                          if (e.key === 'e') e.preventDefault();
-                        }}
-                        className="form-input text-xs pl-6 py-1 w-full font-mono font-bold"
-                        placeholder="0.00"
-                      />
-                    </div>
+                    {optionMatrix && anchorOf(optionMatrix.shape, pkg.id) === optionMatrix.optionId ? (
+                      <IncludedRateBadge />
+                    ) : (
+                      <div className="relative w-28 shrink-0">
+                        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-muted text-[11px] pointer-events-none">
+                          ₹
+                        </span>
+                        <input
+                          id={`opt-pkg-delta-${pkg.id}`}
+                          type="number"
+                          step="0.01"
+                          inputMode="decimal"
+                          value={optionForm.packageDeltas[pkg.id] ?? ''}
+                          onChange={(e) => handleOptionRateChange(pkg.id, e.target.value)}
+                          onKeyDown={(e) => {
+                            // '-' stays allowed: a plainer brand than the tier
+                            // includes is a downgrade credit. 'e' is not a rate.
+                            if (e.key === 'e') e.preventDefault();
+                          }}
+                          className="form-input text-xs pl-6 py-1 w-full font-mono font-bold"
+                          placeholder="0.00"
+                        />
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
               <span className="text-[10px] text-muted block mt-1.5">
-                0.00 where the brand is already included in that tier&apos;s base rate. A
-                negative value is a credit — a plainer brand than the tier includes.
+                A package that includes this brand charges nothing for it. A negative value
+                is a credit — a plainer brand than the package includes.
               </span>
             </fieldset>
+
+            {optionMatrix && optionRateChanges.length > 0 && (
+              <div>
+                <span className="font-bold text-muted block mb-1">After saving</span>
+                <RateMatrixPreview
+                  shape={optionMatrix.shape}
+                  before={optionMatrix.grid}
+                  after={optionMatrix.after}
+                  brands={optionMatrix.brands}
+                  packages={optionMatrix.packages}
+                />
+              </div>
+            )}
 
             <div>
               <label className="font-bold text-muted block mb-1">Technical Specification Note</label>
@@ -3297,6 +3623,123 @@ export function AdminPricingConfigManager() {
                   : optionDialog.mode === 'create'
                     ? 'Create Option'
                     : 'Save Option'}
+              </button>
+            </div>
+          </form>
+        </AdminModal>
+      )}
+
+      {/* MODAL: ONE PACKAGE'S RATES FOR A COMPONENT */}
+      {rateColumnDialog && rateColumnMatrix && (
+        <AdminModal
+          title={`${rateColumnMatrix.pkg.name} Rates — ${rateColumnMatrix.specItem.name}`}
+          onClose={() => setRateColumnDialog(null)}
+          width="max-w-xl"
+        >
+          <form onSubmit={handleSubmitRateColumn} className="space-y-3 text-xs">
+            <p className="text-[11px] text-muted leading-relaxed">
+              What a {rateColumnMatrix.pkg.name} customer pays to switch to each brand, measured
+              from the brand {rateColumnMatrix.pkg.name} includes.
+            </p>
+
+            {rateColumnMatrix.anchor !== null ? (
+              <label className="flex items-start gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={rateColumnForm.linked}
+                  onChange={(e) => {
+                    const linked = e.target.checked;
+                    setRateColumnForm((prev) => ({ ...prev, linked }));
+                  }}
+                  className="calculator-checkbox mt-0.5"
+                />
+                <span>
+                  <span className="font-semibold block">Update the other packages to match</span>
+                  <span className="text-[10px] text-muted">
+                    These rates set each brand&apos;s place on the price ladder. Every other
+                    package is re-measured from the brand it includes.
+                  </span>
+                </span>
+              </label>
+            ) : (
+              <p className="text-[11px] text-muted leading-relaxed">
+                {rateColumnMatrix.pkg.name} includes no {rateColumnMatrix.specItem.name} brand, so
+                there is nothing to measure the other packages from. Saving changes this column only.
+              </p>
+            )}
+
+            <fieldset>
+              <legend className="font-bold text-muted block mb-1">
+                Rate Delta per Brand (₹ / sq.ft)
+              </legend>
+              <div className="space-y-1.5">
+                {rateColumnMatrix.specItem.options.map((opt) => (
+                  <div key={opt.id} className="flex items-center gap-2">
+                    <label
+                      htmlFor={`rate-col-${opt.id}`}
+                      className="text-[11px] font-semibold flex-1 min-w-0 truncate"
+                    >
+                      {opt.brandName}
+                    </label>
+                    {opt.id === rateColumnMatrix.anchor ? (
+                      <IncludedRateBadge />
+                    ) : (
+                      <div className="relative w-28 shrink-0">
+                        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-muted text-[11px] pointer-events-none">
+                          ₹
+                        </span>
+                        <input
+                          id={`rate-col-${opt.id}`}
+                          type="number"
+                          step="0.01"
+                          inputMode="decimal"
+                          value={rateColumnForm.rates[opt.id] ?? ''}
+                          onChange={(e) => {
+                            // Stored as typed, like the brand dialog's rates.
+                            const raw = e.target.value;
+                            setRateColumnForm((prev) => ({
+                              ...prev,
+                              rates: { ...prev.rates, [opt.id]: raw },
+                            }));
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'e') e.preventDefault();
+                          }}
+                          className="form-input text-xs pl-6 py-1 w-full font-mono font-bold"
+                          placeholder="0.00"
+                        />
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </fieldset>
+
+            <div>
+              <span className="font-bold text-muted block mb-1">After saving</span>
+              <RateMatrixPreview
+                shape={rateColumnMatrix.shape}
+                before={rateColumnMatrix.grid}
+                after={rateColumnMatrix.after}
+                brands={rateColumnMatrix.brands}
+                packages={rateColumnMatrix.packages}
+              />
+            </div>
+
+            <div className="pt-3 border-t border-border flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setRateColumnDialog(null)}
+                className="button button--ghost text-xs py-2 px-3"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={savingRateColumn || rateColumnChanges.length === 0}
+                className="button button--solid text-xs py-2 px-4 disabled:opacity-60"
+              >
+                {savingRateColumn ? 'Saving…' : 'Save Rates'}
               </button>
             </div>
           </form>
@@ -3962,6 +4405,7 @@ export function AdminPricingConfigManager() {
                   {confirmState.title}
                 </h3>
                 <p className="text-xs text-muted leading-relaxed mt-1">{confirmState.body}</p>
+                {confirmState.details && <div className="mt-2">{confirmState.details}</div>}
               </div>
             </div>
 

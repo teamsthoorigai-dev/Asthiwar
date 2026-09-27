@@ -15,6 +15,7 @@ import {
   updateAdminOptionPrice,
   deleteAdminOption,
   updateAdminPackageItem,
+  updateAdminItemRateMatrix,
   getAdminMilestones,
   updateAdminMilestones,
   createAdminAddon,
@@ -39,6 +40,7 @@ import {
   CreateOptionDto,
   UpdateOptionPriceDto,
   UpdatePackageItemDto,
+  UpdateItemRateMatrixDto,
   UpdateMilestonesDto,
   CreateAddonDto,
   CreateAddonVariantDto,
@@ -509,6 +511,42 @@ export async function updatePackageItemController(req: Request, res: Response, n
       return;
     }
     next(error);
+  }
+}
+
+
+/**
+ * PUT /admin/config/items/:id/rate-matrix — a component's rates across every
+ * package, and optionally its included brands, saved as one change.
+ */
+export async function updateItemRateMatrixController(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const itemId = parseInt(req.params.id as string, 10);
+    const dto = req.body as UpdateItemRateMatrixDto;
+    const result = await updateAdminItemRateMatrix(itemId, dto);
+
+    logAuditEvent({
+      eventType: 'ADMIN_MUTATION',
+      action: 'UPDATE_RATE_MATRIX',
+      severity: 'HIGH',
+      actorType: 'ADMIN',
+      actorId: req.user?.email || req.user?.id,
+      endpoint: req.originalUrl,
+      httpMethod: req.method,
+      statusCode: 200,
+      metadata: { itemId, changes: result.changes, defaultChanges: result.defaultChanges },
+      ipAddress: clientIp(req),
+      userAgent: req.headers['user-agent'],
+    }).catch(() => {});
+
+    const count = result.changes.length;
+    res.json({
+      success: true,
+      message: `${count} rate${count === 1 ? '' : 's'} updated for '${result.itemName}'`,
+      data: result,
+    });
+  } catch (error) {
+    relayServiceError(error, res, next);
   }
 }
 

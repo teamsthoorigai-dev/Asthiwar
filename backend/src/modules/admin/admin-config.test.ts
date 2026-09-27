@@ -495,6 +495,172 @@ async function runAdminConfigTests() {
     assert(filteredRes.status === 200, 'Filtered query returns 200 OK');
     assert(filteredRes.body.pagination.total === 0, 'An unmatched filter returns nothing rather than everything');
 
+    // -----------------------------------------------------------------
+    // [Test 9] A component's rate matrix saves as one change
+    // -----------------------------------------------------------------
+    console.log('\n[Test 9] Rate Matrix: Linked Rows, Columns & Included Brands');
+    // Cement as seeded: every rate is the gap between two brands on one ladder
+    // (ISI 0, JSW 5, Ramco/Dalmia 15, Ultratech/Chettinad 35), each tier
+    // including a different brand. The console edits a row or a column and sends
+    // everything that moves; this is the request it sends.
+    const matrixSpecsRes = await makeRequest(server, {
+      method: 'GET',
+      path: '/api/v1/admin/config/specifications',
+      headers: { Cookie: sessionCookie },
+    });
+    const cement = matrixSpecsRes.body.data
+      .flatMap((category: any) => category.items)
+      .find((item: any) => item.slug === 'cement');
+    assert(!!cement, 'Cement component is present');
+
+    const allPkgs: Array<{ id: number; slug: string }> = pkgsRes.body.data;
+    const pkgId = (slug: string) => allPkgs.find((p) => p.slug === slug)!.id;
+    const optId = (slug: string) => cement.options.find((o: any) => o.slug === slug).id;
+    const ISI = optId('any_isi_cement');
+    const JSW = optId('jsw_cement');
+    const RAMCO = optId('ramco_dalmia_cement');
+    const ULTRATECH = optId('ultratech_chettinad_cement');
+
+    const liveRate = (option: any, packageId: number): number => {
+      const live = option.prices.filter((p: any) => p.effectiveTo === null);
+      const row =
+        live.find((p: any) => p.packageId === packageId) ?? live.find((p: any) => p.packageId === null);
+      return row ? Number(row.priceDelta) : 0;
+    };
+    const originalRates = cement.options.flatMap((option: any) =>
+      allPkgs.map((pkg) => ({ optionId: option.id, packageId: pkg.id, priceDelta: liveRate(option, pkg.id) }))
+    );
+    const originalPremiumDefault = cement.packageMappings.find(
+      (m: any) => m.packageId === pkgId('premium')
+    ).defaultOptionId;
+    assert(originalPremiumDefault === RAMCO, 'Premium includes Ramco/Dalmia cement as seeded');
+
+    /** One brand's full row, in basic/standard/premium/luxury order. */
+    const row = (optionId: number, rates: [number, number, number, number]) =>
+      ['basic', 'standard', 'premium', 'luxury'].map((slug, index) => ({
+        optionId,
+        packageId: pkgId(slug),
+        priceDelta: rates[index],
+      }));
+
+    const putMatrix = (body: unknown, cookie = sessionCookie) =>
+      makeRequest(server, {
+        method: 'PUT',
+        path: `/api/v1/admin/config/items/${cement.id}/rate-matrix`,
+        body,
+        headers: cookie ? { Cookie: cookie } : {},
+      });
+
+    const configFor = async (packageSlug: string) => {
+      const res = await makeRequest(server, { method: 'GET', path: `/api/v1/calculator/config/${packageSlug}` });
+      return res.body.data.specifications
+        .flatMap((category: any) => category.items)
+        .find((item: any) => item.slug === 'cement');
+    };
+    const quoted = (item: any, optionSlug: string) => item.options.find((o: any) => o.slug === optionSlug);
+
+    try {
+      const unauthMatrix = await putMatrix({ rates: row(ULTRATECH, [40, 35, 25, 0]) }, '');
+      assert(unauthMatrix.status === 401, `Rate matrix write requires auth (got ${unauthMatrix.status})`);
+
+      // A brand sent with some packages missing would leave those tiers unpriced,
+      // and the engine charges an unpriced tier nothing.
+      const partialRow = await putMatrix({
+        rates: [{ optionId: ULTRATECH, packageId: pkgId('basic'), priceDelta: 40 }],
+      });
+      assert(
+        partialRow.status === 400 && partialRow.body.error.code === 'INCOMPLETE_RATE_ROW',
+        `A brand without a rate for every package is refused (got ${partialRow.status} ${partialRow.body.error?.code})`
+      );
+
+      // Option ids are global: another component's brand cannot be repriced
+      // through this one.
+      const steel = matrixSpecsRes.body.data
+        .flatMap((category: any) => category.items)
+        .find((item: any) => item.slug === 'steel_rebar_binding_wires');
+      const foreign = await putMatrix({ rates: row(steel.options[0].id, [0, 0, 0, 0]) });
+      assert(
+        foreign.status === 400 && foreign.body.error.code === 'OPTION_BELONGS_TO_ANOTHER_ITEM',
+        `Another component's brand is refused (got ${foreign.status} ${foreign.body.error?.code})`
+      );
+
+      // Luxury includes Ultratech, so Ultratech cannot carry a charge there.
+      const chargedIncluded = await putMatrix({ rates: row(ULTRATECH, [40, 35, 25, 5]) });
+      assert(
+        chargedIncluded.status === 400 && chargedIncluded.body.error.code === 'INCLUDED_OPTION_IS_NOT_FREE',
+        `An included brand with a charge in its own package is refused (got ${chargedIncluded.status} ${chargedIncluded.body.error?.code})`
+      );
+
+      const duplicate = await putMatrix({
+        rates: [...row(ULTRATECH, [40, 35, 25, 0]), { optionId: ULTRATECH, packageId: pkgId('basic'), priceDelta: 41 }],
+      });
+      assert(duplicate.status === 400, `The same cell twice is refused (got ${duplicate.status})`);
+
+      // Ultratech moves up the ladder by 5: its own row follows, and so does the
+      // Luxury column, which is measured from Ultratech.
+      const moved = await putMatrix({
+        rates: [
+          ...row(ISI, [0, -5, -15, -40]),
+          ...row(JSW, [5, 0, -10, -35]),
+          ...row(RAMCO, [15, 10, 0, -25]),
+          ...row(ULTRATECH, [40, 35, 25, 0]),
+        ],
+      });
+      assert(moved.status === 200, `Linked row edit saves (got ${moved.status} ${moved.body?.error?.code ?? ''})`);
+      assert(moved.body.data.changes.length === 6, `Six rates moved (got ${moved.body.data.changes?.length})`);
+
+      const basicCement = await configFor('basic');
+      const luxuryCement = await configFor('luxury');
+      assert(quoted(basicCement, 'ultratech_chettinad_cement').priceDelta === 40, 'Basic customers are quoted +40 for Ultratech');
+      assert(quoted(luxuryCement, 'any_isi_cement').priceDelta === -40, 'Luxury customers are credited −40 for ISI');
+      assert(quoted(luxuryCement, 'ultratech_chettinad_cement').priceDelta === 0, 'Luxury still includes Ultratech free');
+
+      const matrixAudit = await makeRequest(server, {
+        method: 'GET',
+        path: '/api/v1/admin/audit-logs?action=UPDATE_RATE_MATRIX',
+        headers: { Cookie: sessionCookie },
+      });
+      assert(matrixAudit.body.pagination.total > 0, 'The rate matrix change is in the audit trail');
+
+      // Pointing Premium at a brand that still carries a charge there is refused.
+      const unpricedSwitch = await putMatrix({
+        rates: [],
+        defaults: [{ packageId: pkgId('premium'), defaultOptionId: JSW }],
+      });
+      assert(
+        unpricedSwitch.status === 400 && unpricedSwitch.body.error.code === 'INCLUDED_OPTION_IS_NOT_FREE',
+        `Including a brand that is charged there is refused (got ${unpricedSwitch.status} ${unpricedSwitch.body.error?.code})`
+      );
+
+      // Premium switches to Ultratech and its column is re-measured from it, in
+      // one request — either half alone would be refused.
+      const switched = await putMatrix({
+        rates: [
+          ...row(ISI, [0, -5, -40, -40]),
+          ...row(JSW, [5, 0, -35, -35]),
+          ...row(RAMCO, [15, 10, -25, -25]),
+          ...row(ULTRATECH, [40, 35, 0, 0]),
+        ],
+        defaults: [{ packageId: pkgId('premium'), defaultOptionId: ULTRATECH }],
+      });
+      assert(switched.status === 200, `Included brand switch with its column saves (got ${switched.status} ${switched.body?.error?.code ?? ''})`);
+
+      const premiumCement = await configFor('premium');
+      assert(quoted(premiumCement, 'ultratech_chettinad_cement').isPackageDefault === true, 'Premium now includes Ultratech');
+      assert(quoted(premiumCement, 'ultratech_chettinad_cement').priceDelta === 0, 'Ultratech is free in Premium');
+      assert(quoted(premiumCement, 'ramco_dalmia_cement').priceDelta === -25, 'Ramco/Dalmia is now a −25 credit in Premium');
+    } finally {
+      const restored = await putMatrix({
+        rates: originalRates,
+        defaults: [{ packageId: pkgId('premium'), defaultOptionId: originalPremiumDefault }],
+      });
+      assert(restored.status === 200, `Seeded cement rates restored (got ${restored.status} ${restored.body?.error?.code ?? ''})`);
+    }
+
+    const restoredPremium = await configFor('premium');
+    assert(quoted(restoredPremium, 'ramco_dalmia_cement').isPackageDefault === true, 'Premium includes Ramco/Dalmia again');
+    assert(quoted(restoredPremium, 'any_isi_cement').priceDelta === -15, 'ISI is back to its seeded −15 credit in Premium');
+
     console.log('\n-----------------------------------------------------------------');
     console.log('Results: All Phase 8 Admin Configuration & Pricing Tests Passed!');
   } finally {
