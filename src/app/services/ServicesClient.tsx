@@ -4,7 +4,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { services } from '@/data/site';
-import { gsap, REDUCED } from '@/lib/gsap';
+import { gsap, REDUCED, ScrollTrigger } from '@/lib/gsap';
 import styles from './services.module.css';
 
 const total = String(services.length).padStart(2, '0');
@@ -12,11 +12,11 @@ const total = String(services.length).padStart(2, '0');
 /**
  * Pinned Right-to-Left Horizontal Architectural Filmstrip.
  *
- * - Desktop (>= 1024px): Pinned ScrollTrigger scrub track translating sideways
- *   as the user scrolls down, complete with persistent HUD, jump tabs, and
- *   hairline progress bar.
- * - Mobile (< 1024px): Zero scroll hijacking; native CSS scroll-snap swipe
- *   allowing frictionless 60fps gesture scrolling with active panel tracking.
+ * - Every width: a pinned ScrollTrigger scrub track translating sideways as the
+ *   user scrolls down, with a persistent HUD and hairline progress bar; jump
+ *   tabs join the HUD from 1200px.
+ * - Mobile (< 1024px): one service per screen, and the scroll settles on the
+ *   nearest one so a service is never left half in view.
  * - Restores complete discipline substance: title, philosophy, capabilities
  *   matrix, execution sequence, and direct consultation CTA.
  */
@@ -49,6 +49,19 @@ export function ServicesClient() {
         // against the site's fixed header, clipping the first panel's copy.
         start: () => (window.innerWidth < 1024 ? 'top 72px' : 'top top'),
         end: () => `+=${getScrollDistance()}`,
+        // Each mobile panel fills the screen, so a scroll that stops between two
+        // leaves half of each in view: settle on the nearer one. Wider screens
+        // keep the free scrub (with inertia off, returning the value unchanged
+        // leaves the scroll where it stopped).
+        snap: {
+          snapTo: (progress) =>
+            window.innerWidth < 1024
+              ? Math.round(progress * (services.length - 1)) / (services.length - 1)
+              : progress,
+          inertia: false,
+          duration: { min: 0.2, max: 0.6 },
+          ease: 'power1.inOut',
+        },
         invalidateOnRefresh: true,
         anticipatePin: 1,
         onUpdate: (self) => {
