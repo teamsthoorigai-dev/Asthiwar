@@ -12,6 +12,7 @@ import {
   addons,
   addonPrices,
   estimates,
+  enquiries,
   eq,
   and,
   asc,
@@ -20,6 +21,8 @@ import {
   or,
 } from '@asthiwar/database';
 import { packageTierApplies, packageTierSpecificity } from '../../services/addon-tiers.js';
+import { loggableError } from '../../services/db-errors.js';
+import { sendAdminNewLeadAlert } from '../notifications/notifications.service.js';
 import { isCurrentPrice } from '../../services/pricing-window.js';
 import { EstimateAccessError, publicSnapshotOf, resolveEstimateForPublicAccess } from './quotation.js';
 import { calculateEstimate } from './calculator.service.js';
@@ -467,6 +470,10 @@ export async function createEstimate(req: Request, res: Response, next: NextFunc
       userAgent: req.headers['user-agent'],
     }).catch(() => {});
 
+    if (result.estimateId) {
+      alertTeamOfQuotationLead(result.estimateId);
+    }
+
     res.status(201).json({
       success: true,
       data: result,
@@ -474,6 +481,21 @@ export async function createEstimate(req: Request, res: Response, next: NextFunc
   } catch (error) {
     next(error);
   }
+}
+
+/**
+ * Every saved quotation also opens a CRM lead (calculator.service.ts). Email the
+ * team about it as the Contact form does, so a visitor who only prices a house
+ * is not a lead nobody hears about. In the background: the customer's quotation
+ * does not wait on the mail provider.
+ */
+function alertTeamOfQuotationLead(estimateId: string): void {
+  db.query.enquiries
+    .findFirst({ where: eq(enquiries.estimateId, estimateId), columns: { id: true } })
+    .then((lead) => (lead ? sendAdminNewLeadAlert(lead.id) : undefined))
+    .catch((err) => {
+      console.error('[Calculator] Failed to send lead alert for new quotation:', loggableError(err));
+    });
 }
 
 // ---------------------------------------------------------------------------
