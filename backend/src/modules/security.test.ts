@@ -20,6 +20,7 @@ import {
   count,
   desc,
   eq,
+  ensureFirstAdmin,
   PUBLISHED_DEFAULT_ADMIN_PASSWORD,
 } from '@asthiwar/database';
 import { env } from '../config/env.js';
@@ -982,6 +983,72 @@ async function runSecurityTests() {
       env.TRUST_PROXY_HOPS = configuredHops;
     }
     console.log('  ✅ PASS: The trusted hop count is configurable');
+
+    // -----------------------------------------------------------------
+    // [Test 21] A fresh install has an admin without running the seed
+    // -----------------------------------------------------------------
+    console.log('\n[Test 21] First admin account');
+    // Each case runs against an admin table emptied inside a transaction that is
+    // then rolled back, so the seeded account the other suites sign in with stays.
+    class RollBack extends Error {}
+    const onFreshInstall = async (check: (tx: Parameters<Parameters<typeof db.transaction>[0]>[0]) => Promise<void>) => {
+      try {
+        await db.transaction(async (tx) => {
+          await tx.delete(adminUsers);
+          await check(tx);
+          throw new RollBack();
+        });
+      } catch (err) {
+        if (!(err instanceof RollBack)) throw err;
+      }
+    };
+
+    await onFreshInstall(async (tx) => {
+      const first = await ensureFirstAdmin({ production: true, database: tx });
+      assert(first.created && first.passwordSource === 'generated', 'Production with no password set generates one');
+      assert(first.created && first.email === 'admin@asthiwar.com', 'The default email is used');
+      const generated = first.created ? first.generatedPassword ?? '' : '';
+      assert(generated.length >= 20, 'The generated password is long');
+
+      const [account] = await tx.select().from(adminUsers);
+      assert(account.role === 'super_admin' && account.isActive, 'It is an active super admin');
+      assert(await bcrypt.compare(generated, account.passwordHash), 'The printed password is the one that signs in');
+      assert(
+        !(await bcrypt.compare(PUBLISHED_DEFAULT_ADMIN_PASSWORD, account.passwordHash)),
+        'It is not the password published in the source'
+      );
+
+      const second = await ensureFirstAdmin({ production: true, database: tx });
+      assert(!second.created, 'Later starts leave the account alone');
+    });
+
+    await onFreshInstall(async (tx) => {
+      const result = await ensureFirstAdmin({
+        production: true,
+        email: ' Owner@Example.com ',
+        password: PUBLISHED_DEFAULT_ADMIN_PASSWORD,
+        database: tx,
+      });
+      assert(result.created && result.passwordSource === 'generated', 'The published default is not used in production');
+      assert(result.created && result.email === 'owner@example.com', 'ADMIN_SEED_EMAIL is used, trimmed and lower-cased');
+    });
+
+    await onFreshInstall(async (tx) => {
+      const result = await ensureFirstAdmin({ production: true, password: 'a-chosen-password-123', database: tx });
+      assert(
+        result.created && result.passwordSource === 'configured' && result.generatedPassword === undefined,
+        'ADMIN_SEED_PASSWORD is used and never echoed back'
+      );
+    });
+
+    await onFreshInstall(async (tx) => {
+      const result = await ensureFirstAdmin({ production: false, database: tx });
+      assert(result.created && result.passwordSource === 'development-default', 'Development keeps the published default');
+    });
+
+    const [{ admins }] = await db.select({ admins: count() }).from(adminUsers);
+    assert(Number(admins) > 0, 'The seeded accounts are untouched after the rolled-back checks');
+    console.log('  ✅ PASS: The first admin account is created on its own, without a published password');
 
     console.log('\n-----------------------------------------------------------------');
     console.log('Results: All Security Hardening & Penetration Tests Passed!');

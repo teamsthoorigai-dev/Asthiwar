@@ -24,6 +24,10 @@ const envSchema = z.object({
   API_PROXY_SECRET: z.string().min(32, 'API_PROXY_SECRET must be at least 32 characters').optional(),
   // Proxies between the internet and this process; see the trust proxy setting in app.ts.
   TRUST_PROXY_HOPS: z.coerce.number().int().min(0).max(10).default(1),
+  // The first admin account, made on the first start when none exists. See
+  // ensureFirstAdmin in the database package for the defaults.
+  ADMIN_SEED_EMAIL: z.string().optional(),
+  ADMIN_SEED_PASSWORD: z.string().optional(),
   RESEND_API_KEY: z.string().optional(),
   RESEND_FROM_EMAIL: z.string().default('ASTHIWAR <onboarding@resend.dev>'),
   ADMIN_ALERT_EMAIL: z.string().email().default('contact@asthiwar.com'),
