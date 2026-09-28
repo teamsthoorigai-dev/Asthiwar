@@ -76,6 +76,24 @@ function assert(condition: boolean, message: string) {
   }
 }
 
+/** The parts of a component in the admin specifications payload that Test 9 reads. */
+interface AdminSpecItem {
+  id: number;
+  slug: string;
+  options: Array<{
+    id: number;
+    slug: string;
+    prices: Array<{ packageId: number | null; priceDelta: string | number; effectiveTo: string | null }>;
+  }>;
+  packageMappings: Array<{ packageId: number; defaultOptionId: number | null }>;
+}
+
+/** The parts of a component in the public calculator config that Test 9 reads. */
+interface QuotedSpecItem {
+  slug: string;
+  options: Array<{ slug: string; priceDelta: number; isPackageDefault: boolean }>;
+}
+
 async function runAdminConfigTests() {
   console.log('\n⚙️ ASTHIWAR Admin Calculator Configuration & Pricing Test Suite — Phase 8\n');
   console.log('-----------------------------------------------------------------');
@@ -508,31 +526,32 @@ async function runAdminConfigTests() {
       path: '/api/v1/admin/config/specifications',
       headers: { Cookie: sessionCookie },
     });
-    const cement = matrixSpecsRes.body.data
-      .flatMap((category: any) => category.items)
-      .find((item: any) => item.slug === 'cement');
+    const specItems = (matrixSpecsRes.body.data as Array<{ items: AdminSpecItem[] }>).flatMap(
+      (category) => category.items
+    );
+    const cement = specItems.find((item) => item.slug === 'cement')!;
     assert(!!cement, 'Cement component is present');
 
     const allPkgs: Array<{ id: number; slug: string }> = pkgsRes.body.data;
     const pkgId = (slug: string) => allPkgs.find((p) => p.slug === slug)!.id;
-    const optId = (slug: string) => cement.options.find((o: any) => o.slug === slug).id;
+    const optId = (slug: string) => cement.options.find((o) => o.slug === slug)!.id;
     const ISI = optId('any_isi_cement');
     const JSW = optId('jsw_cement');
     const RAMCO = optId('ramco_dalmia_cement');
     const ULTRATECH = optId('ultratech_chettinad_cement');
 
-    const liveRate = (option: any, packageId: number): number => {
-      const live = option.prices.filter((p: any) => p.effectiveTo === null);
+    const liveRate = (option: AdminSpecItem['options'][number], packageId: number): number => {
+      const live = option.prices.filter((p) => p.effectiveTo === null);
       const row =
-        live.find((p: any) => p.packageId === packageId) ?? live.find((p: any) => p.packageId === null);
+        live.find((p) => p.packageId === packageId) ?? live.find((p) => p.packageId === null);
       return row ? Number(row.priceDelta) : 0;
     };
-    const originalRates = cement.options.flatMap((option: any) =>
+    const originalRates = cement.options.flatMap((option) =>
       allPkgs.map((pkg) => ({ optionId: option.id, packageId: pkg.id, priceDelta: liveRate(option, pkg.id) }))
     );
     const originalPremiumDefault = cement.packageMappings.find(
-      (m: any) => m.packageId === pkgId('premium')
-    ).defaultOptionId;
+      (m) => m.packageId === pkgId('premium')
+    )!.defaultOptionId;
     assert(originalPremiumDefault === RAMCO, 'Premium includes Ramco/Dalmia cement as seeded');
 
     /** One brand's full row, in basic/standard/premium/luxury order. */
@@ -551,13 +570,13 @@ async function runAdminConfigTests() {
         headers: cookie ? { Cookie: cookie } : {},
       });
 
-    const configFor = async (packageSlug: string) => {
+    const configFor = async (packageSlug: string): Promise<QuotedSpecItem> => {
       const res = await makeRequest(server, { method: 'GET', path: `/api/v1/calculator/config/${packageSlug}` });
-      return res.body.data.specifications
-        .flatMap((category: any) => category.items)
-        .find((item: any) => item.slug === 'cement');
+      return (res.body.data.specifications as Array<{ items: QuotedSpecItem[] }>)
+        .flatMap((category) => category.items)
+        .find((item) => item.slug === 'cement')!;
     };
-    const quoted = (item: any, optionSlug: string) => item.options.find((o: any) => o.slug === optionSlug);
+    const quoted = (item: QuotedSpecItem, optionSlug: string) => item.options.find((o) => o.slug === optionSlug)!;
 
     try {
       const unauthMatrix = await putMatrix({ rates: row(ULTRATECH, [40, 35, 25, 0]) }, '');
@@ -575,9 +594,7 @@ async function runAdminConfigTests() {
 
       // Option ids are global: another component's brand cannot be repriced
       // through this one.
-      const steel = matrixSpecsRes.body.data
-        .flatMap((category: any) => category.items)
-        .find((item: any) => item.slug === 'steel_rebar_binding_wires');
+      const steel = specItems.find((item) => item.slug === 'steel_rebar_binding_wires')!;
       const foreign = await putMatrix({ rates: row(steel.options[0].id, [0, 0, 0, 0]) });
       assert(
         foreign.status === 400 && foreign.body.error.code === 'OPTION_BELONGS_TO_ANOTHER_ITEM',
