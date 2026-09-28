@@ -15,6 +15,7 @@ import {
   updateAdminOptionPrice,
   deleteAdminOption,
   updateAdminPackageItem,
+  updateAdminItemRateMatrix,
   getAdminMilestones,
   updateAdminMilestones,
   createAdminAddon,
@@ -39,6 +40,7 @@ import {
   CreateOptionDto,
   UpdateOptionPriceDto,
   UpdatePackageItemDto,
+  UpdateItemRateMatrixDto,
   UpdateMilestonesDto,
   CreateAddonDto,
   CreateAddonVariantDto,
@@ -83,6 +85,7 @@ export async function getPackagesController(req: Request, res: Response, next: N
 }
 
 import { logAuditEvent } from '../../services/audit.service.js';
+import { recordAdminAction } from '../../services/admin-audit.js';
 import { clientIp } from '../../middleware/client-ip.js';
 
 export async function updatePackagePriceController(req: Request, res: Response, next: NextFunction): Promise<void> {
@@ -133,6 +136,13 @@ export async function updatePackageMetadataController(req: Request, res: Respons
     const packageId = parseInt(req.params.id as string, 10);
     const dto = req.body as UpdatePackageMetadataDto;
     const updated = await updateAdminPackageMetadata(packageId, dto);
+
+    recordAdminAction(req, {
+      action: 'UPDATE_PACKAGE',
+      severity: 'MEDIUM',
+      metadata: { packageId, changes: dto },
+    });
+
     res.json({
       success: true,
       message: 'Package metadata updated successfully',
@@ -170,6 +180,14 @@ export async function createLocationController(req: Request, res: Response, next
   try {
     const dto = req.body as CreateLocationDto;
     const created = await createAdminLocation(dto);
+
+    recordAdminAction(req, {
+      action: 'CREATE_LOCATION',
+      severity: 'MEDIUM',
+      statusCode: 201,
+      metadata: { locationId: created.id, changes: dto },
+    });
+
     res.status(201).json({
       success: true,
       message: 'Location created successfully',
@@ -192,6 +210,13 @@ export async function updateLocationController(req: Request, res: Response, next
     const locationId = parseInt(req.params.id as string, 10);
     const dto = req.body as UpdateLocationDto;
     const updated = await updateAdminLocation(locationId, dto);
+
+    recordAdminAction(req, {
+      action: 'UPDATE_LOCATION',
+      severity: 'HIGH',
+      metadata: { locationId, changes: dto },
+    });
+
     res.json({
       success: true,
       message: 'Location updated successfully',
@@ -267,6 +292,13 @@ export async function updateAddonPriceController(req: Request, res: Response, ne
     const addonIdOrSlug = !isNaN(Number(rawId)) ? parseInt(rawId, 10) : rawId;
     const dto = req.body as UpdateAddonPriceDto;
     const newPrice = await updateAdminAddonPrice(addonIdOrSlug, dto);
+
+    recordAdminAction(req, {
+      action: 'UPDATE_ADDON_PRICE',
+      severity: 'HIGH',
+      metadata: { addonIdOrSlug, variantSlug: dto.variantSlug, price: dto.price },
+    });
+
     res.json({
       success: true,
       message: 'Add-on variant price updated successfully with history versioning',
@@ -289,6 +321,13 @@ export async function updateAddonMetadataController(req: Request, res: Response,
     const addonId = parseInt(req.params.id as string, 10);
     const dto = req.body as UpdateAddonMetadataDto;
     const updated = await updateAdminAddonMetadata(addonId, dto);
+
+    recordAdminAction(req, {
+      action: 'UPDATE_ADDON',
+      severity: 'MEDIUM',
+      metadata: { addonId, changes: dto },
+    });
+
     res.json({
       success: true,
       message: 'Add-on metadata updated successfully',
@@ -369,6 +408,14 @@ export async function createAddonVariantController(req: Request, res: Response, 
     const addonId = parseInt(req.params.id as string, 10);
     const dto = req.body as CreateAddonVariantDto;
     const created = await createAdminAddonVariant(addonId, dto);
+
+    recordAdminAction(req, {
+      action: 'CREATE_ADDON_VARIANT',
+      severity: 'MEDIUM',
+      statusCode: 201,
+      metadata: { addonId, variantId: created.id, changes: dto },
+    });
+
     res.status(201).json({
       success: true,
       message: `Variant '${created.variantName}' added successfully`,
@@ -385,6 +432,13 @@ export async function updateAddonVariantController(req: Request, res: Response, 
     const variantId = parseInt(req.params.variantId as string, 10);
     const dto = req.body as UpdateAddonVariantDto;
     const updated = await updateAdminAddonVariant(addonId, variantId, dto);
+
+    recordAdminAction(req, {
+      action: 'UPDATE_ADDON_VARIANT',
+      severity: 'HIGH',
+      metadata: { addonId, variantId, changes: dto },
+    });
+
     res.json({
       success: true,
       message: `Variant '${updated.variantName}' updated successfully`,
@@ -400,6 +454,13 @@ export async function deleteAddonVariantController(req: Request, res: Response, 
     const addonId = parseInt(req.params.id as string, 10);
     const variantId = parseInt(req.params.variantId as string, 10);
     const result = await deleteAdminAddonVariant(addonId, variantId);
+
+    recordAdminAction(req, {
+      action: 'DELETE_ADDON_VARIANT',
+      severity: 'HIGH',
+      metadata: { addonId, variantId },
+    });
+
     res.json({
       success: true,
       message: `Variant '${result.name}' deleted successfully`,
@@ -430,6 +491,14 @@ export async function createOptionController(req: Request, res: Response, next: 
   try {
     const dto = req.body as CreateOptionDto;
     const created = await createAdminOption(dto);
+
+    recordAdminAction(req, {
+      action: 'CREATE_OPTION',
+      severity: 'MEDIUM',
+      statusCode: 201,
+      metadata: { optionId: created.id, changes: dto },
+    });
+
     res.status(201).json({
       success: true,
       message: 'Brand option created successfully',
@@ -451,6 +520,13 @@ export async function deleteOptionController(req: Request, res: Response, next: 
   try {
     const optionId = parseInt(req.params.id as string, 10);
     const result = await deleteAdminOption(optionId);
+
+    recordAdminAction(req, {
+      action: 'DELETE_OPTION',
+      severity: 'HIGH',
+      metadata: { optionId },
+    });
+
     res.json({
       success: true,
       message: `Brand option '${result.name}' deleted successfully`,
@@ -473,6 +549,13 @@ export async function updateOptionPriceController(req: Request, res: Response, n
     const optionId = parseInt(req.params.id as string, 10);
     const dto = req.body as UpdateOptionPriceDto;
     const newPrice = await updateAdminOptionPrice(optionId, dto);
+
+    recordAdminAction(req, {
+      action: 'UPDATE_OPTION_PRICE',
+      severity: 'HIGH',
+      metadata: { optionId, changes: dto },
+    });
+
     res.json({
       success: true,
       message: 'Option prices updated successfully',
@@ -495,6 +578,13 @@ export async function updatePackageItemController(req: Request, res: Response, n
     const packageItemId = parseInt(req.params.id as string, 10);
     const dto = req.body as UpdatePackageItemDto;
     const updated = await updateAdminPackageItem(packageItemId, dto);
+
+    recordAdminAction(req, {
+      action: 'UPDATE_PACKAGE_ITEM',
+      severity: 'HIGH',
+      metadata: { packageItemId, changes: dto },
+    });
+
     res.json({
       success: true,
       message: 'Package specification item updated successfully',
@@ -509,6 +599,34 @@ export async function updatePackageItemController(req: Request, res: Response, n
       return;
     }
     next(error);
+  }
+}
+
+
+/**
+ * PUT /admin/config/items/:id/rate-matrix — a component's rates across every
+ * package, and optionally its included brands, saved as one change.
+ */
+export async function updateItemRateMatrixController(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const itemId = parseInt(req.params.id as string, 10);
+    const dto = req.body as UpdateItemRateMatrixDto;
+    const result = await updateAdminItemRateMatrix(itemId, dto);
+
+    recordAdminAction(req, {
+      action: 'UPDATE_RATE_MATRIX',
+      severity: 'HIGH',
+      metadata: { itemId, changes: result.changes, defaultChanges: result.defaultChanges },
+    });
+
+    const count = result.changes.length;
+    res.json({
+      success: true,
+      message: `${count} rate${count === 1 ? '' : 's'} updated for '${result.itemName}'`,
+      data: result,
+    });
+  } catch (error) {
+    relayServiceError(error, res, next);
   }
 }
 
@@ -547,6 +665,13 @@ export async function updateCategoryController(req: Request, res: Response, next
     const categoryId = parseInt(req.params.id as string, 10);
     const dto = req.body as UpdateCategoryDto;
     const updated = await updateAdminCategory(categoryId, dto);
+
+    recordAdminAction(req, {
+      action: 'UPDATE_CATEGORY',
+      severity: 'MEDIUM',
+      metadata: { categoryId, changes: dto },
+    });
+
     res.json({
       success: true,
       message: 'Category updated successfully',
@@ -620,6 +745,13 @@ export async function updateItemController(req: Request, res: Response, next: Ne
     const itemId = parseInt(req.params.id as string, 10);
     const dto = req.body as UpdateItemDto;
     const updated = await updateAdminItem(itemId, dto);
+
+    recordAdminAction(req, {
+      action: 'UPDATE_ITEM',
+      severity: 'MEDIUM',
+      metadata: { itemId, changes: dto },
+    });
+
     res.json({
       success: true,
       message: 'Component updated successfully',
@@ -693,7 +825,9 @@ export async function updateMilestonesController(req: Request, res: Response, ne
         totalStages: updatedStages.length,
         sumPercentage: updatedStages.reduce((acc, s) => acc + Number(s.percentage), 0),
       },
-    });
+      ipAddress: clientIp(req),
+      userAgent: req.headers['user-agent'],
+    }).catch(() => {});
 
     res.json({
       success: true,

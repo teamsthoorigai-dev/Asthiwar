@@ -22,6 +22,12 @@ const envSchema = z.object({
   // Shared with the Next.js frontend. When its proxy presents this, the client IP
   // it forwards is trusted for rate limiting and audit records. See client-ip.ts.
   API_PROXY_SECRET: z.string().min(32, 'API_PROXY_SECRET must be at least 32 characters').optional(),
+  // Proxies between the internet and this process; see the trust proxy setting in app.ts.
+  TRUST_PROXY_HOPS: z.coerce.number().int().min(0).max(10).default(1),
+  // The first admin account, made on the first start when none exists. See
+  // ensureFirstAdmin in the database package for the defaults.
+  ADMIN_SEED_EMAIL: z.string().optional(),
+  ADMIN_SEED_PASSWORD: z.string().optional(),
   RESEND_API_KEY: z.string().optional(),
   RESEND_FROM_EMAIL: z.string().default('ASTHIWAR <onboarding@resend.dev>'),
   ADMIN_ALERT_EMAIL: z.string().email().default('contact@asthiwar.com'),
@@ -41,6 +47,24 @@ if (!parsedEnv.success) {
 
 if (!process.env.NODE_ENV) {
   console.warn('[env] NODE_ENV is not set; running with production behaviour.');
+}
+
+/**
+ * SESSION_SECRET values published in this repository.
+ *
+ * The secret signs the trusted-device cookie (modules/auth/trusted-device.ts).
+ * Whoever knows it can mint one for any account, each with its own allowance of
+ * guesses, and so walk past the per-account login lockout. The example in
+ * .env.example is long enough to pass the length check, and a deploy built by
+ * copying that file ran on it.
+ */
+const PUBLISHED_SESSION_SECRETS = new Set([
+  'asthiwar-super-secret-development-session-key-change-in-production-min32chars',
+]);
+
+if (parsedEnv.data.NODE_ENV === 'production' && PUBLISHED_SESSION_SECRETS.has(parsedEnv.data.SESSION_SECRET.trim())) {
+  console.error('❌ SESSION_SECRET is the example value from .env.example. Generate your own: openssl rand -hex 32');
+  throw new Error('Invalid environment configuration: SESSION_SECRET is the published example value');
 }
 
 export const env = parsedEnv.data;

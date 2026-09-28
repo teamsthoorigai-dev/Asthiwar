@@ -10,7 +10,9 @@
  * assertions, all green, covering none of the code that quotes a customer.
  *
  * It now runs backend/src/modules/calculator/pricing-math.test.ts, against the
- * arithmetic the live engine actually calls.
+ * arithmetic the live engine actually calls, and src/lib/rateMatrix.test.ts, the
+ * arithmetic the admin console uses to keep a component's brand rates consistent
+ * across package tiers.
  */
 const { spawnSync } = require('node:child_process');
 const fs = require('node:fs');
@@ -18,7 +20,10 @@ const path = require('node:path');
 
 const repoRoot = path.resolve(__dirname, '..');
 const backendRoot = path.join(repoRoot, 'backend');
-const SUITE = 'src/modules/calculator/pricing-math.test.ts';
+const SUITES = [
+  { cwd: backendRoot, file: 'src/modules/calculator/pricing-math.test.ts' },
+  { cwd: repoRoot, file: 'src/lib/rateMatrix.test.ts' },
+];
 
 // Resolved from node_modules rather than shelled through `npx`, which on Windows
 // returned exit 0 with no output when it could not launch — a test command that
@@ -30,25 +35,28 @@ if (!fs.existsSync(tsxBin)) {
   process.exit(1);
 }
 
-if (!fs.existsSync(path.join(backendRoot, SUITE))) {
-  console.error(`❌ Suite not found: ${path.join(backendRoot, SUITE)}`);
-  process.exit(1);
-}
+for (const suite of SUITES) {
+  const suitePath = path.join(suite.cwd, suite.file);
+  if (!fs.existsSync(suitePath)) {
+    console.error(`❌ Suite not found: ${suitePath}`);
+    process.exit(1);
+  }
 
-const result = spawnSync(process.execPath, [tsxBin, '--test', SUITE], {
-  cwd: backendRoot,
-  stdio: 'inherit',
-});
+  const result = spawnSync(process.execPath, [tsxBin, '--test', suite.file], {
+    cwd: suite.cwd,
+    stdio: 'inherit',
+  });
 
-if (result.error) {
-  console.error('❌ Could not run the offline pricing suite:', result.error.message);
-  process.exit(1);
-}
+  if (result.error) {
+    console.error(`❌ Could not run ${suite.file}:`, result.error.message);
+    process.exit(1);
+  }
 
-// A null status means the child was killed by a signal rather than exiting.
-if (result.status !== 0) {
-  console.error(`\n❌ Offline pricing suite failed (exit ${result.status ?? 'signal'}).`);
-  process.exit(result.status ?? 1);
+  // A null status means the child was killed by a signal rather than exiting.
+  if (result.status !== 0) {
+    console.error(`\n❌ ${suite.file} failed (exit ${result.status ?? 'signal'}).`);
+    process.exit(result.status ?? 1);
+  }
 }
 
 console.log('\n✅ Offline pricing arithmetic passed.');

@@ -20,6 +20,7 @@ import {
   CreateOptionDto,
   UpdateOptionPriceDto,
   UpdatePackageItemDto,
+  UpdateItemRateMatrixDto,
   UpdateMilestonesDto,
   CreateAddonDto,
   CreateAddonVariantDto,
@@ -1524,6 +1525,221 @@ export async function updateAdminPackageItem(packageItemId: number, dto: UpdateP
     .returning();
 
   return updated;
+}
+
+/** Whole paise, so two rates compare equal exactly when they print the same. */
+const toPaise = (rupees: number) => Math.round(rupees * 100);
+
+/**
+ * Replace a component's rate matrix — and, optionally, the brand each package
+ * includes — in one transaction.
+ *
+ * Every option named in `rates` has its live price set replaced by the rows
+ * sent, as updateAdminOptionPrice does for a single option; options not named
+ * are left alone. A named option needs a rate for every package: a package left
+ * out would have no row, and the engine charges a missing row as nothing.
+ */
+export async function updateAdminItemRateMatrix(itemId: number, dto: UpdateItemRateMatrixDto) {
+  const item = await db.query.items.findFirst({
+    where: eq(schema.items.id, itemId),
+  });
+
+  if (!item) {
+    throw new AdminServiceError(404, 'ITEM_NOT_FOUND', `Component with ID ${itemId} not found`);
+  }
+
+  const itemOptions = await db
+    .select({ id: schema.options.id, brandName: schema.options.brandName })
+    .from(schema.options)
+    .where(eq(schema.options.itemId, itemId));
+  const brandName = new Map(itemOptions.map((opt) => [opt.id, opt.brandName]));
+
+  const catalogue = await db
+    .select({ id: schema.packages.id, name: schema.packages.name })
+    .from(schema.packages)
+    .orderBy(asc(schema.packages.sortOrder));
+  const packageName = new Map(catalogue.map((pkg) => [pkg.id, pkg.name]));
+
+  const defaults = dto.defaults ?? [];
+
+  // Option ids are global. Without this, a request naming one component could
+  // reprice another component's brands.
+  const foreignOptionIds = [
+    ...new Set([
+      ...dto.rates.map((rate) => rate.optionId),
+      ...defaults.flatMap((entry) => (entry.defaultOptionId === null ? [] : [entry.defaultOptionId])),
+    ]),
+  ].filter((id) => !brandName.has(id));
+
+  if (foreignOptionIds.length > 0) {
+    throw new AdminServiceError(
+      400,
+      'OPTION_BELONGS_TO_ANOTHER_ITEM',
+      `Option ${foreignOptionIds.join(', ')} is not a brand of '${item.name}'.`
+    );
+  }
+
+  const unknownPackageIds = [
+    ...new Set([...dto.rates.map((rate) => rate.packageId), ...defaults.map((entry) => entry.packageId)]),
+  ].filter((id) => !packageName.has(id));
+
+  if (unknownPackageIds.length > 0) {
+    throw new AdminServiceError(400, 'PACKAGE_NOT_FOUND', `No package with ID ${unknownPackageIds.join(', ')}`);
+  }
+
+  const rowsByOption = new Map<number, Map<number, number>>();
+  for (const rate of dto.rates) {
+    const row = rowsByOption.get(rate.optionId) ?? new Map<number, number>();
+    row.set(rate.packageId, rate.priceDelta);
+    rowsByOption.set(rate.optionId, row);
+  }
+
+  for (const [optionId, row] of rowsByOption) {
+    const missing = catalogue.filter((pkg) => !row.has(pkg.id)).map((pkg) => pkg.name);
+    if (missing.length > 0) {
+      throw new AdminServiceError(
+        400,
+        'INCOMPLETE_RATE_ROW',
+        `'${brandName.get(optionId)}' has no rate for ${missing.join(', ')}. Send one for every ` +
+          'package: a package left without a price row is charged nothing for this brand.'
+      );
+    }
+  }
+
+  const mappings = await db
+    .select({
+      id: schema.packageItems.id,
+      packageId: schema.packageItems.packageId,
+      defaultOptionId: schema.packageItems.defaultOptionId,
+    })
+    .from(schema.packageItems)
+    .where(eq(schema.packageItems.itemId, itemId));
+
+  const newDefaultByPackage = new Map(defaults.map((entry) => [entry.packageId, entry.defaultOptionId]));
+
+  for (const packageId of newDefaultByPackage.keys()) {
+    if (!mappings.some((mapping) => mapping.packageId === packageId)) {
+      throw new AdminServiceError(
+        400,
+        'PACKAGE_ITEM_NOT_FOUND',
+        `'${item.name}' is not part of ${packageName.get(packageId)}, so that package has no included brand to set.`
+      );
+    }
+  }
+
+  // Rates in force for this component, resolved the way the engine charges them:
+  // the package's own row, then the universal row, then nothing.
+  const livePrices =
+    itemOptions.length > 0
+      ? await db
+          .select({
+            optionId: schema.optionPrices.optionId,
+            packageId: schema.optionPrices.packageId,
+            priceDelta: schema.optionPrices.priceDelta,
+          })
+          .from(schema.optionPrices)
+          .where(
+            and(
+              inArray(
+                schema.optionPrices.optionId,
+                itemOptions.map((opt) => opt.id)
+              ),
+              isNull(schema.optionPrices.effectiveTo)
+            )
+          )
+      : [];
+
+  const liveRate = (optionId: number, packageId: number): number => {
+    const row =
+      livePrices.find((p) => p.optionId === optionId && p.packageId === packageId) ??
+      livePrices.find((p) => p.optionId === optionId && p.packageId === null);
+    return row ? Number(row.priceDelta) : 0;
+  };
+  const rateAfter = (optionId: number, packageId: number): number =>
+    rowsByOption.get(optionId)?.get(packageId) ?? liveRate(optionId, packageId);
+
+  // A package's included brand has to be free there — the rule
+  // updateAdminPackageItem enforces when a default is chosen. Checked for every
+  // cell this request decides: a rate it writes for an included brand, and the
+  // rate of a brand it newly makes included. An unrelated cell elsewhere in the
+  // matrix does not block the save.
+  for (const mapping of mappings) {
+    const includedOptionId = newDefaultByPackage.has(mapping.packageId)
+      ? newDefaultByPackage.get(mapping.packageId)!
+      : mapping.defaultOptionId;
+    if (includedOptionId === null) continue;
+    if (!rowsByOption.has(includedOptionId) && !newDefaultByPackage.has(mapping.packageId)) continue;
+
+    const delta = rateAfter(includedOptionId, mapping.packageId);
+    if (toPaise(delta) !== 0) {
+      throw new AdminServiceError(
+        400,
+        'INCLUDED_OPTION_IS_NOT_FREE',
+        `'${brandName.get(includedOptionId)}' is the brand ${packageName.get(mapping.packageId)} includes, ` +
+          `so its rate there has to be 0 — this change would charge ${delta > 0 ? '+' : '−'}₹${Math.abs(delta)}.`
+      );
+    }
+  }
+
+  // For the audit trail: only the cells and included brands that actually move.
+  const changes: Array<{ optionId: number; packageId: number; from: number; to: number }> = [];
+  for (const [optionId, row] of rowsByOption) {
+    for (const [packageId, delta] of row) {
+      const before = liveRate(optionId, packageId);
+      if (toPaise(before) !== toPaise(delta)) {
+        changes.push({ optionId, packageId, from: toPaise(before) / 100, to: toPaise(delta) / 100 });
+      }
+    }
+  }
+
+  const defaultChanges = defaults
+    .map((entry) => ({
+      packageId: entry.packageId,
+      from: mappings.find((mapping) => mapping.packageId === entry.packageId)?.defaultOptionId ?? null,
+      to: entry.defaultOptionId,
+    }))
+    .filter((change) => change.from !== change.to);
+
+  const itemPriceType = item.unit === 'fixed' ? 'fixed' : 'per_sqft';
+
+  const prices = await db.transaction(async (tx) => {
+    for (const entry of defaults) {
+      await tx
+        .update(schema.packageItems)
+        .set({ defaultOptionId: entry.defaultOptionId })
+        .where(
+          and(eq(schema.packageItems.itemId, itemId), eq(schema.packageItems.packageId, entry.packageId))
+        );
+    }
+
+    const repricedOptionIds = [...rowsByOption.keys()];
+    if (repricedOptionIds.length === 0) return [];
+
+    await tx
+      .delete(schema.optionPrices)
+      .where(
+        and(
+          inArray(schema.optionPrices.optionId, repricedOptionIds),
+          isNull(schema.optionPrices.effectiveTo)
+        )
+      );
+
+    return tx
+      .insert(schema.optionPrices)
+      .values(
+        [...rowsByOption].flatMap(([optionId, row]) =>
+          [...row].map(([packageId, delta]) => ({
+            optionId,
+            packageId,
+            priceDelta: delta.toFixed(2),
+            priceType: itemPriceType,
+          }))
+        )
+      )
+      .returning();
+  });
+
+  return { itemId, itemName: item.name, prices, changes, defaultChanges };
 }
 
 // ----------------------------------------------------

@@ -41,6 +41,15 @@ export function escapeHtml(str: string | number | null | undefined): string {
 }
 
 /**
+ * Customer text bound for a one-line header such as Subject: line breaks and
+ * other control characters become spaces, so a submitted name cannot start a
+ * header of its own.
+ */
+function headerText(value: string | null | undefined): string {
+  return (value ?? '').replace(/[\u0000-\u001f\u007f]+/g, ' ').trim();
+}
+
+/**
  * Renders a branded HTML email for customer quotation delivery.
  */
 export function renderQuotationEmail(params: QuotationEmailParams): { subject: string; html: string; text: string } {
@@ -52,13 +61,14 @@ export function renderQuotationEmail(params: QuotationEmailParams): { subject: s
   const totalBuiltupAreaSqft = escapeHtml(Number(params.totalBuiltupAreaSqft).toLocaleString('en-IN'));
   const floorCount = escapeHtml(params.floorCount);
   const totalProjectCostFormatted = escapeHtml(params.totalProjectCostFormatted);
+  const pdfUrl = escapeHtml(params.pdfUrl);
 
   const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${subject}</title>
+  <title>${escapeHtml(subject)}</title>
 </head>
 <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f1f5f9; margin: 0; padding: 24px 12px; color: #1e293b;">
   <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
@@ -112,13 +122,13 @@ export function renderQuotationEmail(params: QuotationEmailParams): { subject: s
 
       <!-- PDF Download Button -->
       <div style="text-align: center; margin: 30px 0 24px;">
-        <a href="${params.pdfUrl}" target="_blank" rel="noopener noreferrer" style="display: inline-block; background-color: #0f766e; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-size: 14px; font-weight: 700; letter-spacing: 0.5px; box-shadow: 0 2px 4px rgba(15, 118, 110, 0.2);">
+        <a href="${pdfUrl}" target="_blank" rel="noopener noreferrer" style="display: inline-block; background-color: #0f766e; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-size: 14px; font-weight: 700; letter-spacing: 0.5px; box-shadow: 0 2px 4px rgba(15, 118, 110, 0.2);">
           Download Official Quotation PDF
         </a>
       </div>
 
       <p style="margin: 0; font-size: 12px; color: #64748b; text-align: center;">
-        Direct link: <a href="${params.pdfUrl}" style="color: #0f766e; word-break: break-all;">${params.pdfUrl}</a>
+        Direct link: <a href="${pdfUrl}" style="color: #0f766e; word-break: break-all;">${pdfUrl}</a>
       </p>
     </div>
 
@@ -160,7 +170,7 @@ Contact: +91 94884 40123 | contact@asthiwar.com
  * Renders an instant email alert to admin when a new lead/enquiry arrives.
  */
 export function renderAdminLeadAlertEmail(params: AdminLeadAlertParams): { subject: string; html: string; text: string } {
-  const subject = `🚨 [NEW LEAD] Consultation Request: ${params.fullName} (${params.plotLocation})`;
+  const subject = `🚨 [NEW LEAD] Consultation Request: ${headerText(params.fullName)} (${headerText(params.plotLocation)})`;
   const fullName = escapeHtml(params.fullName);
   const phone = escapeHtml(params.phone);
   const email = params.email ? escapeHtml(params.email) : null;
@@ -168,14 +178,14 @@ export function renderAdminLeadAlertEmail(params: AdminLeadAlertParams): { subje
   const preferredContactTime = escapeHtml(params.preferredContactTime || 'Anytime');
   const requirementNotes = escapeHtml(params.requirementNotes || 'Standard consultation requested.');
   const estimateNumber = params.estimateNumber ? escapeHtml(params.estimateNumber) : null;
-  const pdfUrl = params.pdfUrl;
+  const pdfUrl = params.pdfUrl ? escapeHtml(params.pdfUrl) : null;
 
   const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${subject}</title>
+  <title>${escapeHtml(subject)}</title>
 </head>
 <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; margin: 0; padding: 20px; color: #1e293b;">
   <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
@@ -266,7 +276,7 @@ export function renderCustomerConfirmationEmail(params: CustomerConfirmationPara
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${subject}</title>
+  <title>${escapeHtml(subject)}</title>
 </head>
 <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f1f5f9; margin: 0; padding: 24px 12px; color: #1e293b;">
   <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden;">

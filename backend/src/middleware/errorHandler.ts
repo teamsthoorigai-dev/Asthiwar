@@ -156,7 +156,11 @@ export function flushAnonymousAuditWindow(): Promise<void> {
   return closeAuditWindow(Date.now());
 }
 
-function admitAnonymousAuditRecord(address: string): boolean {
+/**
+ * Whether an anonymous caller at `address` may add one more record now. Shared
+ * with failed sign-ins (auth.controller.ts), which anyone can also produce at will.
+ */
+export function admitAnonymousAuditRecord(address: string): boolean {
   const now = Date.now();
   if (now - auditWindowStart >= ANONYMOUS_AUDIT_WINDOW_MS) void closeAuditWindow(now);
 

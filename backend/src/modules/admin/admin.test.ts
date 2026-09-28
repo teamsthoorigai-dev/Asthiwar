@@ -235,6 +235,9 @@ async function runAdminTests() {
     assert(enquiryDetailRes.body.data.id === testEnquiryId, 'Fetched enquiry ID matches');
     assert(!!enquiryDetailRes.body.data.estimate, 'Includes linked estimate details');
     assert(enquiryDetailRes.body.data.estimate.estimateNumber === testEstimateNumber, 'Linked estimate number matches');
+    // The access token is the customer's link. The console never uses it, and
+    // every admin role — viewer included — reads this route.
+    assert(!('accessToken' in enquiryDetailRes.body.data.estimate), 'Linked estimate omits the customer access token');
 
     // Update Status & Admin Notes
     const updateEnquiryRes = await makeRequest(server, {
@@ -273,6 +276,12 @@ async function runAdminTests() {
     assert(estimateDetailRes.body.data.estimateNumber === testEstimateNumber, 'Estimate number matches');
     assert(Array.isArray(estimateDetailRes.body.data.addons), 'Returns addons array');
     assert(estimateDetailRes.body.data.addons.length >= 1, 'Includes saved addon items');
+    assert(!('accessToken' in estimateDetailRes.body.data), 'Estimate detail omits the customer access token');
+    assert(
+      !JSON.stringify(estimateDetailRes.body.data.fullSnapshotJson ?? {}).includes('"accessToken"'),
+      'The stored snapshot is served without it too'
+    );
+    assert(Boolean(estimateDetailRes.body.data.accessTokenExpiresAt), 'Link expiry is still shown');
 
     // Lookup by Estimate Number.
     //
@@ -301,6 +310,7 @@ async function runAdminTests() {
     assert(updateEstimateRes.status === 200, 'PATCH /admin/estimates/:id returns 200 OK');
     assert(updateEstimateRes.body.data.status === 'GENERATED', 'Estimate status updated to GENERATED');
     assert(updateEstimateRes.body.data.pdfUrl.includes('EST-2026-TEST.pdf'), 'PDF URL attached');
+    assert(!('accessToken' in updateEstimateRes.body.data), 'Estimate update response omits the customer access token');
 
     // -----------------------------------------------------------------
     // [Test 7] Admin Analytics Dashboard & Pipeline KPIs

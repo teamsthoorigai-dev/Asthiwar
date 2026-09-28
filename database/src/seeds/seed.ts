@@ -28,6 +28,7 @@ import {
   milestoneStages,
 } from '../schema/index';
 import { PUBLISHED_DEFAULT_ADMIN_PASSWORD } from '../admin-defaults';
+import { ensureFirstAdmin, firstAdminNotice } from '../admin-bootstrap';
 import { eq, and } from 'drizzle-orm';
 import * as bcrypt from 'bcrypt';
 
@@ -1201,8 +1202,10 @@ async function seedAddons() {
  * so a production deploy created a super_admin whose email and password are both
  * readable in this public repository. Two rules now:
  *
- *   - production will not create an account on the published default; it waits
- *     for ADMIN_SEED_PASSWORD instead.
+ *   - production never creates an account on the published default. With no
+ *     admin at all it creates one with ADMIN_SEED_PASSWORD, or with a generated
+ *     password printed once below (ensureFirstAdmin — the API does the same on
+ *     start, for installs that never run this seed).
  *   - any existing account still on the default is moved to ADMIN_SEED_PASSWORD
  *     when one is configured, and its sessions are ended. Setting the variable and
  *     redeploying is the recovery path, since production login refuses the default.
@@ -1257,27 +1260,12 @@ async function seedAdminUser() {
     return;
   }
 
-  if (!configuredPassword && isProduction) {
-    console.error(
-      '  ❌ Admin user: NOT seeded. Set ADMIN_SEED_EMAIL and ADMIN_SEED_PASSWORD and redeploy.'
-    );
-    return;
-  }
-
-  const email = process.env.ADMIN_SEED_EMAIL ?? 'admin@asthiwar.com';
-  const plainPassword = configuredPassword ?? PUBLISHED_DEFAULT_ADMIN_PASSWORD;
-
-  const passwordHash = await bcrypt.hash(plainPassword, 12);
-
-  await db.insert(adminUsers).values({
-    email,
-    passwordHash,
-    fullName: 'Asthiwar Admin',
-    role: 'super_admin',
-    isActive: true,
+  const result = await ensureFirstAdmin({
+    production: isProduction,
+    email: process.env.ADMIN_SEED_EMAIL,
+    password: configuredPassword,
   });
-
-  console.log(`  ✅ Admin user: seeded (${email})`);
+  console.log(result.created ? firstAdminNotice(result) : '  ⏭️  Admin user: already exists, skipped.');
 }
 
 // ---------------------------------------------------------------------------

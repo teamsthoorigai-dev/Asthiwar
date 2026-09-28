@@ -1136,6 +1136,29 @@ export async function updatePackageItem(
   );
 }
 
+/**
+ * Save a component's rate matrix in one write: the full row of every brand
+ * whose rates changed, and optionally the brand a package now includes.
+ * Brands left out keep their rates.
+ */
+export async function updateItemRateMatrix(
+  itemId: number,
+  payload: {
+    rates: Array<{ optionId: number; packageId: number; priceDelta: number }>;
+    defaults?: Array<{ packageId: number; defaultOptionId: number | null }>;
+  },
+  options?: RequestOptions
+): Promise<{ success: boolean; message?: string }> {
+  return apiClient<{ success: boolean; message?: string }>(
+    `/api/v1/admin/config/items/${itemId}/rate-matrix`,
+    {
+      method: 'PUT',
+      body: payload,
+      ...options,
+    }
+  );
+}
+
 export async function updateMilestones(
   payload: {
     milestones: Array<{

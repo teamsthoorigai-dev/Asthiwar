@@ -20,6 +20,7 @@ import {
   count,
   desc,
   eq,
+  ensureFirstAdmin,
   PUBLISHED_DEFAULT_ADMIN_PASSWORD,
 } from '@asthiwar/database';
 import { env } from '../config/env.js';
@@ -27,7 +28,7 @@ import { SESSION_COOKIE_NAME } from '../middleware/auth.js';
 import { clientIp, clientIpKey } from '../middleware/client-ip.js';
 import { errorHandler, flushAnonymousAuditWindow } from '../middleware/errorHandler.js';
 import { TRUSTED_DEVICE_COOKIE } from './auth/trusted-device.js';
-import { escapeHtml } from './email/email-templates.js';
+import { escapeHtml, renderAdminLeadAlertEmail } from './email/email-templates.js';
 import { boundedForAudit, sanitizePayload } from '../services/audit.service.js';
 import { sendWhatsAppMessage } from '../services/whatsapp.service.js';
 
@@ -105,6 +106,22 @@ async function runSecurityTests() {
     assert(escaped.includes('&#39;'), 'Single quotes are escaped');
     assert(escaped.includes('&amp;'), 'Ampersand is escaped');
     console.log('  ✅ PASS: escapeHtml cleanly converts all HTML injection vectors');
+
+    // The lead alert's subject carries the customer's name into <title>, the one
+    // place in the document it was not escaped. A name that closed the title put
+    // a live link into mail the team receives from its own domain.
+    const leadAlert = renderAdminLeadAlertEmail({
+      fullName: '</title></head><body><a href="https://evil.example/login">Verify your account</a>\nBcc: x@evil.example',
+      phone: '9876543210',
+      plotLocation: 'Chennai',
+    });
+    assert(!leadAlert.html.includes('<a href="https://evil.example'), 'A customer name cannot add markup to the lead alert');
+    assert(
+      /<title>[^<]*&lt;\/title&gt;[^<]*<\/title>/.test(leadAlert.html),
+      'The customer name stays inside <title>, escaped'
+    );
+    assert(!/[\r\n]/.test(leadAlert.subject), 'A line break in the name does not reach the Subject header');
+    console.log('  ✅ PASS: The staff lead alert escapes customer text in its title and subject');
 
     // -----------------------------------------------------------------
     // [Test 2] PII Redaction in Audit & Log Pipelines
@@ -913,6 +930,125 @@ async function runSecurityTests() {
       `Unset NODE_ENV resolves to production (stdout: ${probe.stdout.trim()} stderr: ${probe.stderr.trim().slice(0, 200)})`
     );
     console.log('  ✅ PASS: A deploy that forgets NODE_ENV fails closed');
+
+    const loadEnvWith = (overrides: NodeJS.ProcessEnv) =>
+      spawnSync(
+        process.execPath,
+        ['--import', import.meta.resolve('tsx'), '--input-type=module', '-e', `const m = await import(${JSON.stringify(envModuleUrl)}); console.log('TRUST_PROXY_HOPS=' + m.env.TRUST_PROXY_HOPS);`],
+        {
+          cwd: fs.mkdtempSync(path.join(os.tmpdir(), 'asthiwar-env-')),
+          env: { ...childEnv, ...overrides },
+          encoding: 'utf8',
+        }
+      );
+
+    // -----------------------------------------------------------------
+    // [Test 19] The SESSION_SECRET printed in .env.example does not run production
+    // -----------------------------------------------------------------
+    console.log('\n[Test 19] Published SESSION_SECRET');
+    // It signs the trusted-device cookie: whoever knows it can mint cookies that
+    // skip the per-account login lockout.
+    const exampleSecret = fs
+      .readFileSync(fileURLToPath(new URL('../../../.env.example', import.meta.url)), 'utf8')
+      .match(/^SESSION_SECRET=(.+)$/m)?.[1]
+      ?.trim();
+    assert(Boolean(exampleSecret), '.env.example still carries an example SESSION_SECRET to test against');
+    const prodWithExample = loadEnvWith({ NODE_ENV: 'production', SESSION_SECRET: exampleSecret });
+    assert(
+      prodWithExample.status !== 0 && /published example value/.test(prodWithExample.stderr),
+      `Production refuses to start on it (exit ${prodWithExample.status})`
+    );
+    const devWithExample = loadEnvWith({ NODE_ENV: 'development', SESSION_SECRET: exampleSecret });
+    assert(
+      devWithExample.status === 0,
+      `Local development still starts with it (exit ${devWithExample.status}: ${devWithExample.stderr.trim().slice(0, 200)})`
+    );
+    console.log('  ✅ PASS: The published example secret is refused in production');
+
+    // -----------------------------------------------------------------
+    // [Test 20] Trusted proxy hops match the deployment
+    // -----------------------------------------------------------------
+    console.log('\n[Test 20] Trusted proxy hops');
+    // Trusting a proxy that is not there lets any caller forge X-Forwarded-For
+    // and choose their own rate-limit bucket, so an API reached directly runs
+    // with 0.
+    assert(/TRUST_PROXY_HOPS=1\b/.test(loadEnvWith({}).stdout), 'Default is one hop — the load balancer on Render');
+    assert(/TRUST_PROXY_HOPS=0\b/.test(loadEnvWith({ TRUST_PROXY_HOPS: '0' }).stdout), 'An API reached directly can trust none');
+    assert(loadEnvWith({ TRUST_PROXY_HOPS: '-1' }).status !== 0, 'A negative hop count is refused');
+    const configuredHops = env.TRUST_PROXY_HOPS;
+    try {
+      env.TRUST_PROXY_HOPS = 0;
+      assert(createApp().get('trust proxy') === 0, 'createApp applies TRUST_PROXY_HOPS');
+    } finally {
+      env.TRUST_PROXY_HOPS = configuredHops;
+    }
+    console.log('  ✅ PASS: The trusted hop count is configurable');
+
+    // -----------------------------------------------------------------
+    // [Test 21] A fresh install has an admin without running the seed
+    // -----------------------------------------------------------------
+    console.log('\n[Test 21] First admin account');
+    // Each case runs against an admin table emptied inside a transaction that is
+    // then rolled back, so the seeded account the other suites sign in with stays.
+    class RollBack extends Error {}
+    const onFreshInstall = async (check: (tx: Parameters<Parameters<typeof db.transaction>[0]>[0]) => Promise<void>) => {
+      try {
+        await db.transaction(async (tx) => {
+          await tx.delete(adminUsers);
+          await check(tx);
+          throw new RollBack();
+        });
+      } catch (err) {
+        if (!(err instanceof RollBack)) throw err;
+      }
+    };
+
+    await onFreshInstall(async (tx) => {
+      const first = await ensureFirstAdmin({ production: true, database: tx });
+      assert(first.created && first.passwordSource === 'generated', 'Production with no password set generates one');
+      assert(first.created && first.email === 'admin@asthiwar.com', 'The default email is used');
+      const generated = first.created ? first.generatedPassword ?? '' : '';
+      assert(generated.length >= 20, 'The generated password is long');
+
+      const [account] = await tx.select().from(adminUsers);
+      assert(account.role === 'super_admin' && account.isActive, 'It is an active super admin');
+      assert(await bcrypt.compare(generated, account.passwordHash), 'The printed password is the one that signs in');
+      assert(
+        !(await bcrypt.compare(PUBLISHED_DEFAULT_ADMIN_PASSWORD, account.passwordHash)),
+        'It is not the password published in the source'
+      );
+
+      const second = await ensureFirstAdmin({ production: true, database: tx });
+      assert(!second.created, 'Later starts leave the account alone');
+    });
+
+    await onFreshInstall(async (tx) => {
+      const result = await ensureFirstAdmin({
+        production: true,
+        email: ' Owner@Example.com ',
+        password: PUBLISHED_DEFAULT_ADMIN_PASSWORD,
+        database: tx,
+      });
+      assert(result.created && result.passwordSource === 'generated', 'The published default is not used in production');
+      assert(result.created && result.email === 'owner@example.com', 'ADMIN_SEED_EMAIL is used, trimmed and lower-cased');
+    });
+
+    await onFreshInstall(async (tx) => {
+      const result = await ensureFirstAdmin({ production: true, password: 'a-chosen-password-123', database: tx });
+      assert(
+        result.created && result.passwordSource === 'configured' && result.generatedPassword === undefined,
+        'ADMIN_SEED_PASSWORD is used and never echoed back'
+      );
+    });
+
+    await onFreshInstall(async (tx) => {
+      const result = await ensureFirstAdmin({ production: false, database: tx });
+      assert(result.created && result.passwordSource === 'development-default', 'Development keeps the published default');
+    });
+
+    const [{ admins }] = await db.select({ admins: count() }).from(adminUsers);
+    assert(Number(admins) > 0, 'The seeded accounts are untouched after the rolled-back checks');
+    console.log('  ✅ PASS: The first admin account is created on its own, without a published password');
 
     console.log('\n-----------------------------------------------------------------');
     console.log('Results: All Security Hardening & Penetration Tests Passed!');

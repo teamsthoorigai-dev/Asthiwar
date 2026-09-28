@@ -4,6 +4,9 @@ import { LoginDto, ChangePasswordDto } from './auth.schema.js';
 import { SESSION_COOKIE_NAME } from '../../middleware/auth.js';
 import { env } from '../../config/env.js';
 import { clientIp } from '../../middleware/client-ip.js';
+import { admitAnonymousAuditRecord } from '../../middleware/errorHandler.js';
+import { logAuditEvent } from '../../services/audit.service.js';
+import { recordAdminAction } from '../../services/admin-audit.js';
 import { issueTrustedDevice } from './trusted-device.js';
 
 /**
@@ -40,6 +43,19 @@ export async function loginController(req: Request, res: Response, next: NextFun
     // Exempts this browser from the account-wide login lockout from now on.
     issueTrustedDevice(res, session.user.email);
 
+    logAuditEvent({
+      eventType: 'INFO',
+      action: 'ADMIN_LOGIN',
+      severity: 'LOW',
+      actorType: 'ADMIN',
+      actorId: session.user.email,
+      endpoint: req.originalUrl,
+      httpMethod: req.method,
+      statusCode: 200,
+      ipAddress,
+      userAgent,
+    }).catch(() => {});
+
     // The token travels only in the HttpOnly cookie. It was also returned here,
     // where any script on the page could read it — undoing HttpOnly — and no part
     // of the site used it.
@@ -53,6 +69,26 @@ export async function loginController(req: Request, res: Response, next: NextFun
     });
   } catch (error) {
     if (error instanceof AuthError) {
+      // Every refused sign-in is recorded, so guessing at an account shows up in
+      // the trail. Anyone can produce these, so they draw on the same per-address
+      // budget as other anonymous records; the excess is summarised, not dropped.
+      const address = clientIp(req);
+      if (admitAnonymousAuditRecord(address)) {
+        logAuditEvent({
+          eventType: 'WARN',
+          action: 'ADMIN_LOGIN_FAILED',
+          severity: 'MEDIUM',
+          actorType: 'ANONYMOUS_USER',
+          actorId: (req.body as LoginDto).email,
+          endpoint: req.originalUrl,
+          httpMethod: req.method,
+          statusCode: error.statusCode,
+          errorMessage: error.code,
+          ipAddress: address,
+          userAgent: req.get('user-agent'),
+        }).catch(() => {});
+      }
+
       res.status(error.statusCode).json({
         success: false,
         error: {
@@ -72,6 +108,8 @@ export async function logoutController(req: Request, res: Response, next: NextFu
     if (token) {
       await logout(token);
     }
+
+    recordAdminAction(req, { action: 'ADMIN_LOGOUT', severity: 'LOW', eventType: 'INFO' });
 
     // Clear session cookie
     res.clearCookie(SESSION_COOKIE_NAME, sessionCookieOptions);
@@ -107,6 +145,8 @@ export async function changePasswordController(req: Request, res: Response, next
     const dto = req.body as ChangePasswordDto;
     await changePassword(req.user.id, dto);
 
+    recordAdminAction(req, { action: 'CHANGE_PASSWORD', severity: 'HIGH' });
+
     // Clear cookie to enforce re-login with new password
     res.clearCookie(SESSION_COOKIE_NAME, sessionCookieOptions);
 
@@ -116,6 +156,14 @@ export async function changePasswordController(req: Request, res: Response, next
     });
   } catch (error) {
     if (error instanceof AuthError) {
+      recordAdminAction(req, {
+        action: 'CHANGE_PASSWORD_FAILED',
+        severity: 'MEDIUM',
+        eventType: 'WARN',
+        statusCode: error.statusCode,
+        metadata: { reason: error.code },
+      });
+
       res.status(error.statusCode).json({
         success: false,
         error: {
