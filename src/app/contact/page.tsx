@@ -42,7 +42,15 @@ export default async function ContactPage() {
                 {contactPage.details.map((detail) => (
                   <div className={styles.detail} key={detail.label}>
                     <dt className={styles.detailLabel}>{detail.label}</dt>
-                    <dd className={styles.placeholder}>{detail.value}</dd>
+                    <dd className={styles.placeholder}>
+                      {'href' in detail ? (
+                        <a href={detail.href} className={styles.detailLink}>
+                          {detail.value}
+                        </a>
+                      ) : (
+                        detail.value
+                      )}
+                    </dd>
                   </div>
                 ))}
               </dl>

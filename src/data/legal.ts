@@ -41,7 +41,7 @@ export type LegalPage = {
 
 /** The studio's contact details as links, so no legal page hard-codes them. */
 export const legalContact = {
-  email: { label: contact.email, href: `mailto:${contact.email}` },
-  phone: { label: contact.phone, href: `tel:${contact.phone.replace(/\s/g, '')}` },
+  email: { label: contact.email, href: contact.emailHref },
+  phone: { label: contact.phone, href: contact.phoneHref },
   address: contact.address,
 } as const satisfies { email: LegalLink; phone: LegalLink; address: string };

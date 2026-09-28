@@ -6,8 +6,8 @@ export const contactPage = {
   body: 'Tell us about your project, your site and what you want to build.',
   details: [
     { label: 'Address', value: contact.address },
-    { label: 'Phone', value: contact.phone },
-    { label: 'Email', value: contact.email },
+    { label: 'Phone', value: contact.phone, href: contact.phoneHref },
+    { label: 'Email', value: contact.email, href: contact.emailHref },
     { label: 'Hours', value: 'Mon – Sat: 9:00 AM – 6:30 PM' },
   ],
   map: {

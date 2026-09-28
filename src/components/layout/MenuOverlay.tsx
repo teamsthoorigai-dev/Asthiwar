@@ -126,11 +126,15 @@ export function MenuOverlay({ open, onClose, returnFocusTo }: Props) {
         <div className={styles.meta}>
           <div className={styles.metaBlock}>
             <p className={styles.metaLabel}>Phone</p>
-            <p className={styles.metaValue}>{contact.phone}</p>
+            <a href={contact.phoneHref} className={`${styles.metaValue} ${styles.metaLink}`}>
+              {contact.phone}
+            </a>
           </div>
           <div className={styles.metaBlock}>
             <p className={styles.metaLabel}>Email</p>
-            <p className={styles.metaValue}>{contact.email}</p>
+            <a href={contact.emailHref} className={`${styles.metaValue} ${styles.metaLink}`}>
+              {contact.email}
+            </a>
           </div>
           <div className={styles.metaBlock}>
             <p className={styles.metaLabel}>Studio</p>

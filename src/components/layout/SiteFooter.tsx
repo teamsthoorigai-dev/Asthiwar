@@ -90,10 +90,14 @@ export function SiteFooter() {
                 <p className={styles.value}>{contact.address}</p>
               </li>
               <li>
-                <p className={styles.value}>{contact.phone}</p>
+                <a href={contact.phoneHref} className={styles.link}>
+                  {contact.phone}
+                </a>
               </li>
               <li>
-                <p className={styles.value}>{contact.email}</p>
+                <a href={contact.emailHref} className={styles.link}>
+                  {contact.email}
+                </a>
               </li>
             </ul>
 

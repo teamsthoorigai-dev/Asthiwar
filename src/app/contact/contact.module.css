@@ -79,6 +79,24 @@
   line-height: var(--lh-body);
 }
 
+/* Underlined at rest, as the links on the legal pages are: a phone has no hover
+   to show that these open the dialer and the mail app. */
+.detailLink {
+  text-decoration: underline;
+  text-decoration-color: var(--oxide);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.2em;
+  transition:
+    color var(--dur-fast) var(--ease-out),
+    text-decoration-color var(--dur-fast) var(--ease-out);
+}
+
+.detailLink:hover,
+.detailLink:focus-visible {
+  color: var(--ink);
+  text-decoration-color: var(--ink);
+}
+
 .form {
   min-width: 0;
 }

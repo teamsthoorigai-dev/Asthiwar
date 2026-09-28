@@ -35,6 +35,10 @@ export const contact = {
   address: 'Coimbatore & Virudhunagar, Tamil Nadu',
   phone: '+91 94884 40123',
   email: 'contact@asthiwar.com',
+  // Tapping the number opens the dialer and the address the mail app. tel: takes
+  // the number without spaces.
+  phoneHref: 'tel:+919488440123',
+  emailHref: 'mailto:contact@asthiwar.com',
 } as const;
 
 export const socials: NavLink[] = [

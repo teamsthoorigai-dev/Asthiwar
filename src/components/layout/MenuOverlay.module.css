@@ -136,6 +136,15 @@
   margin: 0;
 }
 
+.metaLink {
+  transition: color var(--dur-fast) var(--ease-out);
+}
+
+.metaLink:hover,
+.metaLink:focus-visible {
+  color: var(--accent);
+}
+
 @media (max-width: 640px), (max-height: 720px) {
   .body {
     padding: var(--s-3) var(--gutter);
