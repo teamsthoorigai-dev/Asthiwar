@@ -8,7 +8,7 @@ import './globals.css';
 export const metadata: Metadata = {
   metadataBase: new URL('https://asthiwar.com'),
   title: {
-    default: 'ASTHIWAR — Architecture & Construction in Coimbatore',
+    default: 'ASTHIWAR',
     template: '%s — ASTHIWAR',
   },
   description:
@@ -22,7 +22,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: 'website',
     siteName: 'ASTHIWAR Design & Build',
-    title: 'ASTHIWAR — Architecture & Construction',
+    title: 'ASTHIWAR',
     description:
       'Architecture, engineering and construction in Coimbatore, coordinated through one process.',
     url: '/',

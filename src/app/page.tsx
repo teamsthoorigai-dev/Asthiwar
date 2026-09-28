@@ -11,11 +11,11 @@ import { SocialDock } from '@/components/layout/SocialDock';
 import { faqContent, workGallery } from '@/data/home';
 
 export const metadata: Metadata = {
-  title: 'Architecture & Construction in Coimbatore',
+  title: 'Asthiwar ',
   description:
     'Architecture, engineering and construction in Coimbatore — coordinated through one process, from the first site walk to the first monsoon.',
   openGraph: {
-    title: 'ASTHIWAR — Architecture & Construction in Coimbatore',
+    title: 'ASTHIWAR',
     description:
       'Architecture, engineering and construction in Coimbatore — coordinated through one process, from the first site walk to the first monsoon.',
     url: '/',
