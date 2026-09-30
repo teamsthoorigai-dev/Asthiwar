@@ -1,14 +1,16 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Lock, Mail, ShieldAlert, ArrowRight, Loader2, KeyRound } from 'lucide-react';
+import { Lock, Mail, ShieldAlert, ShieldCheck, ArrowRight, Loader2, KeyRound } from 'lucide-react';
 import { adminLogin, AdminUser } from '@/lib/api/admin';
 
 interface AdminLoginFormProps {
   onSuccess: (user: AdminUser) => void;
+  /** Shown above the form, e.g. after a password change signs the account out. */
+  notice?: string | null;
 }
 
-export function AdminLoginForm({ onSuccess }: AdminLoginFormProps) {
+export function AdminLoginForm({ onSuccess, notice }: AdminLoginFormProps) {
   // Not prefilled: an address on the form is a name an attacker does not have to
   // guess, and it is the seeded one.
   const [email, setEmail] = useState<string>('');
@@ -45,6 +47,13 @@ export function AdminLoginForm({ onSuccess }: AdminLoginFormProps) {
       </div>
 
       <div className="calculator-card p-6">
+        {notice && !error && (
+          <div className="mb-4 p-3 rounded bg-green-500/10 border border-green-500/30 text-green-700 dark:text-green-400 text-xs flex items-center gap-2">
+            <ShieldCheck className="w-4 h-4 shrink-0" />
+            <span>{notice}</span>
+          </div>
+        )}
+
         {error && (
           <div className="mb-4 p-3 rounded bg-red-500/10 border border-red-500/30 text-red-600 dark:text-red-400 text-xs flex items-center gap-2">
             <ShieldAlert className="w-4 h-4 shrink-0" />

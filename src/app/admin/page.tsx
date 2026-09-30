@@ -2,8 +2,9 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import { Loader2 } from 'lucide-react';
-import { adminGetMe, AdminUser } from '@/lib/api/admin';
+import { adminGetMe, adminLogout, AdminUser } from '@/lib/api/admin';
 import { AdminLoginForm } from '@/components/admin/AdminLoginForm';
+import { AdminChangePasswordDialog } from '@/components/admin/AdminChangePasswordDialog';
 import { AdminLayout, AdminTab } from '@/components/admin/AdminLayout';
 import { AdminDashboardOverview } from '@/components/admin/AdminDashboardOverview';
 import { AdminEnquiriesManager } from '@/components/admin/AdminEnquiriesManager';
@@ -30,6 +31,7 @@ function isAdminTab(value: string): value is AdminTab {
 export default function AdminPortalPage() {
   const [user, setUser] = useState<AdminUser | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+  const [loginNotice, setLoginNotice] = useState<string | null>(null);
   // The address bar is the source of truth, so a refresh, a bookmark and
   // back/forward all restore the same tab. An unrecognised hash falls back to
   // the dashboard rather than blanking the console.
@@ -67,7 +69,34 @@ export default function AdminPortalPage() {
   if (!user) {
     return (
       <div className="admin-console min-h-screen flex items-center justify-center bg-background">
-        <AdminLoginForm onSuccess={setUser} />
+        <AdminLoginForm
+          notice={loginNotice}
+          onSuccess={(signedIn) => {
+            setLoginNotice(null);
+            setUser(signedIn);
+          }}
+        />
+      </div>
+    );
+  }
+
+  // Still on the published default password: the server refuses everything but
+  // changing it, so that is all this screen offers.
+  if (user.mustChangePassword) {
+    return (
+      <div className="admin-console min-h-screen bg-background">
+        <AdminChangePasswordDialog
+          required
+          onChanged={() => {
+            setLoginNotice('Password changed. Sign in with your new password.');
+            setUser(null);
+          }}
+          onClose={() => {
+            adminLogout()
+              .catch((err) => console.error('Logout error:', err))
+              .finally(() => setUser(null));
+          }}
+        />
       </div>
     );
   }

@@ -63,7 +63,7 @@ export function AdminLayout({
     { id: 'enquiries', label: 'Enquiries & Leads', icon: Users },
     { id: 'estimates', label: 'Estimates Explorer', icon: FileSpreadsheet },
     { id: 'pricing', label: 'Pricing Matrix Config', icon: Sliders },
-    { id: 'audit', label: 'Audit Trail', icon: ScrollText },
+    //{ id: 'audit', label: 'Audit Trail', icon: ScrollText },
     // Only a super admin can reach these endpoints; the tab is shown to everyone
     // and the server refuses the calls, so a role change needs no reload here.
     // { id: 'users', label: 'Admin Accounts', icon: UserCog },

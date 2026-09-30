@@ -86,15 +86,6 @@ export async function login(
     throw new AuthError('Account is disabled. Please contact administrator.', 403, 'ACCOUNT_DISABLED');
   }
 
-  if (env.NODE_ENV === 'production' && credentials.password === PUBLISHED_DEFAULT_ADMIN_PASSWORD) {
-    throw new AuthError(
-      'This account still uses the default password published in the source code, so sign-in ' +
-        'is blocked. Set ADMIN_SEED_PASSWORD on the server and redeploy to replace it.',
-      403,
-      'DEFAULT_PASSWORD_BLOCKED'
-    );
-  }
-
   // 3. Generate secure random session token
   const token = crypto.randomBytes(32).toString('hex');
   const tokenHash = hashSessionToken(token);
@@ -122,6 +113,8 @@ export async function login(
     role: user.role,
     isActive: user.isActive,
     createdAt: user.createdAt,
+    mustChangePassword:
+      env.NODE_ENV === 'production' && credentials.password === PUBLISHED_DEFAULT_ADMIN_PASSWORD,
   };
 
   return {
@@ -148,6 +141,7 @@ export async function verifySession(token: string): Promise<AdminUserDto> {
       role: adminUsers.role,
       isActive: adminUsers.isActive,
       createdAt: adminUsers.createdAt,
+      passwordHash: adminUsers.passwordHash,
     })
     .from(adminSessions)
     .innerJoin(adminUsers, eq(adminUsers.id, adminSessions.userId))
@@ -176,7 +170,28 @@ export async function verifySession(token: string): Promise<AdminUserDto> {
     role: s.role,
     isActive: s.isActive,
     createdAt: s.createdAt,
+    mustChangePassword: env.NODE_ENV === 'production' && (await usesPublishedDefault(s.passwordHash)),
   };
+}
+
+/**
+ * Whether a stored hash is of the password published in the source.
+ *
+ * Production signs in on that password so a fresh deploy works with no setup,
+ * but its session is held to changing the password (requireAdminAuth). This runs
+ * on every authenticated request, so the bcrypt comparison is kept per hash: a
+ * changed password is a new hash and is checked afresh.
+ */
+const publishedDefaultByHash = new Map<string, Promise<boolean>>();
+
+function usesPublishedDefault(passwordHash: string): Promise<boolean> {
+  let check = publishedDefaultByHash.get(passwordHash);
+  if (!check) {
+    if (publishedDefaultByHash.size >= 100) publishedDefaultByHash.clear();
+    check = bcrypt.compare(PUBLISHED_DEFAULT_ADMIN_PASSWORD, passwordHash).catch(() => false);
+    publishedDefaultByHash.set(passwordHash, check);
+  }
+  return check;
 }
 
 export async function logout(token: string): Promise<void> {

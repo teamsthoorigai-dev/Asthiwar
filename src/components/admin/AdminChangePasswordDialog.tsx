@@ -9,6 +9,11 @@ interface AdminChangePasswordDialogProps {
   /** Called once the password is changed — every session is gone, so sign out. */
   onChanged: () => void;
   onClose: () => void;
+  /**
+   * The account is on the published default password and may do nothing else
+   * until it is changed: no close button, and the way out is signing out.
+   */
+  required?: boolean;
 }
 
 /** Mirrors changePasswordSchema on the server, so the rule is stated once here. */
@@ -22,7 +27,7 @@ const MIN_PASSWORD_LENGTH = 8;
  * printed the seeded default for anyone who loaded it. Both halves of that are
  * now closed: the credentials are off the login form, and this is the screen.
  */
-export function AdminChangePasswordDialog({ onChanged, onClose }: AdminChangePasswordDialogProps) {
+export function AdminChangePasswordDialog({ onChanged, onClose, required = false }: AdminChangePasswordDialogProps) {
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -73,18 +78,27 @@ export function AdminChangePasswordDialog({ onChanged, onClose }: AdminChangePas
           <div className="flex items-center gap-2">
             <KeyRound className="w-4 h-4 text-muted" aria-hidden="true" />
             <h2 id="admin-change-password-title" className="text-sm font-extrabold">
-              Change Password
+              {required ? 'Choose a New Password' : 'Change Password'}
             </h2>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="text-muted hover:text-foreground transition-colors"
-            aria-label="Close"
-          >
-            <X size={16} />
-          </button>
+          {!required && (
+            <button
+              type="button"
+              onClick={onClose}
+              className="text-muted hover:text-foreground transition-colors"
+              aria-label="Close"
+            >
+              <X size={16} />
+            </button>
+          )}
         </div>
+
+        {required && (
+          <p className="mb-4 text-[11px] text-muted leading-relaxed">
+            This account is still on the default password, which anyone can read in
+            the source code. Choose your own to open the admin portal.
+          </p>
+        )}
 
         {error && (
           <div className="mb-3 p-2.5 rounded bg-red-500/10 border border-red-500/30 text-red-600 dark:text-red-400 text-[11px] flex items-start gap-2">
@@ -154,7 +168,7 @@ export function AdminChangePasswordDialog({ onChanged, onClose }: AdminChangePas
               onClick={onClose}
               className="button button--ghost text-xs py-2 px-3"
             >
-              Cancel
+              {required ? 'Sign out' : 'Cancel'}
             </button>
             <button
               type="submit"

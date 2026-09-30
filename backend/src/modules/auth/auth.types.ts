@@ -5,6 +5,11 @@ export interface AdminUserDto {
   role: string;
   isActive: boolean;
   createdAt: Date;
+  /**
+   * Production only: the account is still on the password published in the
+   * source, so its session may change the password and nothing else.
+   */
+  mustChangePassword?: boolean;
 }
 
 export interface SessionResult {

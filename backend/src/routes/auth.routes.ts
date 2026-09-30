@@ -7,7 +7,11 @@ import {
   meController,
 } from '../modules/auth/auth.controller.js';
 import { validateRequest } from '../middleware/validate.js';
-import { requireAdminAuth, requireRole } from '../middleware/auth.js';
+import {
+  requireAdminAuth,
+  requireAdminAuthForPasswordChange,
+  requireRole,
+} from '../middleware/auth.js';
 import { clientIpKey } from '../middleware/client-ip.js';
 import { submittedEmail, trustedDeviceFor } from '../modules/auth/trusted-device.js';
 import { changePasswordSchema, loginSchema } from '../modules/auth/auth.schema.js';
@@ -110,10 +114,10 @@ router.post(
 );
 
 // POST /api/v1/admin/auth/logout — Invalidate current session
-router.post('/logout', requireAdminAuth, logoutController);
+router.post('/logout', requireAdminAuthForPasswordChange, logoutController);
 
 // GET /api/v1/admin/auth/me — Verify active session and return profile
-router.get('/me', requireAdminAuth, meController);
+router.get('/me', requireAdminAuthForPasswordChange, meController);
 
 /**
  * POST /api/v1/admin/auth/password — Change the signed-in account's password.
@@ -126,7 +130,7 @@ router.get('/me', requireAdminAuth, meController);
  */
 router.post(
   '/password',
-  requireAdminAuth,
+  requireAdminAuthForPasswordChange,
   passwordChangeLimiter,
   validateRequest({ body: changePasswordSchema }),
   changePasswordController

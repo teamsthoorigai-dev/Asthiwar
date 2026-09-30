@@ -5,6 +5,8 @@ export interface AdminUser {
   email: string;
   fullName: string;
   role: string;
+  /** Still on the published default password: the portal only lets it be changed. */
+  mustChangePassword?: boolean;
 }
 
 /** The session itself is only ever in the HttpOnly cookie; it is not in this body. */

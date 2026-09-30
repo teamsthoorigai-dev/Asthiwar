@@ -8,6 +8,27 @@ export async function requireAdminAuth(
   res: Response,
   next: NextFunction
 ): Promise<void> {
+  return authenticate(req, res, next, false);
+}
+
+/**
+ * requireAdminAuth, but also admitting a session that must change its password
+ * first. Only for what that screen needs: /me, /password and /logout.
+ */
+export async function requireAdminAuthForPasswordChange(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  return authenticate(req, res, next, true);
+}
+
+async function authenticate(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+  allowPendingPasswordChange: boolean
+): Promise<void> {
   try {
     let token: string | undefined;
 
@@ -35,6 +56,20 @@ export async function requireAdminAuth(
 
     // 3. Verify session in DB
     const user = await verifySession(token);
+
+    // The published default password gets a session in production so a fresh
+    // deploy can sign in, but anyone who read the source has it too: until it is
+    // changed, the session can do nothing else.
+    if (user.mustChangePassword && !allowPendingPasswordChange) {
+      res.status(403).json({
+        success: false,
+        error: {
+          code: 'PASSWORD_CHANGE_REQUIRED',
+          message: 'Change the default password before using the admin portal.',
+        },
+      });
+      return;
+    }
 
     req.user = user;
     req.sessionToken = token;

@@ -1207,8 +1207,8 @@ async function seedAddons() {
  *     password printed once below (ensureFirstAdmin — the API does the same on
  *     start, for installs that never run this seed).
  *   - any existing account still on the default is moved to ADMIN_SEED_PASSWORD
- *     when one is configured, and its sessions are ended. Setting the variable and
- *     redeploying is the recovery path, since production login refuses the default.
+ *     when one is configured, and its sessions are ended. Without it, production
+ *     signs in on the default only to change it; nothing else is allowed until then.
  */
 async function seedAdminUser() {
   // Anything not explicitly development or test is treated as production, so a
@@ -1240,8 +1240,8 @@ async function seedAdminUser() {
     if (!configuredPassword) {
       console.warn(
         `  ⚠️  ${onDefault.length} admin account(s) still use the published default password.` +
-          (isProduction ? ' Sign-in with it is refused in production.' : '') +
-          ' Set ADMIN_SEED_PASSWORD and re-run the seed to replace it.'
+          (isProduction ? ' Sign in with it and the portal will ask for a new one.' : '') +
+          ' Or set ADMIN_SEED_PASSWORD and re-run the seed to replace it.'
       );
       return;
     }

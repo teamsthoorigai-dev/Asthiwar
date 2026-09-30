@@ -359,15 +359,30 @@ async function runSecurityTests() {
       await db.delete(adminUsers).where(eq(adminUsers.id, disabledUser.id));
     }
 
-    // Production refuses the password published in the source.
+    // Production signs in on the password published in the source, but that
+    // session may only change it.
     const realNodeEnv = env.NODE_ENV;
     env.NODE_ENV = 'production';
     try {
       const defaultLogin = await timeLogin('admin@asthiwar.com', PUBLISHED_DEFAULT_ADMIN_PASSWORD);
       assert(
-        defaultLogin.res.status === 403 && defaultLogin.res.body.error.code === 'DEFAULT_PASSWORD_BLOCKED',
-        `Production blocks the published default password (got ${defaultLogin.res.status})`
+        defaultLogin.res.status === 200 && defaultLogin.res.body.data.user.mustChangePassword === true,
+        `Production signs in on the default password with a change required (got ${defaultLogin.res.status})`
       );
+      const defaultCookie = (defaultLogin.res.headers['set-cookie'] ?? [])
+        .find((c) => c.startsWith(`${SESSION_COOKIE_NAME}=`))!
+        .split(';')[0];
+      const blocked = await makeRequest(server, {
+        path: '/api/v1/admin/enquiries',
+        headers: { Cookie: defaultCookie },
+      });
+      assert(
+        blocked.status === 403 && blocked.body.error.code === 'PASSWORD_CHANGE_REQUIRED',
+        `A default-password session cannot reach the portal (got ${blocked.status})`
+      );
+      const me = await makeRequest(server, { path: '/api/v1/admin/auth/me', headers: { Cookie: defaultCookie } });
+      assert(me.status === 200 && me.body.data.user.mustChangePassword === true, 'It can still read /me');
+      await makeRequest(server, { method: 'POST', path: '/api/v1/admin/auth/logout', headers: { Cookie: defaultCookie } });
     } finally {
       env.NODE_ENV = realNodeEnv;
     }
