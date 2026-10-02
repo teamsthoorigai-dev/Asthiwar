@@ -71,20 +71,15 @@ import {
 import { useAdminRoute, writeAdminHash } from '@/lib/useAdminRoute';
 import {
   anchorOf,
-  canLink,
   cellKey,
-  currentLadder,
-  deriveGrid,
   diffGrids,
   formatRupees,
-  ladderFromColumn,
-  moveBrand,
   parseRupees,
   rateAt,
   rowsToSave,
   toPaise,
   withIncludedBrand,
-  type Ladder,
+  withMirrors,
   type MatrixShape,
   type RateGrid,
 } from '@/lib/rateMatrix';
@@ -216,24 +211,11 @@ interface OptionForm {
    * is why no option's price could be edited from this console at all.
    */
   packageDeltas: Record<number, string>;
-  /**
-   * Whether the brand's rates move together. A brand's rate in each package is
-   * its gap to the brand that package includes (src/lib/rateMatrix.ts), so one
-   * rate fixes the rest; typing it in any package fills in the others, and a
-   * package that includes this brand is re-measured from it on save.
-   */
-  linked: boolean;
-  /** The component's price ladder, with this brand where its typed rates put it. */
-  ladder: Ladder | null;
-  /** Rates are derived only once one is typed, so renaming a brand reprices nothing. */
-  ratesTouched: boolean;
 }
 
 interface RateColumnForm {
   /** Each brand's rate in the package, as typed, keyed by option id. */
   rates: Record<number, string>;
-  /** Whether the other packages are re-measured from this column on save. */
-  linked: boolean;
 }
 
 interface AddonForm {
@@ -270,11 +252,8 @@ const EMPTY_OPTION_FORM: OptionForm = {
   slug: '',
   description: '',
   packageDeltas: {},
-  linked: true,
-  ladder: null,
-  ratesTouched: false,
 };
-const EMPTY_RATE_COLUMN_FORM: RateColumnForm = { rates: {}, linked: true };
+const EMPTY_RATE_COLUMN_FORM: RateColumnForm = { rates: {} };
 const EMPTY_ADDON_FORM: AddonForm = {
   name: '',
   slug: '',
@@ -331,27 +310,6 @@ function resolveLiveDelta(
   const universal = live.find((pr) => pr.packageId === null);
   if (universal) return { amount: Number(universal.priceDelta) || 0, inherited: true };
   return { amount: 0, inherited: false };
-}
-
-/**
- * A brand's rate in every package that includes a brand, as the ladder places
- * it, written back into the brand dialog's inputs. `except` is the input being
- * typed in, left exactly as typed.
- */
-function linkedRow(
-  shape: MatrixShape,
-  ladder: Ladder,
-  optionId: number,
-  packageDeltas: Record<number, string>,
-  except: number
-): Record<number, string> {
-  const next = { ...packageDeltas };
-  for (const column of shape.columns) {
-    const anchor = anchorOf(shape, column.packageId);
-    if (anchor === null || column.packageId === except) continue;
-    next[column.packageId] = formatRupees((ladder[optionId] ?? 0) - (ladder[anchor] ?? 0));
-  }
-  return next;
 }
 
 function toOptionalNumber(value: string): number | undefined {
@@ -1208,8 +1166,8 @@ export function AdminPricingConfigManager() {
 
   /**
    * The brand dialog's view of its component: the matrix with the brand's row as
-   * typed (a new row, while creating) and, once a rate is typed with linking on,
-   * everything that row moves.
+   * typed (a new row, while creating), and each changed rate's mirror cell set to
+   * the opposite amount (src/lib/rateMatrix.ts).
    */
   const optionMatrixFor = (dialog: OptionDialog, form: OptionForm) => {
     const specItem = findSpecItem(dialog.itemId);
@@ -1230,27 +1188,22 @@ export function AdminPricingConfigManager() {
       if (rate !== null) typed[cellKey(optionId, pkg.id)] = rate;
     }
 
-    const after =
-      form.linked && form.ratesTouched && form.ladder ? deriveGrid(shape, form.ladder, typed) : typed;
+    const after = withMirrors(shape, base.grid, typed);
 
     return { ...base, specItem, optionId, shape, after };
   };
 
   const openCreateOption = (specItem: AdminSpecificationItem) => {
-    const { shape, grid, packages } = matrixFor(specItem);
-    const ladder = currentLadder(shape, grid);
+    const { packages } = matrixFor(specItem);
     setOptionForm({
       ...EMPTY_OPTION_FORM,
       packageDeltas: Object.fromEntries(packages.map((pkg) => [pkg.id, '0.00'])),
-      linked: ladder !== null,
-      ladder: ladder ? { ...ladder, [NEW_OPTION_ID]: 0 } : null,
     });
     setOptionDialog({ mode: 'create', itemId: specItem.id, itemName: specItem.name });
   };
 
   const openEditOption = (option: BrandOption, specItem: AdminSpecificationItem) => {
-    const { shape, grid, packages } = matrixFor(specItem);
-    const ladder = currentLadder(shape, grid);
+    const { grid, packages } = matrixFor(specItem);
 
     setOptionForm({
       name: option.brandName,
@@ -1259,40 +1212,17 @@ export function AdminPricingConfigManager() {
       packageDeltas: Object.fromEntries(
         packages.map((pkg) => [pkg.id, formatRupees(rateAt(grid, option.id, pkg.id))])
       ),
-      linked: ladder !== null,
-      ladder,
-      ratesTouched: false,
     });
     setOptionDialog({ mode: 'edit', option, itemId: specItem.id, itemName: specItem.name });
   };
 
   const handleOptionRateChange = (packageId: number, raw: string) => {
-    if (!optionDialog) return;
-    const context = optionMatrixFor(optionDialog, optionForm);
-
-    setOptionForm((prev) => {
-      // Stored as typed. Coercing to a number here would erase a half-entered
-      // '-' or '1.' on every keystroke.
-      const next: OptionForm = {
-        ...prev,
-        packageDeltas: { ...prev.packageDeltas, [packageId]: raw },
-        ratesTouched: true,
-      };
-      if (!prev.linked || !prev.ladder || !context) return next;
-
-      const rate = parseRupees(raw);
-      const ladder =
-        rate === null ? null : moveBrand(context.shape, prev.ladder, context.optionId, packageId, rate);
-      // Not a number yet, or a package that includes no brand to measure from:
-      // the rate stands on its own.
-      if (!ladder) return next;
-
-      return {
-        ...next,
-        ladder,
-        packageDeltas: linkedRow(context.shape, ladder, context.optionId, next.packageDeltas, packageId),
-      };
-    });
+    // Stored as typed. Coercing to a number here would erase a half-entered
+    // '-' or '1.' on every keystroke.
+    setOptionForm((prev) => ({
+      ...prev,
+      packageDeltas: { ...prev.packageDeltas, [packageId]: raw },
+    }));
   };
 
   const handleSubmitOption = async (e: React.FormEvent) => {
@@ -1386,8 +1316,8 @@ export function AdminPricingConfigManager() {
 
   /**
    * One package's column of a component's rates: what a customer on that package
-   * pays to switch to each brand. With linking on, the column sets every brand's
-   * place on the ladder and the other packages are re-measured from it.
+   * pays to switch to each brand. Each changed rate's mirror in the other
+   * packages is set to the opposite amount; nothing else moves.
    */
   const rateColumnMatrixFor = (dialog: RateColumnDialog, form: RateColumnForm) => {
     const specItem = findSpecItem(dialog.itemId);
@@ -1405,19 +1335,17 @@ export function AdminPricingConfigManager() {
       else typed[cellKey(opt.id, pkg.id)] = rate;
     }
 
-    const ladder = form.linked ? ladderFromColumn(base.shape, typed, pkg.id) : null;
-    const after = ladder ? deriveGrid(base.shape, ladder, base.grid) : typed;
+    const after = withMirrors(base.shape, base.grid, typed);
 
     return { ...base, specItem, pkg, anchor, invalid, after };
   };
 
   const openRateColumn = (specItem: AdminSpecificationItem, packageId: number) => {
-    const { shape, grid } = matrixFor(specItem);
+    const { grid } = matrixFor(specItem);
     setRateColumnForm({
       rates: Object.fromEntries(
         specItem.options.map((opt) => [opt.id, formatRupees(rateAt(grid, opt.id, packageId))])
       ),
-      linked: anchorOf(shape, packageId) !== null,
     });
     setRateColumnDialog({ itemId: specItem.id, packageId });
   };
@@ -2563,7 +2491,7 @@ export function AdminPricingConfigManager() {
                             Brands &amp; Package Rates
                           </span>
                           <span className="text-[11px] text-muted">
-                            Rates are linked: edit one brand&apos;s row (&lsquo;Edit Rates&rsquo;) or one package&apos;s column (&lsquo;Edit column&rsquo;) and the rest of the matrix follows.
+                            Every rate has a mirror in another package, e.g. +₹35 to upgrade in Basic ↔ −₹35 to downgrade in Luxury. Editing a rate updates its mirror and nothing else.
                           </span>
                         </div>
 
@@ -3511,32 +3439,10 @@ export function AdminPricingConfigManager() {
               <legend className="font-bold text-muted block mb-1">
                 Rate Delta per Package (₹ / sq.ft)
               </legend>
-              {optionMatrix && canLink(optionMatrix.shape) && (
-                <label className="flex items-start gap-2 mb-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={optionForm.linked}
-                    onChange={(e) => {
-                      const linked = e.target.checked;
-                      // Relinking waits for the next rate typed, so rates entered
-                      // one by one are never rewritten by the toggle alone.
-                      setOptionForm((prev) => ({
-                        ...prev,
-                        linked,
-                        ratesTouched: linked ? false : prev.ratesTouched,
-                      }));
-                    }}
-                    className="calculator-checkbox mt-0.5"
-                  />
-                  <span>
-                    <span className="font-semibold block">Link rates across packages</span>
-                    <span className="text-[10px] text-muted">
-                      Type this brand&apos;s rate for any one package and the others fill in,
-                      measured from the brand each package includes.
-                    </span>
-                  </span>
-                </label>
-              )}
+              <span className="text-[10px] text-muted block mb-2">
+                Each rate you change also sets its mirror — the same amount with the
+                opposite sign in the package that includes this brand. No other rate moves.
+              </span>
               <div className="space-y-1.5">
                 {(optionMatrix?.packages ?? config?.packages ?? []).map((pkg) => (
                   <div key={pkg.id} className="flex items-center gap-2">
@@ -3642,31 +3548,11 @@ export function AdminPricingConfigManager() {
               from the brand {rateColumnMatrix.pkg.name} includes.
             </p>
 
-            {rateColumnMatrix.anchor !== null ? (
-              <label className="flex items-start gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={rateColumnForm.linked}
-                  onChange={(e) => {
-                    const linked = e.target.checked;
-                    setRateColumnForm((prev) => ({ ...prev, linked }));
-                  }}
-                  className="calculator-checkbox mt-0.5"
-                />
-                <span>
-                  <span className="font-semibold block">Update the other packages to match</span>
-                  <span className="text-[10px] text-muted">
-                    These rates set each brand&apos;s place on the price ladder. Every other
-                    package is re-measured from the brand it includes.
-                  </span>
-                </span>
-              </label>
-            ) : (
-              <p className="text-[11px] text-muted leading-relaxed">
-                {rateColumnMatrix.pkg.name} includes no {rateColumnMatrix.specItem.name} brand, so
-                there is nothing to measure the other packages from. Saving changes this column only.
-              </p>
-            )}
+            <p className="text-[11px] text-muted leading-relaxed">
+              {rateColumnMatrix.anchor !== null
+                ? 'Each rate you change also updates its mirror in another package — the same amount with the opposite sign. No other rate moves.'
+                : `${rateColumnMatrix.pkg.name} includes no ${rateColumnMatrix.specItem.name} brand, so its rates have no mirror. Saving changes this column only.`}
+            </p>
 
             <fieldset>
               <legend className="font-bold text-muted block mb-1">

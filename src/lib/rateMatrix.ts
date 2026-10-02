@@ -1,22 +1,18 @@
 /**
- * A component's brand rates, kept consistent across package tiers.
+ * A component's brand rates across package tiers.
  *
  * Every figure in the specification matrix answers one question: what does a
- * customer on package P pay to switch to brand B? The answer is the gap between
- * B and the brand P already includes, each measured on one shared scale — the
- * brand's position on the component's cost ladder:
+ * customer on package P pay to switch to brand B? Each tier includes one brand
+ * at no charge, so every switch has a mirror: Basic (incl. ISI) charges +₹35 to
+ * move up to Ultratech, and Luxury (incl. Ultratech) credits −₹35 to move down
+ * to ISI. Both are the same swap seen from either end, so they are kept equal
+ * and opposite:
  *
- *     rate(B, P) = ladder(B) − ladder(included(P))
+ *     rate(B, P) = −rate(included(P), Q)   where Q includes B
  *
- * The seed is written this way (database/src/seeds/seed.ts, Option Prices) and
- * all 24 of its components obey it exactly. So four brands across four tiers
- * are sixteen figures but only four facts, one per brand. Edited one figure at a
- * time, they stop agreeing with each other: Ultratech +₹35 over ISI in Basic,
- * while the Luxury column still credits ISI −₹30 against Ultratech.
- *
- * This is the arithmetic for editing a row or a column and deriving the rest.
- * Amounts are whole paise throughout, so a derived difference never carries
- * float noise into a price.
+ * Editing a rate updates its mirror and nothing else — no other tier is
+ * re-priced. Amounts are whole paise throughout, so a mirrored figure never
+ * carries float noise into a price.
  */
 
 export type Paise = number;
@@ -81,11 +77,6 @@ export function anchorOf(shape: MatrixShape, packageId: number): number | null {
   return anchor !== null && shape.optionIds.includes(anchor) ? anchor : null;
 }
 
-/** Whether any column includes a brand. Without one there is no ladder to derive from. */
-export function canLink(shape: MatrixShape): boolean {
-  return shape.columns.some((column) => anchorOf(shape, column.packageId) !== null);
-}
-
 /**
  * The ladder one column implies: each brand's rate there, measured from the
  * brand the column includes. Null for a column that includes none.
@@ -103,9 +94,9 @@ export function ladderFromColumn(shape: MatrixShape, grid: RateGrid, packageId: 
 }
 
 /**
- * The ladder the matrix implies, read from the first column that includes a
- * brand. When the matrix already obeys the rule every column gives the same
- * answer; when it does not, this is the column the rest is rebuilt from.
+ * Each brand's position relative to the others, read from the first column
+ * that includes a brand. Used to re-measure a column when the brand it
+ * includes changes, so each brand keeps its gap to the others.
  */
 export function currentLadder(shape: MatrixShape, grid: RateGrid): Ladder | null {
   for (const column of shape.columns) {
@@ -116,39 +107,36 @@ export function currentLadder(shape: MatrixShape, grid: RateGrid): Ladder | null
 }
 
 /**
- * Every rate the ladder implies. A column that includes no brand keeps its rates
- * from `grid` — there is nothing to derive them from.
+ * The cells that mirror (optionId, packageId): the brand `packageId` includes,
+ * in each tier that includes `optionId`. Empty when the tier includes no brand
+ * or includes this one (its rate there is fixed at zero), or when no tier
+ * includes `optionId`.
  */
-export function deriveGrid(shape: MatrixShape, ladder: Ladder, grid: RateGrid): RateGrid {
-  const next: RateGrid = { ...grid };
-  for (const column of shape.columns) {
-    const anchor = anchorOf(shape, column.packageId);
-    if (anchor === null) continue;
-    for (const optionId of shape.optionIds) {
-      next[cellKey(optionId, column.packageId)] = (ladder[optionId] ?? 0) - (ladder[anchor] ?? 0);
-    }
-  }
-  return next;
+export function mirrorsOf(
+  shape: MatrixShape,
+  optionId: number,
+  packageId: number
+): Array<{ optionId: number; packageId: number }> {
+  const anchor = anchorOf(shape, packageId);
+  if (anchor === null || anchor === optionId) return [];
+  return shape.columns
+    .filter((column) => anchorOf(shape, column.packageId) === optionId)
+    .map((column) => ({ optionId: anchor, packageId: column.packageId }));
 }
 
 /**
- * Move one brand along the ladder so that its rate in `packageId` becomes `rate`.
- *
- * A brand's rates across tiers are one fact seen from several places, so they
- * move together: its other rates follow, and so does every rate in a tier that
- * includes it. Null when the column cannot anchor the move — it includes no
- * brand, or includes this one, whose rate there is fixed at zero.
+ * `typed` with each rate that differs from `before` mirrored: its mirror cell
+ * becomes the same amount with the opposite sign. Every other cell is left as
+ * it is in `typed`.
  */
-export function moveBrand(
-  shape: MatrixShape,
-  ladder: Ladder,
-  optionId: number,
-  packageId: number,
-  rate: Paise
-): Ladder | null {
-  const anchor = anchorOf(shape, packageId);
-  if (anchor === null || anchor === optionId) return null;
-  return { ...ladder, [optionId]: (ladder[anchor] ?? 0) + rate };
+export function withMirrors(shape: MatrixShape, before: RateGrid, typed: RateGrid): RateGrid {
+  const next: RateGrid = { ...typed };
+  for (const change of diffGrids(shape, before, typed)) {
+    for (const mirror of mirrorsOf(shape, change.optionId, change.packageId)) {
+      next[cellKey(mirror.optionId, mirror.packageId)] = change.to === 0 ? 0 : -change.to;
+    }
+  }
+  return next;
 }
 
 /**
