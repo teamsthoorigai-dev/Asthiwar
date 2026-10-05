@@ -348,15 +348,15 @@ async function seedSpecifications(
     { itemSlug: "waterproofing_basement_pcc", slug: "pcc_dr_fixit_prem", brandName: "PCC + Dr.Fixit/Fosroc/Bostik Waterproofing (Prem)", isDefault: false },
     { itemSlug: "waterproofing_basement_pcc", slug: "rcc_basement_waterproofing", brandName: "RCC Basement + Dr.Fixit/Fosroc Waterproofing", isDefault: false },
     // ── Item #7: Soil Testing ──
-    { itemSlug: "soil_testing", slug: "soil_testing_not_included_basic", brandName: "Soil Testing (Not Included)", isDefault: true },
-    { itemSlug: "soil_testing", slug: "soil_testing_not_included_std", brandName: "Soil Testing (Not Included - Std)", isDefault: false },
-    { itemSlug: "soil_testing", slug: "soil_testing_included_prem", brandName: "Soil Testing Included", isDefault: false },
-    { itemSlug: "soil_testing", slug: "soil_testing_included_lux", brandName: "Soil Testing Included (Lux)", isDefault: false },
+    { itemSlug: "soil_testing", slug: "soil_testing_not_included_basic", brandName: "Soil Testing", specification: "Not Included", isDefault: true },
+    { itemSlug: "soil_testing", slug: "soil_testing_not_included_std", brandName: "Soil Testing", specification: "Not Included", isDefault: false },
+    { itemSlug: "soil_testing", slug: "soil_testing_included_prem", brandName: "Soil Testing", specification: "Included", isDefault: false },
+    { itemSlug: "soil_testing", slug: "soil_testing_included_lux", brandName: "Soil Testing", specification: "Included", isDefault: false },
     // ── Item #8: Electrical & Plumbing Drawings ──
-    { itemSlug: "electrical_plumbing_drawings", slug: "mep_drawings_basic", brandName: "MEP Drawings (Not Included)", isDefault: true },
-    { itemSlug: "electrical_plumbing_drawings", slug: "mep_drawings_std", brandName: "MEP Drawings (Not Included - Std)", isDefault: false },
-    { itemSlug: "electrical_plumbing_drawings", slug: "mep_drawings_included_prem", brandName: "MEP Drawings Included", isDefault: false },
-    { itemSlug: "electrical_plumbing_drawings", slug: "mep_drawings_included_lux", brandName: "MEP Drawings Included (Lux)", isDefault: false },
+    { itemSlug: "electrical_plumbing_drawings", slug: "mep_drawings_basic", brandName: "MEP Drawings", specification: "Not Included", isDefault: true },
+    { itemSlug: "electrical_plumbing_drawings", slug: "mep_drawings_std", brandName: "MEP Drawings", specification: "Not Included", isDefault: false },
+    { itemSlug: "electrical_plumbing_drawings", slug: "mep_drawings_included_prem", brandName: "MEP Drawings", specification: "Included", isDefault: false },
+    { itemSlug: "electrical_plumbing_drawings", slug: "mep_drawings_included_lux", brandName: "MEP Drawings", specification: "Included", isDefault: false },
     // ── Item #9: Isometric Views & Virtual Reality ──
     { itemSlug: "isometric_vr", slug: "iso_vr_not_included_basic", brandName: "Isometric Views & VR (Not Included)", isDefault: true },
     { itemSlug: "isometric_vr", slug: "iso_vr_not_included_std", brandName: "Isometric Views & VR (Not Included - Std)", isDefault: false },
