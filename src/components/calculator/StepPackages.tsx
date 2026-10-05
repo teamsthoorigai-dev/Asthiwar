@@ -645,8 +645,11 @@ export function StepPackages({
     };
   };
 
-  const renderCellContent = (value: string, tier: PackageSlug): React.ReactNode => {
-    if (!value || value === '—' || value.toLowerCase().includes('not included')) {
+  const renderCellContent = (rawValue: string, tier: PackageSlug): React.ReactNode => {
+    // Yes/No components (Soil Testing, MEP Drawings, ...) name their options
+    // "Yes" and "No"; the matrix reads them as included or not.
+    const value = rawValue === 'Yes' ? 'Included' : rawValue;
+    if (!value || value === '—' || value === 'No' || value.toLowerCase().includes('not included')) {
       return <span className="pkg-matrix-dash" aria-label="Not included">—</span>;
     }
 
