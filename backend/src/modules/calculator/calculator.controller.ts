@@ -255,7 +255,8 @@ export async function getPackageConfig(req: Request, res: Response, next: NextFu
           or(eq(optionPrices.packageId, pkg.id), isNull(optionPrices.packageId)),
           isCurrentPrice(optionPrices.effectiveTo)
         )
-      );
+      )
+      .orderBy(asc(options.id));
 
     // Widening the join can return both a package row and a universal row for one
     // option. The narrower one wins — the same precedence calculator.service.ts

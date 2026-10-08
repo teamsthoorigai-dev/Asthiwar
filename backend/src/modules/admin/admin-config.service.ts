@@ -821,9 +821,12 @@ export async function getAdminSpecifications() {
     .from(schema.items)
     .orderBy(asc(schema.items.sortOrder));
 
+  // Creation order. Without it Postgres returns an edited row last, so every
+  // rename or rate change moved that brand to the bottom of its component.
   const optionsList = await db
     .select()
-    .from(schema.options);
+    .from(schema.options)
+    .orderBy(asc(schema.options.id));
 
   const optionPricesList = await db
     .select()
