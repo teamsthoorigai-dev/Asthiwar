@@ -12,6 +12,7 @@ import {
   addons,
   addonPrices,
   estimates,
+  enquiries,
   eq,
   and,
   asc,
@@ -24,6 +25,8 @@ import { isCurrentPrice } from '../../services/pricing-window.js';
 import { EstimateAccessError, publicSnapshotOf, resolveEstimateForPublicAccess } from './quotation.js';
 import { calculateEstimate } from './calculator.service.js';
 import { CalculatorInput } from './calculator.types.js';
+import { sendAdminNewLeadAlert } from '../notifications/notifications.service.js';
+import { loggableError } from '../../services/db-errors.js';
 
 export const DEFAULT_PACKAGE_HIGHLIGHTS: Record<string, string[]> = {
   basic: [
@@ -467,6 +470,20 @@ export async function createEstimate(req: Request, res: Response, next: NextFunc
       ipAddress: clientIp(req),
       userAgent: req.headers['user-agent'],
     }).catch(() => {});
+
+    // Saving an estimate also creates its CRM lead (calculator.service.ts), and
+    // that lead is announced the way a contact-form enquiry is: an email to
+    // CONTACT_RECIPIENT_EMAIL. In the background, so a mail outage never fails
+    // the quotation the customer is waiting for.
+    if (result.estimateId) {
+      const estimateId = result.estimateId;
+      db.query.enquiries
+        .findFirst({ where: eq(enquiries.estimateId, estimateId) })
+        .then((lead) => (lead ? sendAdminNewLeadAlert(lead.id) : undefined))
+        .catch((err) => {
+          console.error('[Calculator] Failed to send email alert for estimate lead:', loggableError(err));
+        });
+    }
 
     res.status(201).json({
       success: true,
